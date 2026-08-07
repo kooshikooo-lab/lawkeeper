@@ -24,6 +24,7 @@ guardrail = ["template/**/*"]
 python_files = [
     "test_guard_scripts.py",
     "test_template.py",
+    "test_executor.py",
 ]
 
 [tool.ruff]
