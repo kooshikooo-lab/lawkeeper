@@ -1,0 +1,25 @@
+# Machine-readable e2e test plan for lawkeeper (mirror of docs/e2e_PLAN.md).
+# Location: repo root (tests/ is .py-only by placement rule).
+
+keep_mvp = true
+
+scope = [
+    "commits",
+    "bugs",
+    "commit_msg_gate",
+    "pre_commit_gate",
+    "conflicts",
+]
+
+merge_gate_verified = "2026-08-07 git 2.55 divergent sibling branches -> rc1 CONFLICT(content); probe error corrected"
+merge_gate_reverify_target = "linux-ci"
+
+import_order = ["instrument-designer", "autonomi-code-assistant"]
+
+green_gate = [
+    "python -m pytest tests/ -q",
+    "python -m guardrail.cli run",
+    "python scripts/system_audit.py",
+    "python scripts/compliance_watchdog.py --check-laws",
+    "python scripts/compliance_watchdog.py --check-baseline",
+]

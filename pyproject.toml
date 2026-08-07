@@ -28,6 +28,7 @@ python_files = [
     "test_guard_scripts.py",
     "test_template.py",
     "test_framework.py",
+    "test_e2e.py",
 ]
 
 [tool.ruff]
