@@ -17,7 +17,7 @@ jobs:
           python-version: "3.12"
       - name: Install package + hooks
         run: |
-          pip install -e .
+          pip install -e .[dev]
           python scripts/install_hooks.py
       - name: Block unauthorized governance edits and unmarked provisional work
         run: |
@@ -35,9 +35,9 @@ jobs:
       - name: System self-audit (Law 16 — enforcement layers active and correct)
         run: |
           python scripts/system_audit.py
-      - name: Meta-tests for the guard scripts (Law 16.5)
+      - name: Framework + guard meta-tests (Law 16.5)
         run: |
-          python -m pytest tests/test_guard_scripts.py -q
+          python -m pytest tests/ -q
     powershell-lint:
       runs-on: windows-latest
       steps:

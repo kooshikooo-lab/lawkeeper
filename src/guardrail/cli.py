@@ -3,6 +3,7 @@
 Commands:
   lawkeeper init [DIR]   scaffold full governance into a project (constitution,
                         hooks, guards, CI, template files)
+  lawkeeper run          run constitution laws against the repo (exit non-zero on FAIL)
   lawkeeper status       show which enforcement layers are active (human-safe)
   lawkeeper version
 """
@@ -124,6 +125,12 @@ def main(argv=None) -> int:
     p_init.add_argument("--machines", help="comma-separated machine names, e.g. desktop,laptop")
     p_init.add_argument("--force", action="store_true", help="overwrite existing governance")
 
+    p_run = sub.add_parser("run", help="run constitution laws against the repo")
+    p_run.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    p_run.add_argument("--law", type=int, action="append", default=[],
+                       help="run only the given law id (repeatable)")
+    p_run.add_argument("--quiet", action="store_true", help="suppress output; exit code only")
+
     sub.add_parser("status", help="show enforcement-layer status (read-only)")
 
     args = parser.parse_args(argv)
@@ -134,8 +141,31 @@ def main(argv=None) -> int:
         return cmd_init(args)
     if args.cmd == "status":
         return cmd_status(args)
+    if args.cmd == "run":
+        return cmd_run(args)
     parser.print_help()
     return 1
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    """Run the constitution laws against the current repo."""
+    from guardrail.core.primitives import Status
+    from guardrail.core.runner import GuardrailRunner
+
+    root = _repo_root()
+    runner = GuardrailRunner(root)
+    report = runner.run(only=set(args.law) if args.law else None)
+
+    if not args.quiet:
+        if args.json:
+            print(report.to_json())
+        else:
+            icons = {Status.PASS.value: "PASS", Status.WARN.value: "WARN", Status.FAIL.value: "FAIL"}
+            for r in report.results:
+                print(f"[{icons[r.status.value]}] Law {r.law_id} - {r.message}")
+            s = report.summary
+            print(f"\n{s['total']} checks: {s['pass']} pass, {s['warn']} warn, {s['fail']} fail")
+    return report.exit_code
 
 
 if __name__ == "__main__":

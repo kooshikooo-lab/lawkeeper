@@ -50,10 +50,29 @@ everyone compliant.
 | Command | What it does |
 |---|---|
 | `lawkeeper init [DIR]` | scaffold full governance into a project |
+| `lawkeeper run` | run the constitution laws against the current repo (exit non-zero on FAIL; `--json`, `--law N`, `--quiet`) |
 | `lawkeeper status` | show which enforcement layers are active (read-only) |
 | `python scripts/merge_gate.py <base> <head>` | predict merge conflicts without touching the worktree |
 | `python scripts/guard_branch.py --audit` | report Law 15 branch-topology violations |
 | `python scripts/system_audit.py` | verify the whole enforcement stack is alive |
+
+## Running the laws
+`lawkeeper run` loads every portable Law from `guardrail/laws/` (auto-discovered by
+`guardrail.core.registry`) and checks the repo. On `lawkeeper` itself it is green:
+
+```
+[PASS] Law 1  - README.md declares project purpose and structure.
+[PASS] Law 9  - docs/ARCHITECTURE_DECISIONS.md records architectural decisions.
+[PASS] Law 12 - AGENTS.md present.
+[PASS] Law 14 - Commit-audit validators present and wired.
+[PASS] Law 15 - Branch 'opencode/<topic>/<machine>' is feature (compliant).
+[PASS] Law 16 - Enforcement system present: guards, tests, and config.
+
+6 checks: 6 pass, 0 warn, 0 fail
+```
+
+`--json` emits a machine-readable report; `--law N` runs a single law; `--quiet`
+returns only the exit code (non-zero if any Law FAILS).
 
 ## Non-coder quickstart
 ```bash

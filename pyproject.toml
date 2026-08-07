@@ -11,6 +11,9 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = []
 
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
 [project.scripts]
 lawkeeper = "guardrail.cli:main"
 
@@ -24,6 +27,7 @@ guardrail = ["template/**/*"]
 python_files = [
     "test_guard_scripts.py",
     "test_template.py",
+    "test_framework.py",
 ]
 
 [tool.ruff]
