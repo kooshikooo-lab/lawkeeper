@@ -1,0 +1,142 @@
+"""lawkeeper CLI — make any git project constitution-governed.
+
+Commands:
+  lawkeeper init [DIR]   scaffold full governance into a project (constitution,
+                        hooks, guards, CI, template files)
+  lawkeeper status       show which enforcement layers are active (human-safe)
+  lawkeeper version
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+from guardrail import __version__
+
+TEMPLATE_ROOT = Path(__file__).resolve().parent.parent.parent / "template"
+
+
+def _repo_root(start: Path = Path.cwd()) -> Path:
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=start, capture_output=True, text=True,
+            encoding="utf-8", errors="replace"
+        )
+        return Path(out.stdout.strip()) or start
+    except OSError:
+        return start
+
+
+def _render(src: Path, dst: Path, project_name: str) -> None:
+    text = src.read_text(encoding="utf-8", errors="replace")
+    rendered = (text
+                .replace("__PROJECT_NAME__", project_name)
+                .replace("__PROJECT_NAME_TITLE__", project_name.replace("-", " ").title()))
+    dst.write_text(rendered, encoding="utf-8", newline="\n")
+
+
+def cmd_init(args: argparse.Namespace) -> int:
+    target = Path(args.dir or ".").resolve()
+    root = target if (target / ".git").exists() else None
+    if root is None:
+        # walk up for a git repo; else treat target as new
+        walk = target
+        while walk != walk.parent and not (walk / ".git").exists():
+            walk = walk.parent
+        root = walk
+    if (root / ".guardrail.json").exists():
+        print(f"lawkeeper: {root} already has a .guardrail.json — refusing to overwrite.")
+        return 1
+    if (root / "docs/AI_CONSTITUTION.md").exists():
+        print(f"lawkeeper: {root} already looks governed (has docs/AI_CONSTITUTION.md). "
+              f"Re-run with --force only if you intend to replace it.")
+        return 1
+
+    project_name = args.name or root.name
+    dst_root = root
+
+    # Copy template tree (rendering placeholders).
+    for rel in TEMPLATE_ROOT.rglob("*"):
+        if rel.is_dir():
+            continue
+        rel_target = rel.relative_to(TEMPLATE_ROOT)
+        dst = dst_root / rel_target
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if rel.suffix in (".tmpl",):
+            dst_final = dst.with_suffix(rel.suffix.replace(".tmpl", ""))
+        else:
+            dst_final = dst
+        _render(rel, dst_final, project_name)
+
+    # Write project config.
+    import json
+    config = {
+        "project_name": project_name,
+        "machines": args.machines.split(",") if args.machines else ["desktop", "laptop"],
+        "canonical_branches": ["main"],
+    }
+    (dst_root / ".guardrail.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
+
+    print(f"lawkeeper: scaffolding written to {dst_root}")
+    print("Next steps:")
+    print("  1. pip install -e .   # from the project root")
+    print("  2. python scripts/install_hooks.py   # installs pre-commit, commit-msg, pre-push")
+    print("  3. git add -A && git commit -m 'chore: lawkeeper governance bootstrap' -m 'GOVERNANCE-UPDATE'")
+    print("  4. python scripts/system_audit.py    # must PASS before any real commit")
+    print("  5. git push && open a PR (branch protection requires it)")
+    return 0
+
+
+def cmd_status(_: argparse.Namespace) -> int:
+    """Human-safe summary of enforcement layers. Never destructive."""
+    root = _repo_root()
+    print(f"repo: {root}")
+    print(f"project: {(root / '.guardrail.json').exists() and 'governed' or 'NOT governed by lawkeeper'}")
+    hooks = root / ".git" / "hooks"
+    cfg = subprocess.run(["git", "config", "--get", "core.hooksPath"],
+                         cwd=root, capture_output=True, text=True,
+                         encoding="utf-8", errors="replace").stdout.strip()
+    print(f"core.hooksPath: {cfg or '(unset)'}")
+    audit = root / "scripts" / "system_audit.py"
+    print(f"system_audit.py: {'present' if audit.exists() else 'MISSING'}")
+    if audit.exists():
+        print("\nRun `python scripts/system_audit.py` to verify all enforcement layers are active.")
+    return 0
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="lawkeeper",
+        description="Constitution-as-code governance for agentic + vibe-coded projects.",
+    )
+    parser.add_argument("--version", action="store_true", help="print version and exit")
+    sub = parser.add_subparsers(dest="cmd")
+
+    p_init = sub.add_parser("init", help="scaffold full governance into a project")
+    p_init.add_argument("dir", nargs="?", default=".", help="target directory (default: .)")
+    p_init.add_argument("--name", help="project name for templates")
+    p_init.add_argument("--machines", help="comma-separated machine names, e.g. desktop,laptop")
+    p_init.add_argument("--force", action="store_true", help="overwrite existing governance")
+
+    sub.add_parser("status", help="show enforcement-layer status (read-only)")
+
+    args = parser.parse_args(argv)
+    if args.version or args.cmd is None:
+        print(f"lawkeeper {__version__}")
+        return 0
+    if args.cmd == "init":
+        return cmd_init(args)
+    if args.cmd == "status":
+        return cmd_status(args)
+    parser.print_help()
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

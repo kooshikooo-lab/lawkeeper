@@ -1,0 +1,5 @@
+#!/bin/sh
+# commit-msg hook: block unauthorized governance edits, provisional work, and
+# commits without audit declaration (Law 14/16). Versioned via core.hooksPath.
+MSG_FILE="$1"
+python "$(git rev-parse --show-toplevel)/scripts/validate_commit_msg.py" "$MSG_FILE" || exit 1

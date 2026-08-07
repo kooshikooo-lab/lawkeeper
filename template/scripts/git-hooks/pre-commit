@@ -1,0 +1,4 @@
+#!/bin/sh
+# pre-commit hook: validate staged files before commit (Law 14).
+# Versioned via core.hooksPath — install with: python scripts/install_hooks.py
+python "$(git rev-parse --show-toplevel)/scripts/validate_pre_commit.py" || exit 1

@@ -1,0 +1,28 @@
+# lawkeeper
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Regenerable artifacts (Law 14/validate_pre_commit)
+*.stl
+*.step
+*.stp
+*.obj
+*.ply
+*.3mf
+*.png
+*.jpg
+*.jpeg
+*.svg
+.log
+*.jsonl
+.dat
+# test/design outputs (keep baseline.json and .guardrail.json tracked)
+test_output/
+designs/
+chat-logs/

@@ -1,0 +1,222 @@
+"""Branch-safety guard — enforces Law 15 (Branch governance) at the git layer.
+
+Mechanical enforcement: a git push that would delete or force-push a canonical
+branch, or merge blindly, is BLOCKED. The guard never depends on the agent being
+well-behaved — it reads the push refspecs from stdin and exits non-zero.
+
+Config (repo root `.guardrail.json`, written by `lawkeeper init`):
+  { "machines": ["desktop","laptop"], "canonical_branches": ["main"] }
+
+CLI:
+  guard_branch.py --check-push            read push refspecs from stdin (pre-push hook)
+  guard_branch.py --check-delete NAME     check a single local branch deletion
+  guard_branch.py --audit                 report Law 15 topology violations (read-only)
+
+Human approval overrides (explicit, scoped, per-branch):
+  GUARD_BRANCH_ALLOW_DELETE=<branch>      permit deleting one canonical branch
+  GUARD_BRANCH_ALLOW_FORCE=<branch>      permit force-pushing one canonical branch
+
+Exit codes: 0 = OK, 1 = blocked.
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(subprocess.run(
+    ["git", "rev-parse", "--show-toplevel"],
+    capture_output=True, text=True, encoding="utf-8", errors="replace"
+).stdout.strip() or Path.cwd())
+
+
+def load_config():
+    try:
+        from guardrail.config import Config  # packaged install path
+    except Exception:
+        try:
+            sys.path.insert(0, str(REPO_ROOT / "src"))
+            from guardrail.config import Config
+        except Exception:
+            class _Fallback:
+                machines = ["desktop", "laptop"]
+                canonical_branches = ["main"]
+                placement_rules = {}
+                feature_regexes = lambda self: [re.compile(r"^opencode/[a-z0-9-]+/(?:desktop|laptop)$")]
+                canonical_branch_names = lambda self: {"main", "opencode/main/desktop", "opencode/main/laptop"}
+            return _Fallback()
+    return Config.load(REPO_ROOT)
+
+
+CONFIG = load_config()
+
+
+def canonical_branches() -> set[str]:
+    return CONFIG.canonical_branch_names()
+
+
+def classify(name: str) -> str | None:
+    """Return the Law 15 namespace of a branch, or None if it is an orphan."""
+    name = name.strip()
+    if name == "main" or (name in canonical_branches()):
+        return "canonical" if name.startswith("opencode/main/") else "trunk"
+    if any(re.match(r, name) for r in CONFIG.feature_regexes()):
+        return "feature"
+    if re.match(r"^merge/[a-z0-9-]+$", name):
+        return "merge_staging"
+    return None
+
+
+def is_canonical(name: str) -> bool:
+    ns = classify(name)
+    return ns in ("canonical", "trunk")
+
+
+def run_git(args):
+    try:
+        result = subprocess.run(["git"] + args, capture_output=True, text=True,
+                                encoding="utf-8", errors="replace")
+        return result.stdout.strip(), result.returncode
+    except OSError:
+        return "", 1
+
+
+def content_preserved(sha: str) -> bool:
+    """Law 15.5: is `sha` an ancestor of a canonical branch or main?"""
+    for ref in sorted(canonical_branches()) | {"main", "origin/main"}:
+        out, code = run_git(["merge-base", "--is-ancestor", sha, ref])
+        if code == 0:
+            return True
+    return False
+
+
+def origin_head_points_at_main() -> bool:
+    out, _ = run_git(["symbolic-ref", "refs/remotes/origin/HEAD"])
+    return out.rstrip("/") in ("refs/remotes/origin/main", "refs/remotes/origin/main/")
+
+
+NAMESPACED_ZERO = "0" * 40
+
+
+def parse_push_lines(lines):
+    pushes = []
+    for line in lines:
+        parts = line.strip().split()
+        if len(parts) != 4:
+            continue
+        local_ref, local_sha, remote_ref, remote_sha = parts
+        pushes.append({
+            "local_ref": local_ref,
+            "local_sha": local_sha,
+            "remote_ref": remote_ref,
+            "remote_sha": remote_sha,
+            "branch": remote_ref.replace("refs/heads/", ""),
+            "deletion": set(local_sha) == {"0"},
+            "forced": local_sha not in ("", NAMESPACED_ZERO)
+                      and remote_sha not in ("", NAMESPACED_ZERO)
+                      and local_sha != remote_sha,
+        })
+    return pushes
+
+
+def check_push(lines, human_delete=None, human_force=None):
+    human_delete = human_delete or set()
+    human_force = human_force or set()
+    violations = []
+    for push in parse_push_lines(lines):
+        name = push["branch"]
+        ns = classify(name)
+        if ns is None:
+            violations.append(
+                f"PUSH {name}: orphan branch — not in a Law 15 namespace "
+                f"(main / opencode/main/<machine> / opencode/<topic>/<machine> / merge/<topic>)."
+            )
+        if push["deletion"]:
+            if is_canonical(name) and name not in human_delete:
+                violations.append(
+                    f"PUSH {name}: deletion of a canonical branch requires explicit "
+                    f"human approval (GUARD_BRANCH_ALLOW_DELETE={name}). Law 15.8."
+                )
+            elif not push["local_sha"] or set(push["local_sha"]) == {"0"}:
+                continue  # nothing to prove for a branch that never existed locally
+            elif not content_preserved(push["local_sha"]):
+                violations.append(
+                    f"PUSH {name}: deletion would lose content not proven present "
+                    f"on a canonical branch or main. Law 15.5."
+                )
+        elif is_canonical(name) and name not in human_force:
+            out, code = run_git(["merge-base", "--is-ancestor",
+                                 push["remote_sha"], push["local_sha"]])
+            if code != 0:
+                violations.append(
+                    f"PUSH {name}: force/non-fast-forward push to a canonical branch "
+                    f"requires explicit human approval (GUARD_BRANCH_ALLOW_FORCE={name}). "
+                    f"Law 15.8."
+                )
+    return violations
+
+
+def check_delete(name: str) -> list[str]:
+    if classify(name) is None:
+        return [f"DELETE {name}: orphan branch — not in a Law 15 namespace."]
+    if is_canonical(name):
+        allowed = os.environ.get("GUARD_BRANCH_ALLOW_DELETE", "").split(",")
+        if name in allowed:
+            return []
+        return [
+            f"DELETE {name}: deletion of a canonical branch requires explicit human "
+            f"approval (set GUARD_BRANCH_ALLOW_DELETE={name}). Law 15.8."
+        ]
+    sha, _ = run_git(["rev-parse", name])
+    if sha and not content_preserved(sha):
+        return [f"DELETE {name}: content not provably present on a canonical branch or main. Law 15.5."]
+    return []
+
+
+def audit_branches() -> list[str]:
+    out, _ = run_git(["for-each-ref", "--format=%(refname)", "refs/heads"])
+    findings = []
+    for ref in out.splitlines():
+        name = ref.replace("refs/heads/", "")
+        if classify(name) is None:
+            findings.append(f"AUDIT branch {name}: orphan — not in a Law 15 namespace.")
+    if not origin_head_points_at_main():
+        findings.append("AUDIT origin/HEAD: does not point at main (Law 15.6).")
+    return findings
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Branch-safety guard (Law 15)")
+    parser.add_argument("--check-push", action="store_true")
+    parser.add_argument("--check-delete", metavar="BRANCH")
+    parser.add_argument("--audit", action="store_true")
+    args = parser.parse_args()
+
+    if args.audit:
+        for f in audit_branches():
+            print(f)
+        return 1 if audit_branches() else 0
+
+    if args.check_delete:
+        vs = check_delete(args.check_delete)
+        for v in vs:
+            print(v, file=sys.stderr)
+        return 1 if vs else 0
+
+    if args.check_push:
+        lines = sys.stdin.read().splitlines()
+        hd = {n.strip() for n in os.environ.get("GUARD_BRANCH_ALLOW_DELETE", "").split(",") if n.strip()}
+        hf = {n.strip() for n in os.environ.get("GUARD_BRANCH_ALLOW_FORCE", "").split(",") if n.strip()}
+        violations = check_push(lines, hd, hf)
+        for v in violations:
+            print(v, file=sys.stderr)
+        return 1 if violations else 0
+
+    parser.print_help()
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

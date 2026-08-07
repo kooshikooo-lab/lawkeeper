@@ -1,0 +1,6 @@
+#!/bin/sh
+# pre-push hook: enforce Law 15 branch governance (no canonical-branch deletion
+# or force-push without explicit human approval). Versioned via core.hooksPath.
+# Override for intentional canonical changes:
+#   GUARD_BRANCH_ALLOW_DELETE=<branch>   GUARD_BRANCH_ALLOW_FORCE=<branch>
+python "$(git rev-parse --show-toplevel)/scripts/guard_branch.py" --check-push || exit 1
