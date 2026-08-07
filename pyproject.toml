@@ -29,6 +29,7 @@ python_files = [
     "test_template.py",
     "test_framework.py",
     "test_e2e.py",
+    "test_reasoning.py",
 ]
 
 [tool.ruff]

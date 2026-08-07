@@ -130,6 +130,14 @@ def main(argv=None) -> int:
     p_run.add_argument("--law", type=int, action="append", default=[],
                        help="run only the given law id (repeatable)")
     p_run.add_argument("--quiet", action="store_true", help="suppress output; exit code only")
+    p_run.add_argument("--show-reasoning", action="store_true",
+                       help="show the model's internal reasoning (overrides config)")
+    p_run.add_argument("--hide-reasoning", action="store_true",
+                       help="suppress internal reasoning (overrides config)")
+
+    p_reason = sub.add_parser("reasoning",
+                              help="record or show the model's internal reasoning")
+    p_reason.add_argument("text", nargs="*", help="reasoning text to record")
 
     sub.add_parser("status", help="show enforcement-layer status (read-only)")
 
@@ -143,29 +151,53 @@ def main(argv=None) -> int:
         return cmd_status(args)
     if args.cmd == "run":
         return cmd_run(args)
+    if args.cmd == "reasoning":
+        return cmd_reasoning(args)
     parser.print_help()
     return 1
 
 
 def cmd_run(args: argparse.Namespace) -> int:
     """Run the constitution laws against the current repo."""
-    from guardrail.core.primitives import Status
+    from guardrail.core.reasoning import is_enabled as reasoning_enabled
     from guardrail.core.runner import GuardrailRunner
 
     root = _repo_root()
     runner = GuardrailRunner(root)
     report = runner.run(only=set(args.law) if args.law else None)
 
+    show_reasoning = reasoning_enabled(runner.config)
+    if args.hide_reasoning:
+        show_reasoning = False
+    elif args.show_reasoning:
+        show_reasoning = True
+
     if not args.quiet:
         if args.json:
             print(report.to_json())
         else:
-            icons = {Status.PASS.value: "PASS", Status.WARN.value: "WARN", Status.FAIL.value: "FAIL"}
-            for r in report.results:
-                print(f"[{icons[r.status.value]}] Law {r.law_id} - {r.message}")
-            s = report.summary
-            print(f"\n{s['total']} checks: {s['pass']} pass, {s['warn']} warn, {s['fail']} fail")
+            print(report.human_text(show_reasoning=show_reasoning))
     return report.exit_code
+
+
+def cmd_reasoning(args: argparse.Namespace) -> int:
+    """Record or report the state of internal-reasoning capture."""
+    from guardrail.config import Config
+    from guardrail.core.reasoning import emit, is_enabled
+
+    root = _repo_root()
+    config = Config.load(root)
+    if not args.text:
+        print(f"show_internal_reasoning: {is_enabled(config)}")
+        print(f"reasoning_log: {config.reasoning_log}")
+        return 0
+    text = " ".join(args.text)
+    log = emit(text, root, config)
+    if log:
+        print(f"reasoning recorded to {log}")
+    else:
+        print("reasoning hidden — set show_internal_reasoning=true in .guardrail.json to record")
+    return 0
 
 
 if __name__ == "__main__":

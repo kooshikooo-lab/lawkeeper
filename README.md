@@ -87,6 +87,20 @@ git push && open a PR                  # branch protection + CI backstop guard m
 Now any agent you send at the repo is mechanically constrained: it cannot delete
 the trunk, cannot merge blind, and cannot ship without its own guards passing.
 
+## Hiding internal reasoning
+By default lawkeeper does not record the model's internal reasoning (chain-of-
+thought, scratch thinking). Set `"show_internal_reasoning": true` in `.guardrail.json`
+and optionally `"reasoning_log": "docs/reasoning.log"` to capture reasoning to the
+file (version-control the log path only if you want it shared).
+
+```
+lawkeeper reasoning "why I chose feature branch opencode/x/desktop"   # records if enabled
+lawkeeper reasoning                                            # prints current toggle state
+lawkeeper run --show-reasoning                                   # surface per-law detail
+lawkeeper run --hide-reasoning                                   # suppress it (default)
+```
+Flags override the config. When suppressed, `lawkeeper run` prints concise PASS/WARN/FAIL.
+
 ## Design note: assemble, don't reinvent
 This project deliberately reuses the governance infra already battle-tested in
 [`kooshikooo-lab/instrument-designer`](https://github.com/kooshikooo-lab/instrument-designer)

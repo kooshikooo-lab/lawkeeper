@@ -39,6 +39,8 @@ DEFAULTS: dict = {
         "docs/REMINDERS.md",
         "AGENTS.md",
     ],
+    "show_internal_reasoning": False,
+    "reasoning_log": "docs/reasoning.log",
 }
 
 
@@ -53,6 +55,8 @@ class Config:
     regenerable_suffixes: list[str] = field(default_factory=list)
     regenerable_paths: list[str] = field(default_factory=list)
     governance_files: list[str] = field(default_factory=list)
+    show_internal_reasoning: bool = False
+    reasoning_log: str = "docs/reasoning.log"
 
     @classmethod
     def load(cls, repo_root: Path) -> "Config":
@@ -75,6 +79,8 @@ class Config:
             regenerable_suffixes=list(data["regenerable_suffixes"]),
             regenerable_paths=list(data["regenerable_paths"]),
             governance_files=list(data["governance_files"]),
+            show_internal_reasoning=bool(data["show_internal_reasoning"]),
+            reasoning_log=data["reasoning_log"],
         )
 
     def canonical_branch_names(self) -> set[str]:

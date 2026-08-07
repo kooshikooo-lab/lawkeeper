@@ -48,6 +48,20 @@ class Report:
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), indent=2)
 
+    def human_text(self, show_reasoning: bool = False) -> str:
+        icons = {"pass": "PASS", "warn": "WARN", "fail": "FAIL"}
+        lines = []
+        for r in self.results:
+            lines.append(f"[{icons[r.status.value]}] Law {r.law_id} - {r.message}")
+            if show_reasoning and r.details:
+                for key, value in r.details.items():
+                    lines.append(f"        . {key}: {value}")
+        s = self.summary
+        lines.append(
+            f"\n{s['total']} checks: {s['pass']} pass, {s['warn']} warn, {s['fail']} fail"
+        )
+        return "\n".join(lines)
+
 
 class GuardrailRunner:
     def __init__(self, repo_root: Path | None = None, config=None) -> None:
