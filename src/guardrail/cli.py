@@ -139,6 +139,17 @@ def main(argv=None) -> int:
                               help="record or show the model's internal reasoning")
     p_reason.add_argument("text", nargs="*", help="reasoning text to record")
 
+    p_choose = sub.add_parser(
+        "choose",
+        help="interactive checkbox-choice protocol (lawkeeper choose --file spec.json)")
+    p_choose.add_argument("--file", required=True, help="path to the choice spec JSON")
+    p_choose.add_argument("--select", action="append", default=[],
+                          help="pre-select an option id or 1-based number (non-interactive)")
+    p_choose.add_argument("--custom", default=None,
+                          help="free-text value (non-interactive)")
+    p_choose.add_argument("--single", action="store_true",
+                          help="single-select mode (clears other picks on toggle)")
+
     sub.add_parser("status", help="show enforcement-layer status (read-only)")
 
     args = parser.parse_args(argv)
@@ -153,6 +164,8 @@ def main(argv=None) -> int:
         return cmd_run(args)
     if args.cmd == "reasoning":
         return cmd_reasoning(args)
+    if args.cmd == "choose":
+        return cmd_choose(args)
     parser.print_help()
     return 1
 
@@ -198,6 +211,41 @@ def cmd_reasoning(args: argparse.Namespace) -> int:
     else:
         print("reasoning hidden — set show_internal_reasoning=true in .guardrail.json to record")
     return 0
+
+
+def cmd_choose(args: argparse.Namespace) -> int:
+    """Run the checkbox-choice protocol against a spec file.
+
+    Non-interactive (--select/--custom): validate the declared picks and emit
+    JSON of the ChoiceResult. Interactive (no --select): present the menu on
+    stdin/stdout. Exit code 1 signals a cancelled/invalid pick so callers can
+    detect it.
+    """
+    import json
+    from guardrail.choices import (Choice, ChoiceResult, ask, load_spec,
+                                   resolve_token, spec_to_choices, validate)
+
+    spec = load_spec(args.file)
+    choices = spec_to_choices(spec)
+    title = spec.get("title", "")
+    body = spec.get("body", "")
+    multi = spec.get("multi", not args.single)
+
+    if args.select or args.custom is not None:
+        selected = []
+        for token in (args.select or []):
+            cid = resolve_token(token, choices)
+            if cid is None:
+                print(f"unknown option: {token!r}", file=sys.stderr)
+                return 2
+            selected.append(cid)
+        res = validate(choices, selected, args.custom)
+    else:
+        res = ask(title, body, choices, input_lines=None, multi=multi)
+
+    print(json.dumps({"selected": res.selected, "custom": res.custom,
+                      "cancelled": res.cancelled}))
+    return 1 if res.cancelled else 0
 
 
 if __name__ == "__main__":

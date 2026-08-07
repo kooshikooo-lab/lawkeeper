@@ -30,6 +30,7 @@ python_files = [
     "test_framework.py",
     "test_e2e.py",
     "test_reasoning.py",
+    "test_choices.py",
 ]
 
 [tool.ruff]
