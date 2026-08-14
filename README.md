@@ -107,7 +107,7 @@ Flags override the config. When suppressed, `lawkeeper run` prints concise PASS/
 
 ## Design note: assemble, don't reinvent
 This project deliberately reuses the governance infra already battle-tested in
-[`kooshikooo-lab/instrument-designer`](https://github.com/kooshikooo-lab/instrument-designer)
+[`kooshikooo-lab/Windwright`](https://github.com/kooshikooo-lab/Windwright)
 (the 16-law constitution, the git-layer branch guard, the merge gate, the self-audit)
 rather than building another runtime policy engine. Existing open-source agent
 governance (Microsoft Agent Governance Toolkit, OpenPolicyAgent/Rego,

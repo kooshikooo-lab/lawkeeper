@@ -7,7 +7,7 @@ Status: **APPROVED** by user (build mode). Defaults applied unless user edits.
 - [x] B. scope = all five: own commits, bugs, commit-msg gate, pre-commit gate, conflicts
 - [x] C. merge_gate is NOT broken (probe was a default-branch error); re-verified
       with divergent branches -> rc 1, `CONFLICT (content)`. Re-verify on Linux CI.
-- [x] D. import order = instrument-designer first, then autonomi-code-assistant
+- [x] D. import order = Windwright first, then autonomi-code-assistant
 - [x] E. green gate = pytest tests/ -q + `lawkeeper run` + system_audit + watchdog --check-laws + watchdog --check-baseline
 
 ## Acceptance (must all hold)

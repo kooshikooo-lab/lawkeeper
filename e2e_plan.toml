@@ -14,7 +14,7 @@ scope = [
 merge_gate_verified = "2026-08-07 git 2.55 divergent sibling branches -> rc1 CONFLICT(content); probe error corrected"
 merge_gate_reverify_target = "linux-ci"
 
-import_order = ["instrument-designer", "autonomi-code-assistant"]
+import_order = ["Windwright", "autonomi-code-assistant"]
 
 green_gate = [
     "python -m pytest tests/ -q",
