@@ -1,0 +1,24 @@
+test_id: test_template
+theory: >
+  The shipped template (installed by `lawkeeper init`) must stay in lock-step with
+  the live repo's scripts/docs/hooks, so the framework self-installs exactly what
+  it runs. Tests both sync (byte-equal) and completeness (all starter files).
+oracle:
+  type: invariant
+  independence: independent
+  expression: "live script == template script (byte-equal); template contains constitution/hooks/CI/guards"
+acceptance: "all synced files byte-equal; template has the full starter kit"
+blind_spot: >
+  Byte-equality is checked for a FIXED list of files. A new governance file added
+  to the live repo but not to the sync list (and not to template) is not caught
+  until someone adds it to ROOT_DOCS/ROOT_SCRIPT_FILES. It checks presence, not
+  correctness of the template content.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: live/template drift, or template missing a starter file
+  crash: import failure
+  pass: template in sync with live
+debug:
+  - a drift failure means a live file changed without copying to template/ (or vice versa)
+  - update ROOT_DOCS/ROOT_SCRIPT_FILES when adding a new governed file

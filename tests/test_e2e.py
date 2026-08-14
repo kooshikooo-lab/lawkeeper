@@ -82,6 +82,27 @@ def _scaffold_governed(tmp_path: Path) -> Path:
         (hooks / name).write_text("", encoding="utf-8")
     (repo / "tests").mkdir()
     (repo / "tests/test_guard_scripts.py").write_text("", encoding="utf-8")
+    (repo / "test_governance/cards").mkdir(parents=True)
+    (repo / "test_governance/cards/test_guard_scripts.yaml").write_text(
+        "test_id: test_guard_scripts\n"
+        "theory: guard scripts must be tested (Law 16).\n"
+        "oracle:\n"
+        "  type: invariant\n"
+        "  independence: independent\n"
+        "acceptance: guard rules hold\n"
+        "blind_spot: simulated inputs only\n"
+        "trust_level: T2\n"
+        "adversarial_review: none\n"
+        "failure_meaning:\n"
+        "  failed: a guard rule regressed\n"
+        "  crash: import failure\n"
+        "  pass: guards correct\n"
+        "debug:\n"
+        "  - check the guard script\n",
+        encoding="utf-8",
+    )
+    (repo / "scripts/governed_test.py").write_text("", encoding="utf-8")
+    (repo / "docs/TEST_THEORY.md").write_text("# theory\n", encoding="utf-8")
     (repo / ".guardrail.json").write_text("{}", encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "chore: e2e governed scaffold\n\nTests: n/a")

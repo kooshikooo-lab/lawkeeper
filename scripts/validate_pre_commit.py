@@ -301,6 +301,18 @@ def main():
             for line in result.stdout.splitlines() + result.stderr.splitlines():
                 errors.append(f"  {line}")
 
+    # 8. Test governance (Law 18): a staged file under tests/ must have a theory card.
+    for rel in files:
+        if rel.startswith("tests/") and rel.endswith(".py"):
+            stem = Path(rel).stem
+            card = repo_root / "test_governance" / "cards" / f"{stem}.yaml"
+            if not card.exists():
+                errors.append(
+                    f"{rel}: no theory card (expected test_governance/cards/{stem}.yaml). "
+                    f"Add a card with theory/oracle/acceptance/blind_spot/trust_level "
+                    f"(Law 18, docs/TEST_THEORY.md) or run scripts/governed_test.py."
+                )
+
     if warnings:
         print("WARNINGS (non-blocking):")
         for w in warnings:

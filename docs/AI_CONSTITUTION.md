@@ -122,5 +122,62 @@ guards MUST NOT depend on the agent being well-behaved.
    `merge/<topic>` branch.
 7. **Audit result is declared in the commit** (`System: audit PASS/FAIL`).
 
+### Law 17 — Work in order of safety, not order of approval
+Halting is the expensive failure. A machine that waits for approval for steps it
+could safely do itself wastes the whole session. Work MUST be ordered by what is
+safe and independent, not by what requires permission. Approval gates only the
+steps that truly need them.
+
+1. **Do the safe work first**. When a task has multiple steps, execute every step
+   that is local, reversible, and unblocked BEFORE any step that requires another
+   machine, a human, or a shared-state change. Never let a downstream approval
+   gate stall upstream work that does not depend on it.
+2. **Local is never blocked**. Working on a machine's own canonical branch
+   (committing, merging its own branches, running tests, updating docs) is always
+   permitted and NEVER waits for the other machine. An instruction to "hold
+   pushes" does NOT mean hold local commits, merges, rehearsals, or verification —
+   it means hold only the shared-state actions.
+3. **Rehearse while you wait**. If a step is gated, do the unblocked preparation
+   now: run `merge_gate.py`, rehearse on a `merge/<topic>` branch, run the
+   verification gates, resolve conflicts. The gated action becomes a single push
+   instead of a stalled workflow.
+4. **Blocked ≠ idle**. When blocked, do the next safe thing: test, research,
+   document, prepare messages, review the diff. Silence and waiting are never the
+   default.
+5. **Ask once, then proceed**. Post the question once with a deadline, then
+   continue with all safe independent work. Do not re-ask, do not idle.
+6. **Escalate only real blocks**. Escalation to the human is for decisions that
+   genuinely require a human. Work a machine can verify itself is never an
+   escalation.
+
+### Law 18 — Tests must be governed
+A test that passes while the code is wrong is worse than no test — it produces
+false confidence. Every test must carry a machine-readable "theory card" declaring
+its independent oracle, acceptance threshold, blind spot (what wrong code it would
+NOT catch), and a trust level. Tests run through a governed runner; a result is
+UNTRUSTED until it is adversarially reviewed.
+
+1. **No test without a card** — a commit touching `tests/` whose test file has no
+   theory card is blocked (structural hook). A missing card is an infrastructure
+   failure, not permission to proceed.
+2. **Independent oracle** — a test must assert against an analytic formula, a
+   published reference, a known-bad fixture, or a pure relation, NOT against the
+   code it tests. A self-referential test (asserts the code equals its own
+   constant) is worthless and is rejected.
+3. **Classify before reporting** — a failing test is not "done" until it is
+   classified CODE BUG / TEST BUG / KNOWN LIMITATION with a justification that
+   references the oracle. "Ran" is never "passed": a result must state its number
+   WITH its threshold (a 400-cent result against a <20-cent target is BROKEN).
+4. **Trust levels** — T0 smoke, T1 assertion, T2 independent oracle, T3
+   adversarially reviewed, T4 mutation/discrimination verified, T5 validated
+   against independent physics/reference. Reports state trust level, not just
+   pass/fail.
+5. **Adversarial review is a state transition** — a non-trivial change's result is
+   UNTRUSTED until `scripts/ai_review.py` (or equivalent) has reviewed it and its
+   answer has been fact-checked empirically. Model confidence is not evidence.
+6. **Tests must discriminate** — mutation testing (deliberately break the code;
+   the test must fail) proves a test actually checks what it claims. A test that
+   passes on both broken and fixed code is worthless.
+
 Violating any law is a constitutional violation. Log failures in
 `docs/AI_FAILURE_PATTERNS.md`.

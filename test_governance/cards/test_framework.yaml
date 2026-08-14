@@ -1,0 +1,24 @@
+test_id: test_framework
+theory: >
+  The guardrail law-runner framework: laws are auto-discovered classes; the
+  registry loads them sorted; the runner produces a Report with PASS/WARN/FAIL
+  summary and exit code; portable laws pass on a properly scaffolded repo.
+oracle:
+  type: invariant
+  independence: independent
+  expression: "registry == {1,9,12,14,15,16,18}; laws sorted; report exit_code nonzero on any FAIL; a scaffolded repo passes portable laws"
+acceptance: "registry set exact; sorted order; exit_code semantics; scaffolded-repo portable laws all PASS"
+blind_spot: >
+  Pure unit tests on tmp_path repos. Cannot catch a law that is structurally
+  present but semantically wrong (a law that checks the wrong file), nor a
+  real cross-machine race. It validates the framework WIRING, not the content
+  of every law's check logic.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: registry/runner behavior regressed (law count, ordering, exit code)
+  crash: import failure
+  pass: framework wiring correct
+debug:
+  - a registry-set failure means a Law class was added/removed without updating the test
+  - check load_law_classes() auto-discovery (guardrail.laws package)

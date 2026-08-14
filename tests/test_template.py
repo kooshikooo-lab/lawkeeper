@@ -22,12 +22,14 @@ ROOT_SCRIPT_FILES = [
     "scripts/guard_governance.py",
     "scripts/compliance_watchdog.py",
     "scripts/install_hooks.py",
+    "scripts/governed_test.py",
 ]
 ROOT_DOCS = [
     "docs/AI_CONSTITUTION.md",
     "docs/COMPLIANCE_CHECK.md",
     "docs/ARCHITECTURE_DECISIONS.md",
     "docs/AI_FAILURE_PATTERNS.md",
+    "docs/TEST_THEORY.md",
 ]
 HOOKS = ["pre-commit", "commit-msg", "pre-push"]
 
@@ -63,6 +65,12 @@ class TestTemplateSync:
 
     def test_constitution_sync(self):
         self._check("docs/AI_CONSTITUTION.md", "docs/AI_CONSTITUTION.md")
+
+    def test_test_theory_sync(self):
+        self._check("docs/TEST_THEORY.md", "docs/TEST_THEORY.md")
+
+    def test_governed_test_sync(self):
+        self._check("scripts/governed_test.py", "scripts/governed_test.py")
 
     def test_hooks_sync(self):
         for h in HOOKS:

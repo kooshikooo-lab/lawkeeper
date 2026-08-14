@@ -20,6 +20,7 @@ from guardrail.laws.law_12_read_fully import Law12
 from guardrail.laws.law_14_audit_before_commit import Law14
 from guardrail.laws.law_15_branch_naming import Law15
 from guardrail.laws.law_16_enforcement import Law16
+from guardrail.laws.law_18_test_governance import Law18
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -62,11 +63,11 @@ def test_law_is_abstract():
 class TestRegistry:
     def test_law_classes_discovered(self):
         cls = load_law_classes()
-        assert set(cls) == {1, 9, 12, 14, 15, 16}
+        assert set(cls) == {1, 9, 12, 14, 15, 16, 18}
 
     def test_load_laws_sorted_and_described(self):
         laws = load_laws()
-        assert [l.law_id for l in laws] == [1, 9, 12, 14, 15, 16]
+        assert [l.law_id for l in laws] == [1, 9, 12, 14, 15, 16, 18]
         for law in laws:
             assert law.title
             assert law.description
@@ -102,14 +103,17 @@ class TestRunnerOnGovernedRepo:
         (tmp_path / "AGENTS.md").write_text("governed\n", encoding="utf-8")
         (tmp_path / "docs").mkdir()
         (tmp_path / "docs/ARCHITECTURE_DECISIONS.md").write_text("# ADR\n", encoding="utf-8")
+        (tmp_path / "docs/TEST_THEORY.md").write_text("# theory\n", encoding="utf-8")
         (tmp_path / "scripts").mkdir()
-        for name in ["validate_commit_msg.py", "validate_pre_commit.py"]:
+        for name in ["validate_commit_msg.py", "validate_pre_commit.py", "governed_test.py"]:
             (tmp_path / "scripts" / name).write_text("", encoding="utf-8")
         (tmp_path / "scripts/git-hooks").mkdir()
         for name in ["commit-msg", "pre-commit"]:
             (tmp_path / "scripts/git-hooks" / name).write_text("", encoding="utf-8")
         (tmp_path / "tests").mkdir()
         (tmp_path / "tests/test_guard_scripts.py").write_text("", encoding="utf-8")
+        (tmp_path / "test_governance/cards").mkdir(parents=True)
+        (tmp_path / "test_governance/cards/example.yaml").write_text("test_id: x\n", encoding="utf-8")
         (tmp_path / "scripts/guard_branch.py").write_text("", encoding="utf-8")
         (tmp_path / "scripts/guard_governance.py").write_text("", encoding="utf-8")
         (tmp_path / "scripts/compliance_watchdog.py").write_text("", encoding="utf-8")
@@ -120,7 +124,7 @@ class TestRunnerOnGovernedRepo:
 
     def test_all_portable_laws_pass(self, tmp_path):
         root = self._scaffold(tmp_path)
-        report = GuardrailRunner(root).run(only={1, 9, 12, 14})
+        report = GuardrailRunner(root).run(only={1, 9, 12, 14, 18})
         assert report.exit_code == 0
         assert all(r.status.value == "pass" for r in report.results)
 
@@ -252,6 +256,31 @@ class TestLaw16:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("", encoding="utf-8")
         res = Law16().check(tmp_path, None)
+        assert res[0].status == Status.PASS
+
+
+# ── Law 18 ────────────────────────────────────────────────────────────
+
+
+class TestLaw18:
+    def test_no_tests_dir_is_exempt(self, tmp_path):
+        res = Law18().check(tmp_path, None)
+        assert res[0].status == Status.PASS
+
+    def test_tests_without_governance_fails(self, tmp_path):
+        (tmp_path / "tests").mkdir()
+        res = Law18().check(tmp_path, None)
+        assert res[0].status == Status.FAIL
+        assert any("governed_test.py" in p for p in res[0].details["missing"])
+
+    def test_tests_with_governance_passes(self, tmp_path):
+        (tmp_path / "tests").mkdir()
+        (tmp_path / "scripts").mkdir()
+        (tmp_path / "scripts/governed_test.py").write_text("", encoding="utf-8")
+        (tmp_path / "docs").mkdir()
+        (tmp_path / "docs/TEST_THEORY.md").write_text("# theory\n", encoding="utf-8")
+        (tmp_path / "test_governance/cards").mkdir(parents=True)
+        res = Law18().check(tmp_path, None)
         assert res[0].status == Status.PASS
 
 

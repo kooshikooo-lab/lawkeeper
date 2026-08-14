@@ -37,6 +37,7 @@ DEFAULTS: dict = {
         "docs/ARCHITECTURE_DECISIONS.md",
         "docs/AI_FAILURE_PATTERNS.md",
         "docs/REMINDERS.md",
+        "docs/TEST_THEORY.md",
         "AGENTS.md",
     ],
     "show_internal_reasoning": False,

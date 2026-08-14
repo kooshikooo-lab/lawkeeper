@@ -22,11 +22,14 @@ pip install lawkeeper        # or: pip install -e .
 lawkeeper init               # into an existing git project
 ```
 This scaffolds:
-- `docs/AI_CONSTITUTION.md` — 16 enforceable laws (architecture, duplication,
+- `docs/AI_CONSTITUTION.md` — 18 enforceable laws (architecture, duplication,
   physics one-source-of-truth, audit-before-commit, branch governance,
-  system self-audit...).
+  system self-audit, work-in-order-of-safety, tests-must-be-governed...).
 - `scripts/git-hooks/{pre-commit,commit-msg,pre-push}` + `scripts/*guard*`
   — the enforcement layer.
+- `scripts/governed_test.py` + `docs/TEST_THEORY.md` + `test_governance/cards/`
+  — the test-governance layer (Law 18): theory cards, trust levels, mutation
+  testing, adversarial-review state.
 - `.github/workflows/governance-guard.yml` — the CI backstop.
 - `scripts/system_audit.py` — the system audits its own guards.
 - `tests/test_guard_scripts.py` — tests for the guards.
@@ -67,8 +70,9 @@ everyone compliant.
 [PASS] Law 14 - Commit-audit validators present and wired.
 [PASS] Law 15 - Branch 'opencode/<topic>/<machine>' is feature (compliant).
 [PASS] Law 16 - Enforcement system present: guards, tests, and config.
+[PASS] Law 18 - Test-governance infrastructure present: governed runner, theory cards, reference.
 
-6 checks: 6 pass, 0 warn, 0 fail
+7 checks: 7 pass, 0 warn, 0 fail
 ```
 
 `--json` emits a machine-readable report; `--law N` runs a single law; `--quiet`

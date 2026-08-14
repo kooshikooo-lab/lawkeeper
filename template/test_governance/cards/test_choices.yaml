@@ -1,0 +1,22 @@
+test_id: test_choices
+theory: >
+  The checkbox-choice protocol (`lawkeeper choose`): surface defaults as simple
+  checkboxes and wait for explicit approval (Law 10 / Law 12 — no ambiguity
+  answered with multi-part questions, no acting before sign-off).
+oracle:
+  type: invariant
+  independence: independent
+  expression: "choices render as checkbox prompts; selection round-trips; default is surfaced"
+acceptance: "checkbox protocol renders, parses, and returns the user's selection correctly"
+blind_spot: >
+  Tests the choice MECHANISM, not whether the agent actually waits for approval in
+  real workflows. A protocol that renders checkboxes but is skipped by the agent
+  at runtime is not caught here — that is a Law 10 behaviour, not a code path.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: checkbox-choice protocol regressed
+  crash: import/subprocess failure
+  pass: choice protocol behaves correctly
+debug:
+  - check guardrail.choices rendering + CLI parsing round-trip
