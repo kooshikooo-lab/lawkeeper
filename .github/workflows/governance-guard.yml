@@ -38,22 +38,29 @@ jobs:
       - name: Meta-tests for the guard scripts (Law 16.5)
         run: |
           python -m pytest tests/test_guard_scripts.py -q
-    powershell-lint:
-      runs-on: windows-latest
-      steps:
-        - uses: actions/checkout@v4
-        - name: PowerShell 5.1 compatibility lint
-          shell: powershell
-          run: |
-            python scripts/check_powershell_51_compat.py
 
-  dependency-locks:
-    runs-on: ubuntu-latest
+  # Found while fixing the dependency-locks job below: this was indented as
+  # a child of `guard:` (4 spaces, matching guard's own `runs-on`/`steps`
+  # keys) instead of a sibling job under `jobs:` (2 spaces, matching
+  # `guard:` itself). GitHub Actions never recognized it as a job at all -
+  # the PowerShell 5.1 compatibility lint has never actually run in CI.
+  powershell-lint:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Check requirements lock files are up to date
+      - name: PowerShell 5.1 compatibility lint
+        shell: powershell
         run: |
-          python scripts/compile_requirements.py --check
+          python scripts/check_powershell_51_compat.py
+
+  # NOTE: there used to be a `dependency-locks` job here calling
+  # `scripts/compile_requirements.py --check`. That script never existed in
+  # this repo - inherited from the Windwright template this project was
+  # scaffolded from (same root cause as the hardcoded backend/
+  # woodwind_designer scan paths elsewhere). Removed rather than stubbed
+  # out: Lawkeeper declares `dependencies = []` in pyproject.toml (only
+  # loose `>=` pins in [project.optional-dependencies].dev) and has no
+  # requirements.txt/lock file anywhere to check - there was nothing for
+  # this job to actually verify. If real dependency pinning is ever added,
+  # write compile_requirements.py against real lock files at that point,
+  # not before.
