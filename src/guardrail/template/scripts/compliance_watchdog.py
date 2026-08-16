@@ -24,6 +24,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+try:
+    from scan_config import get_oversized_allowlist, get_scan_paths  # normal `python scripts/x.py` run
+except ImportError:
+    # Same fallback pattern as guard_branch.py's load_config(): a plain
+    # sibling import only works when Python itself put scripts/ on
+    # sys.path (running the file directly). tests/test_guard_scripts.py
+    # loads this module via importlib.util.spec_from_file_location
+    # instead, which does not - insert the directory explicitly.
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from scan_config import get_oversized_allowlist, get_scan_paths
 DOCS_DIR = REPO_ROOT / "docs"
 SCRIPTS_DIR = REPO_ROOT / "scripts"
 COMPLIANCE_LOG = SCRIPTS_DIR / "compliance_log.jsonl"
@@ -41,11 +52,6 @@ def load_guardrail_config():
         pass
     return {}
 
-BACKEND_DIRS = [
-    REPO_ROOT / "backend",
-    REPO_ROOT / "woodwind_designer",
-]
-
 EXCLUDED_DIRS = [
     "__pycache__",
     ".git",
@@ -56,23 +62,6 @@ EXCLUDED_DIRS = [
 EXCLUDED_FILES = [
     "__init__.py",
 ]
-
-# Known oversized modules (architectural debt, tracked for future refactoring).
-# These don't cause FAIL but are reported for awareness.
-OVERSIZED_ALLOWLIST = {
-    "backend\\ai_advisor.py",
-    "backend\\benchmark_all.py",
-    "backend\\cadquery_export.py",
-    "backend\\inverse_design.py",
-    "backend\\modular_components.py",
-    "backend\\pareto_optimizer.py",
-    "backend\\tmm_acoustics.py",
-    "backend\\trumpet_acoustics.py",
-    "backend\\trumpet_openwind.py",
-    "backend\\stl_verifier.py",
-    "woodwind_designer\\engine\\design_server.py",
-    "woodwind_designer\\engine\\instrument_library.py",
-}
 
 # ── Boot sequence knowledge ─────────────────────────────────────────
 
@@ -148,7 +137,7 @@ TRIGGER_TYPES = ["timer", "before-code", "after-tests", "drift-feel"]
 
 def find_python_files():
     files = []
-    for d in BACKEND_DIRS:
+    for d in get_scan_paths(REPO_ROOT):
         if not d.exists():
             continue
         for root, dirs, names in os.walk(d):
@@ -290,6 +279,7 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
     }
 
     files = find_python_files()
+    oversized_allowlist = get_oversized_allowlist(REPO_ROOT)
 
     bare_excepts_total = 0
     mutable_total = 0
@@ -337,7 +327,7 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
         try:
             rel_str = str(rel)
             size = check_module_size(f)
-            if size and rel_str not in OVERSIZED_ALLOWLIST:
+            if size and rel_str not in oversized_allowlist:
                 oversized_modules.append({"file": rel_str, "lines": size})
                 results["violations"].append({
                     "file": rel_str,
