@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "guardrail"
+name = "lawkeeper"
 version = "0.1.0"
 description = "Constitution-as-code governance for agentic + vibe-coded projects."
 readme = "README.md"
@@ -11,12 +11,19 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = []
 
+[project.optional-dependencies]
+dev = ["pytest>=7", "build>=1.0"]
+
 [project.scripts]
 lawkeeper = "guardrail.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# NOTE: this path is relative to the PACKAGE directory (src/guardrail/),
+# not the repo root. The template/ folder must live at src/guardrail/template
+# for this to actually ship inside a built wheel. Verified with:
+#   python -m build --wheel && python -m zipfile -l dist/*.whl | grep template
 [tool.setuptools.package-data]
 guardrail = ["template/**/*"]
 
@@ -24,6 +31,10 @@ guardrail = ["template/**/*"]
 python_files = [
     "test_guard_scripts.py",
     "test_template.py",
+    "test_init_smoke.py",
+]
+markers = [
+    "slow: end-to-end tests that build a wheel and create a venv (test_init_smoke.py)",
 ]
 
 [tool.ruff]

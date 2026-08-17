@@ -29,9 +29,18 @@ def main() -> int:
         return 1
     hooks_dir = root / "scripts" / "git-hooks"
     for required in ("pre-commit", "commit-msg", "pre-push"):
-        if not (hooks_dir / required).is_file():
-            print(f"Hook source missing: {hooks_dir / required}", file=sys.stderr)
+        hook_path = hooks_dir / required
+        if not hook_path.is_file():
+            print(f"Hook source missing: {hook_path}", file=sys.stderr)
             return 1
+        # Belt-and-suspenders: git silently no-ops a non-executable hook
+        # (just a soft warning, the commit still goes through). Force the
+        # bit here too, not just at scaffold time, so a fresh `git clone`
+        # or a manual copy that dropped +x can't leave enforcement
+        # silently disabled.
+        mode = hook_path.stat().st_mode
+        if not (mode & 0o111):
+            hook_path.chmod(mode | 0o111)
     rel = "scripts/git-hooks"
     proc = subprocess.run(["git", "config", "core.hooksPath", rel])
     if proc.returncode != 0:
