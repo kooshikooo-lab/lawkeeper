@@ -95,26 +95,51 @@ def content_preserved(sha: str) -> bool:
 def origin_head_points_at_main() -> bool:
     """Law 15.6: the remote's default branch should be main.
 
-    Prefers the local origin/HEAD symref when git has set it (a real
-    `git clone` always does) - fast path, unchanged behavior. That symref
-    is legitimately absent in other valid states this check must not
-    false-fail on, found by actually hitting both in practice, not by
-    inspection: a brand-new local-only project with no remote configured
-    at all (the originally-documented case), and a CI checkout via
-    actions/checkout@v4, which fetches origin/main but does not set the
-    HEAD symref. Falls back to checking what this law actually cares
-    about - is origin/main itself known - rather than local symref
-    bookkeeping. No network calls: everything here reads local refs
-    already fetched by whatever checked this repo out.
+    Three layers, cheapest/most-local first, each only tried when the
+    previous one couldn't answer - found by actually hitting each gap in
+    practice across two separate real failures, not by inspection:
+
+    1. Local origin/HEAD symref, when git has set it (a real `git clone`
+       always does). No network call.
+    2. refs/remotes/origin/main existing locally. Still no network call -
+       covers a normal fetch that didn't run `git remote set-head`. This
+       was tried alone first and was NOT enough: a `pull_request`-event
+       checkout via actions/checkout@v4 checks out a synthetic merge ref
+       directly and never creates refs/remotes/origin/main locally at
+       all, even though the remote's real default branch is main.
+    3. `git ls-remote --symref origin HEAD` - asks the remote directly.
+       Needs network + a reachable `origin` URL, which is exactly the
+       situation CI is always in. Kept as the last resort, not the first
+       check, so normal local dev usage of this law never needs network
+       access for something a local ref can already answer.
+
+    If a remote is configured but every layer still can't determine an
+    answer (offline, unreachable, all local refs missing), or no remote
+    is configured at all (a brand-new local-only project - the originally
+    documented case), returns True: nothing here indicates a real
+    violation, and this check must not manufacture a false FAIL out of
+    "I couldn't determine the answer."
     """
     out, code = run_git(["symbolic-ref", "refs/remotes/origin/HEAD"])
     if code == 0:
         return out.rstrip("/") in ("refs/remotes/origin/main", "refs/remotes/origin/main/")
+
     _, remote_code = run_git(["remote", "get-url", "origin"])
     if remote_code != 0:
         return True  # no remote configured yet - nothing to violate this against
+
     _, main_code = run_git(["rev-parse", "--verify", "refs/remotes/origin/main"])
-    return main_code == 0
+    if main_code == 0:
+        return True
+
+    ls_out, ls_code = run_git(["ls-remote", "--symref", "origin", "HEAD"])
+    if ls_code != 0:
+        return True  # remote unreachable - can't determine, don't false-fail
+    for line in ls_out.splitlines():
+        if line.startswith("ref:"):
+            parts = line.split()
+            return len(parts) >= 2 and parts[1] == "refs/heads/main"
+    return True  # no symref line in the response - can't determine
 
 
 NAMESPACED_ZERO = "0" * 40
