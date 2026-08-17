@@ -26,3 +26,6 @@ dist/
 test_output/
 designs/
 chat-logs/
+.venv/
+.selfcheck/
+build/

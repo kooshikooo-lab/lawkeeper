@@ -169,8 +169,19 @@ def check_delete(name: str) -> list[str]:
             f"DELETE {name}: deletion of a canonical branch requires explicit human "
             f"approval (set GUARD_BRANCH_ALLOW_DELETE={name}). Law 15.8."
         ]
-    sha, _ = run_git(["rev-parse", name])
-    if sha and not content_preserved(sha):
+    sha, code = run_git(["rev-parse", name])
+    if code != 0 or not sha:
+        # git couldn't resolve the branch at all (bad ref, not a git repo,
+        # transient failure, whatever). The old code treated "I don't know"
+        # as "no violation" and let the deletion through unchecked. A guard
+        # that can't verify safety should refuse, not shrug.
+        return [
+            f"DELETE {name}: could not resolve this branch with `git rev-parse` "
+            f"(exit {code}) — refusing to approve deletion of something that "
+            f"can't be verified. If you're sure this is safe, delete it manually "
+            f"outside lawkeeper."
+        ]
+    if not content_preserved(sha):
         return [f"DELETE {name}: content not provably present on a canonical branch or main. Law 15.5."]
     return []
 
