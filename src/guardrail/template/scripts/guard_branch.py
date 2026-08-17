@@ -93,8 +93,28 @@ def content_preserved(sha: str) -> bool:
 
 
 def origin_head_points_at_main() -> bool:
-    out, _ = run_git(["symbolic-ref", "refs/remotes/origin/HEAD"])
-    return out.rstrip("/") in ("refs/remotes/origin/main", "refs/remotes/origin/main/")
+    """Law 15.6: the remote's default branch should be main.
+
+    Prefers the local origin/HEAD symref when git has set it (a real
+    `git clone` always does) - fast path, unchanged behavior. That symref
+    is legitimately absent in other valid states this check must not
+    false-fail on, found by actually hitting both in practice, not by
+    inspection: a brand-new local-only project with no remote configured
+    at all (the originally-documented case), and a CI checkout via
+    actions/checkout@v4, which fetches origin/main but does not set the
+    HEAD symref. Falls back to checking what this law actually cares
+    about - is origin/main itself known - rather than local symref
+    bookkeeping. No network calls: everything here reads local refs
+    already fetched by whatever checked this repo out.
+    """
+    out, code = run_git(["symbolic-ref", "refs/remotes/origin/HEAD"])
+    if code == 0:
+        return out.rstrip("/") in ("refs/remotes/origin/main", "refs/remotes/origin/main/")
+    _, remote_code = run_git(["remote", "get-url", "origin"])
+    if remote_code != 0:
+        return True  # no remote configured yet - nothing to violate this against
+    _, main_code = run_git(["rev-parse", "--verify", "refs/remotes/origin/main"])
+    return main_code == 0
 
 
 NAMESPACED_ZERO = "0" * 40
