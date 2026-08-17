@@ -85,9 +85,33 @@ STDLIBISH = {
 }
 
 
+def _src_package_names() -> set[str]:
+    """This project's own importable package name(s) - any directory under
+    src/ containing __init__.py.
+
+    Fixes the documented "toolcheck.py false-flags the guardrail import"
+    bug: pyproject.toml's [project].name is "lawkeeper" (the distribution
+    name), but the actual package is src/guardrail/ - a deliberate rename
+    (see pyproject.toml's package-data comment). _declared() only reads
+    real third-party dependencies, so it never learns "guardrail" is this
+    project's own code; scripts/guard_branch.py's legitimate self-import
+    (`from guardrail.config import Config`, its packaged-install fallback
+    path) then looked identical to an undeclared third-party dependency.
+    A self-import is never phantom - you don't declare your own package as
+    a dependency of itself.
+    """
+    names = set()
+    src_dir = ROOT / "src"
+    if src_dir.is_dir():
+        for entry in src_dir.iterdir():
+            if entry.is_dir() and (entry / "__init__.py").exists():
+                names.add(entry.name)
+    return names
+
+
 def _is_local(root: str) -> bool:
     """True if the import root is a local package subtree, not a pip package."""
-    if root in LOCAL_ROOTS:
+    if root in LOCAL_ROOTS or root in _src_package_names():
         return True
     # backend.foo / woodwind_designer.bar appear as their second segment in
     # ImportFrom.module when scanning relative-import-adjacent code; treat any
