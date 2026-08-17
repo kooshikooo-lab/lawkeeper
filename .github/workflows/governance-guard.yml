@@ -20,6 +20,18 @@ jobs:
           pip install -e .
           python scripts/install_hooks.py
       - name: Block unauthorized governance edits and unmarked provisional work
+        # push-only, not pull_request: on a pull_request event this repo
+        # checks out GitHub's synthetic test-merge commit (an ephemeral
+        # "Merge <sha> into <sha>" commit that never carries a Tests:/
+        # Verification: line and often isn't even the commit that ends up
+        # on main - e.g. a rebase merge lands the PR's real commits
+        # as-is, each already validated by this exact script when they
+        # were made). Checking that synthetic commit made every PR
+        # unmergeable regardless of how compliant its real commits were -
+        # found by actually trying to merge a real PR, not by inspection.
+        # On push, HEAD is the actual commit landing on main, which is
+        # what this check is meant to validate.
+        if: github.event_name == 'push'
         run: |
           python scripts/validate_commit_msg.py
       - name: Check local dependencies are present for imported declared packages
