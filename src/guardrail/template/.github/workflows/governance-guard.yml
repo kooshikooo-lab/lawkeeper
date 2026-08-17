@@ -16,8 +16,16 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install package + hooks
+        # `pip install -e .` alone installs ZERO dependencies -
+        # pyproject.toml's [project].dependencies is deliberately empty;
+        # pytest/build live under optional-dependencies.dev. The later
+        # "Meta-tests" step runs `python -m pytest`, which needs [dev]
+        # installed to have ever had a chance of working. Found by
+        # actually checking this repo's CI run history (gh run list):
+        # every single governance-guard run since the very first commit
+        # has failed - this was never once caught before now.
         run: |
-          pip install -e .
+          pip install -e ".[dev]"
           python scripts/install_hooks.py
       - name: Block unauthorized governance edits and unmarked provisional work
         # push-only, not pull_request: on a pull_request event this repo
