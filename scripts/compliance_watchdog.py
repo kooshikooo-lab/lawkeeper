@@ -287,12 +287,20 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
     oversized_modules = []
 
     for f in files:
-        rel = f.relative_to(REPO_ROOT)
+        # .as_posix(), not str() - str(Path) uses backslashes on Windows,
+        # forward slashes on Linux/mac. compliance_baseline.json is a
+        # committed, cross-platform-shared file: a baseline recorded on
+        # Windows would never match the same violations found by Linux CI
+        # (or vice versa), since the "file" field is compared as a plain
+        # string. Found by actually running the real CI job, not by
+        # inspection - passed locally on Windows because the baseline was
+        # also generated on Windows, so the mismatch was invisible there.
+        rel = f.relative_to(REPO_ROOT).as_posix()
         try:
             bare = check_bare_excepts(f)
             if bare:
                 results["violations"].append({
-                    "file": str(rel),
+                    "file": rel,
                     "check": "bare_except",
                     "lines": bare,
                 })
@@ -304,7 +312,7 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
             mutables = check_module_mutables(f)
             if mutables:
                 results["violations"].append({
-                    "file": str(rel),
+                    "file": rel,
                     "check": "module_mutable",
                     "items": mutables,
                 })
@@ -316,7 +324,7 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
             ips = check_hardcoded_ips(f)
             if ips:
                 results["violations"].append({
-                    "file": str(rel),
+                    "file": rel,
                     "check": "hardcoded_ip",
                     "ips": ips,
                 })
@@ -325,7 +333,7 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
             pass
 
         try:
-            rel_str = str(rel)
+            rel_str = rel
             size = check_module_size(f)
             if size and rel_str not in oversized_allowlist:
                 oversized_modules.append({"file": rel_str, "lines": size})
