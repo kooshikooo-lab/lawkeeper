@@ -1,7 +1,7 @@
 {
   "violations": [
     [
-      "scripts\\compliance_watchdog.py",
+      "scripts/compliance_watchdog.py",
       "module_mutable",
       [
         "EXCLUDED_DIRS L55",
@@ -11,21 +11,21 @@
       ]
     ],
     [
-      "scripts\\compliance_watchdog.py",
+      "scripts/compliance_watchdog.py",
       "module_size",
       [
-        522
+        530
       ]
     ],
     [
-      "scripts\\guard_governance.py",
+      "scripts/guard_governance.py",
       "module_mutable",
       [
         "GOVERNANCE_FILES L19"
       ]
     ],
     [
-      "scripts\\system_audit.py",
+      "scripts/system_audit.py",
       "module_mutable",
       [
         "HOOK_WIRING L40",
@@ -33,7 +33,7 @@
       ]
     ],
     [
-      "scripts\\toolcheck.py",
+      "scripts/toolcheck.py",
       "module_mutable",
       [
         "PACKAGE_ALIASES L29",
@@ -44,7 +44,7 @@
       ]
     ],
     [
-      "scripts\\validate_commit_msg.py",
+      "scripts/validate_commit_msg.py",
       "module_mutable",
       [
         "GOVERNANCE_FILES L16",
@@ -52,21 +52,21 @@
       ]
     ],
     [
-      "scripts\\validate_imports.py",
+      "scripts/validate_imports.py",
       "module_mutable",
       [
         "DELETED_MODULES L22"
       ]
     ],
     [
-      "scripts\\validate_pre_commit.py",
+      "scripts/validate_pre_commit.py",
       "hardcoded_ip",
       [
         "100.64.0.0"
       ]
     ],
     [
-      "scripts\\validate_pre_commit.py",
+      "scripts/validate_pre_commit.py",
       "module_mutable",
       [
         "PLACEMENT_RULES L21",
@@ -77,7 +77,7 @@
       ]
     ],
     [
-      "src\\guardrail\\template\\scripts\\compliance_watchdog.py",
+      "src/guardrail/template/scripts/compliance_watchdog.py",
       "module_mutable",
       [
         "EXCLUDED_DIRS L55",
@@ -87,21 +87,21 @@
       ]
     ],
     [
-      "src\\guardrail\\template\\scripts\\compliance_watchdog.py",
+      "src/guardrail/template/scripts/compliance_watchdog.py",
       "module_size",
       [
-        522
+        530
       ]
     ],
     [
-      "src\\guardrail\\template\\scripts\\guard_governance.py",
+      "src/guardrail/template/scripts/guard_governance.py",
       "module_mutable",
       [
         "GOVERNANCE_FILES L19"
       ]
     ],
     [
-      "src\\guardrail\\template\\scripts\\system_audit.py",
+      "src/guardrail/template/scripts/system_audit.py",
       "module_mutable",
       [
         "HOOK_WIRING L40",
@@ -109,7 +109,7 @@
       ]
     ],
     [
-      "src\\guardrail\\template\\scripts\\toolcheck.py",
+      "src/guardrail/template/scripts/toolcheck.py",
       "module_mutable",
       [
         "PACKAGE_ALIASES L29",
@@ -120,7 +120,7 @@
       ]
     ],
     [
-      "src\\guardrail\\template\\scripts\\validate_commit_msg.py",
+      "src/guardrail/template/scripts/validate_commit_msg.py",
       "module_mutable",
       [
         "GOVERNANCE_FILES L16",
@@ -128,21 +128,21 @@
       ]
     ],
     [
-      "src\\guardrail\\template\\scripts\\validate_imports.py",
+      "src/guardrail/template/scripts/validate_imports.py",
       "module_mutable",
       [
         "DELETED_MODULES L22"
       ]
     ],
     [
-      "src\\guardrail\\template\\scripts\\validate_pre_commit.py",
+      "src/guardrail/template/scripts/validate_pre_commit.py",
       "hardcoded_ip",
       [
         "100.64.0.0"
       ]
     ],
     [
-      "src\\guardrail\\template\\scripts\\validate_pre_commit.py",
+      "src/guardrail/template/scripts/validate_pre_commit.py",
       "module_mutable",
       [
         "PLACEMENT_RULES L21",
@@ -153,14 +153,14 @@
       ]
     ],
     [
-      "tests\\test_guard_scripts.py",
+      "tests/test_guard_scripts.py",
       "hardcoded_ip",
       [
         "100.69.113.41"
       ]
     ],
     [
-      "tests\\test_template.py",
+      "tests/test_template.py",
       "module_mutable",
       [
         "ROOT_DIRS L20",
