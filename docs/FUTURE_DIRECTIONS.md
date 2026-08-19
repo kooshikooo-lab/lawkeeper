@@ -9,6 +9,40 @@ note (Claude's persistent memory) — both point back here.
 
 ---
 
+## Point Falcun's evolutionary methodology at the failure-pattern corpus
+
+**Deferred:** 2026-08-19, explicitly scoped out of the same-day session
+that built `scripts/mine_failure_patterns.py`, per the plan's own Step 3.
+
+**Context:** the miner does real, valuable work today (parsed 19 real
+failure records across Windwright and lawkeeper into themes by hand,
+already led to Law 20 being added — see `docs/AI_CONSTITUTION.md`), but
+the categorization is manual (`THEME_MAP`, hand-assigned) and the
+governance response is a one-off human/Claude judgment call, not a
+systematic loop. [[falcun-broader-vision]] establishes Falcun's actual
+purpose as a reusable evolutionary methodology (population of rules,
+fitness-scored against real outcomes, mutation/selection across
+generations) — pointing that at this corpus is the natural next-level
+version: candidate governance rules/checkers as the population, fitness =
+how many real historical failure records a candidate would have caught,
+evolved instead of hand-picked.
+
+**Why not attempted today:** real scoping call, not an oversight —
+designing a fitness function against ~19-21 records, wiring Falcun's
+evolve loop to a different domain than code-bug-hunting, and validating
+the result all needs more than the remaining time in a one-hour session
+budget. The miner and its manual categorization are a complete, useful
+thing on their own; this is a genuine upgrade, not a missing piece of
+today's deliverable.
+
+**If this gets picked back up:** the corpus format `mine_failure_patterns.py`
+already produces (`FailureRecord`: repo, id, date, law_or_theme, problem,
+root_cause, fix, severity, theme) is the natural input — no need to
+re-parse `AI_FAILURE_PATTERNS.md` again, just feed the existing structured
+output into whatever Falcun population/fitness setup gets built.
+
+---
+
 ## Adopt Hermes's memory-provider pattern (not its verification model)
 
 **Deferred:** 2026-08-19, by the user. Explicitly "a direction worth
