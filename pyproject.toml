@@ -33,6 +33,7 @@ python_files = [
     "test_choices.py",
     "test_adversarial_review_checker.py",
     "test_code_compliance_checker.py",
+    "test_check_declared_dependencies.py",
 ]
 
 [tool.ruff]

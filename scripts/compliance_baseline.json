@@ -8,6 +8,13 @@
       ]
     ],
     [
+      "scripts\\check_declared_dependencies.py",
+      "module_mutable",
+      [
+        "IMPORT_NAME_OVERRIDES L31"
+      ]
+    ],
+    [
       "scripts\\compliance_watchdog.py",
       "module_mutable",
       [

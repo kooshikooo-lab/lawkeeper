@@ -1,0 +1,35 @@
+test_id: test_check_declared_dependencies
+theory: >
+  Law 13 (missing dependencies are bugs) had no mechanical check at all --
+  a declared-but-uninstalled dependency would only surface as a confusing
+  ImportError somewhere downstream, not a clear, upfront diagnosis. Tests
+  that check_declared_dependencies.py actually detects a genuinely-missing
+  package (not just a fixture the script itself would trivially pass), and
+  that it correctly resolves the common PyPI-name-vs-import-name mismatch
+  (pyyaml declares as "pyyaml" but imports as "yaml") rather than false-
+  flagging every such package as missing.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    a real nonexistent package name must be reported missing; a real
+    installed package with a known name/import mismatch (pyyaml/yaml)
+    must NOT be reported missing; this repo's own real pyproject.toml
+    dependencies must genuinely import (checked against the real file, not
+    a fixture).
+acceptance: "detects genuinely missing packages, correctly resolves known name/import mismatches, and exits nonzero when a required dependency is missing end-to-end."
+blind_spot: >
+  IMPORT_NAME_OVERRIDES is a manually maintained list of known mismatches,
+  not exhaustive -- a newly-added dependency with an unlisted name/import
+  mismatch would be false-flagged as missing until added to the map. Not
+  wired into any git hook, so it only catches problems when someone
+  remembers to run it (a real, acknowledged limitation, not hidden).
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in missing-package detection or name resolution
+  crash: import failure or a change to pyproject.toml's structure the parser can't handle
+  pass: dependency-import checking behaves correctly on real and synthetic cases
+debug:
+  - a name/import mismatch false positive means IMPORT_NAME_OVERRIDES needs a new entry
+  - test_real_dependencies_in_this_repo_all_import failing means an actual environment problem, not a test bug -- fix the environment, not the test
