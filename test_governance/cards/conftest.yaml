@@ -1,0 +1,31 @@
+test_id: conftest
+theory: >
+  conftest.py is not a test file -- it has no test functions of its own.
+  It provides load_script() and REPO_ROOT, a shared helper for importing
+  scripts/ modules by file path (they are not a package) so guard-script
+  and checker-script test files don't each duplicate the loader (Law 3).
+  Extracted 2026-08-19 from a copy that used to live only inside
+  test_guard_scripts.py, when a second and third test file
+  (test_adversarial_review_checker.py, test_code_compliance_checker.py)
+  needed the same loading logic.
+oracle:
+  type: none
+  independence: independent
+  expression: "not applicable -- no test functions exist in this file"
+acceptance: "every test file that imports load_script/REPO_ROOT from this module collects and runs without an ImportError; this is verified indirectly by those files' own test runs, not by a test in this file."
+blind_spot: >
+  This file has no direct tests. Its correctness is entirely covered
+  indirectly -- if load_script() were broken, every test file that uses it
+  (test_guard_scripts.py, test_adversarial_review_checker.py,
+  test_code_compliance_checker.py) would fail to collect at all, which is
+  a loud, immediate signal, not a silent gap. A card exists here only to
+  satisfy the structural theory-card requirement (Law 18) for a file under
+  tests/, not because it has its own oracle to state.
+trust_level: T0
+adversarial_review: none
+failure_meaning:
+  failed: not applicable -- no test functions
+  crash: any test file importing from conftest fails to collect -- the real signal to act on
+  pass: not applicable -- no test functions
+debug:
+  - if test collection fails across multiple test files at once with an ImportError pointing at conftest, the bug is here

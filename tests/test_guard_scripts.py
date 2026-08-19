@@ -5,27 +5,13 @@ guards (the very code that prevents failure) is caught. They must not depend on
 the real git state or network, only on the scripts' importable functions.
 """
 
-import importlib.util
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(subprocess.run(
-    ["git", "rev-parse", "--show-toplevel"],
-    capture_output=True, text=True, encoding="utf-8", errors="replace"
-).stdout.strip() or Path(__file__).resolve().parents[1])
-
-
-def load_script(name: str):
-    """Import a scripts/ module by path (they are not a package)."""
-    path = REPO_ROOT / "scripts" / name
-    spec = importlib.util.spec_from_file_location(f"guardtest_{name[:-3]}", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
+from conftest import REPO_ROOT, load_script
 
 guard_branch = load_script("guard_branch.py")
 merge_gate = load_script("merge_gate.py")

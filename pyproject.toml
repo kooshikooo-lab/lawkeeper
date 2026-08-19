@@ -31,6 +31,8 @@ python_files = [
     "test_e2e.py",
     "test_reasoning.py",
     "test_choices.py",
+    "test_adversarial_review_checker.py",
+    "test_code_compliance_checker.py",
 ]
 
 [tool.ruff]
