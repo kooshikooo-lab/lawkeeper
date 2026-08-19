@@ -19,7 +19,11 @@ GUARD_SCRIPTS = [
     "scripts/validate_pre_commit.py",
     "scripts/validate_commit_msg.py",
 ]
-REQUIRED_TESTS = ["tests/test_guard_scripts.py"]
+REQUIRED_TESTS = [
+    "tests/test_guard_scripts.py",
+    "tests/test_adversarial_review_checker.py",
+    "tests/test_code_compliance_checker.py",
+]
 CONFIG_FILE = ".guardrail.json"
 
 REQUIRED = GUARD_SCRIPTS + REQUIRED_TESTS + [CONFIG_FILE]
