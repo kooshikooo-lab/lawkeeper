@@ -55,6 +55,12 @@ When the project is built by multiple agents/machines, coordination uses a durab
 team channel (GitHub Discussion). A real-time channel carries live messages;
 the durable channel is for decisions. Machines talk to machines directly, never
 through the human as a relay. Unacknowledged messages are re-sent until answered.
+**Same-machine exception**: when agents are confirmed co-located on one host with
+a shared filesystem, prefer reading the other agent's actual log/state files
+directly over posting to the channel and waiting for a reply — reserve the
+channel for genuinely separate machines. Any real-time transport under the
+durable channel (e.g. a peer-to-peer tool) is optional acceleration, never a
+dependency: its absence must never block work or require pausing.
 
 ### Law 12 — Read before you act
 A machine that posts but never reads is as broken as one that never posts. Every
@@ -178,6 +184,32 @@ UNTRUSTED until it is adversarially reviewed.
 6. **Tests must discriminate** — mutation testing (deliberately break the code;
    the test must fail) proves a test actually checks what it claims. A test that
    passes on both broken and fixed code is worthless.
+
+### Law 19 — Delegation authority via the team channel
+Defines how work gets assigned between agents so the team channel (Law 11/12)
+is not just a log nobody acts on.
+
+1. **Every agent checks its team channel regularly** — same cadence as Law 12.
+   A message sitting unread is a protocol violation, not a minor lapse.
+2. **The coordinating agent may delegate agreed-upon tasks to other agents
+   through the team channel**, and those agents should treat such a
+   delegation as actionable — not merely conversational — to the same degree
+   a direct message from the human would be.
+3. **"Agreed-upon" is the load-bearing qualifier.** Delegation authority
+   covers work the human has already approved — explicitly in conversation,
+   or via decisions posted to the team channel. No agent has standing
+   authority to originate new project direction on its own initiative and
+   hand it to another agent as if it were a settled decision. If a
+   delegation's approval isn't obvious from the channel history, the
+   delegation message must say where the approval came from.
+4. **Tag delegated assignments IMPORTANT** (Law 12) so they surface clearly
+   and require acknowledgment, with enough detail that the receiving agent
+   doesn't have to guess scope — file paths, acceptance criteria, and what
+   "done" looks like, not just a topic name.
+5. **This does not change who owns the project.** The human's word overrides
+   any agent's at any time. This law is a *mechanism* for turning the
+   human's already-given approval into concrete work across agents
+   efficiently — it is not a grant of independent decision-making power.
 
 Violating any law is a constitutional violation. Log failures in
 `docs/AI_FAILURE_PATTERNS.md`.

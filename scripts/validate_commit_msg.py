@@ -76,9 +76,22 @@ def python_changed(staged=True):
                for line in result.stdout.splitlines() if line.strip())
 
 
+_PROVISIONAL_PATTERN = re.compile(
+    r"\b(?:" + "|".join(re.escape(kw) for kw in PROVISIONAL_KEYWORDS) + r")\b",
+    re.IGNORECASE,
+)
+
+
 def looks_provisional(msg):
-    low = msg.lower()
-    return any(kw in low for kw in PROVISIONAL_KEYWORDS)
+    """True if msg contains a whole provisional keyword (word-boundary match).
+
+    A plain substring check (`kw in low`) previously matched "temp" inside
+    ordinary words like "template" -- e.g. a commit touching a `template/`
+    directory was falsely flagged as provisional work. `\\b` word boundaries
+    fix this while still matching keyword variants (temp/temporary) and
+    multi-word phrases (work in progress) as whole units.
+    """
+    return bool(_PROVISIONAL_PATTERN.search(msg))
 
 
 def main():

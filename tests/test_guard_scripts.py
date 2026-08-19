@@ -159,6 +159,19 @@ class TestCommitMsgGuard:
         msg2 = "spike: try something new\n\nAUDIT: exploratory"
         assert "AUDIT:" in msg2
 
+    def test_provisional_keyword_does_not_match_inside_other_words(self):
+        """Regression: a plain substring check flagged 'temp' inside 'template'
+        as provisional work (2026-08-19, real commit blocked on a legitimate
+        change touching template/docs/AI_CONSTITUTION.md). Word-boundary
+        matching must not fire on ordinary words that merely contain a
+        keyword as a substring."""
+        assert not validate_commit_msg.looks_provisional(
+            "sync template/docs/AI_CONSTITUTION.md with docs/AI_CONSTITUTION.md"
+        )
+        # sanity: the real keyword, as a whole word, must still be caught
+        assert validate_commit_msg.looks_provisional("temp fix, revisit later")
+        assert validate_commit_msg.looks_provisional("temporary workaround")
+
     def test_verification_pattern_required(self):
         ok = "fix bug\n\nTests: pytest tests/test_x.py -q (1 passed)"
         assert validate_commit_msg.VERIFICATION_PATTERN.search(ok) is not None
