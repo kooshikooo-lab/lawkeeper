@@ -19,5 +19,20 @@ Log every compliance failure and guard bypass. Review before each session (Law 1
 - [2026-08-19] LAW 9 — `compliance_watchdog.py`'s `BACKEND_DIRS` was hardcoded to `backend/` and `woodwind_designer/` — Windwright's layout, not lawkeeper's own (lawkeeper has neither directory). Task #10 ("parameterize hardcoded backend/woodwind_designer scan paths") was already marked completed, but this file was apparently missed — the scanner silently found zero files and reported "0 violations" on every run, deterministically checking nothing rather than the non-determinism task #79 was originally filed against; a more fundamental version of the same "the scan can't be trusted" problem. Root cause: `load_guardrail_config()` existed and was already wired into a different feature (`load_architecture_docs`) in the same file, but `BACKEND_DIRS` was never migrated to the same config-driven pattern — a partially-finished generalization, not a from-scratch bug. Fix: added `load_scan_dirs()` reading `.guardrail.json`'s `scan_dirs` key (falls back to `src/`); declared `scan_dirs: ["src", "scripts"]` for lawkeeper's own config; re-ran twice and confirmed byte-identical output (30 files, 14 real violations) before trusting it; established those 14 as the baseline so they read as known debt, not new failures, going forward. `SUBSYSTEM_TABLE` has the same hardcoded-Windwright-filenames problem but only feeds a human-readable checklist printout, not the actual scan — left as a separate, lower-priority follow-up, not silently bundled into this fix. Severity: policy.
 
 ## Debt (non-blocking)
+- [2026-08-19] Second occurrence of a corrupted local Python install on this
+  machine (first was task #1: pip/stdlib/psutil missing files). This time,
+  `falcun`'s real test suite (`pytest tests/`) showed 8/78 failures, all
+  `LookupError: Backend 'asyncio' is not available` from `anyio` — not a
+  falcun code bug. Root cause confirmed directly (not assumed): the
+  installed `anyio` package's `_backends/` directory was missing
+  `_asyncio.py` entirely (`os.listdir` showed only `_trio.py` and
+  `__init__.py`). Fixed with `pip install --force-reinstall --no-deps
+  anyio==4.14.2`; re-ran the 8 previously-failing tests and confirmed all
+  12 tests in those two files now pass. No repo-side code changed — this
+  was a machine-level package-integrity issue, same class as task #1.
+  Worth a standing awareness that this machine's site-packages have shown
+  file-level corruption twice now; if a third occurrence turns up, treat
+  it as a pattern needing a real cause (disk issue? antivirus quarantine?
+  interrupted installs?) rather than a one-off. Severity: debt.
 - Pre-existing orphan branches outside Law 15 namespaces: clean up via #23; canonical branches are NOT deleted without human approval.
 - [2026-08-07T16:40] Initial `git merge-tree` probe falsely reported "no conflict" because the repo's default branch was `master`, so `checkout main` created a non-divergent branch. `merge_gate.py` itself is NOT broken — a corrected probe (sibling branches from a single base) returns rc 1 with `CONFLICT (content)` as expected. Debt: re-verify `merge_gate` e2e against real git conflicts on Linux CI before relying on it. Severity: debt.
