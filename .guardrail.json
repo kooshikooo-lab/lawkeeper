@@ -1,5 +1,6 @@
 {
   "project_name": "lawkeeper",
   "machines": ["desktop", "laptop"],
-  "canonical_branches": ["main"]
+  "canonical_branches": ["main"],
+  "scan_dirs": ["src", "scripts"]
 }

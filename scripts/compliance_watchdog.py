@@ -41,10 +41,27 @@ def load_guardrail_config():
         pass
     return {}
 
-BACKEND_DIRS = [
-    REPO_ROOT / "backend",
-    REPO_ROOT / "woodwind_designer",
-]
+def load_scan_dirs() -> list[Path]:
+    """Directories to scan for Python compliance checks.
+
+    Was hardcoded to `backend/` and `woodwind_designer/` -- Windwright's
+    layout, not any project this script actually runs in (lawkeeper has
+    neither directory). The scanner silently found zero files and reported
+    "0 violations" every single run -- deterministically checking nothing,
+    not the non-determinism task #79 was originally filed against, but a
+    more fundamental version of the same "the scan can't be trusted" family
+    of bug (found + fixed 2026-08-19). A project declares its own real
+    source directories in `.guardrail.json` as `scan_dirs: [...]`; falls
+    back to `src/` (this repo's own layout) if unset, so `--once` reports
+    something real by default rather than nothing.
+    """
+    cfg = load_guardrail_config()
+    declared = cfg.get("scan_dirs")
+    dirs = declared if declared else ["src"]
+    return [REPO_ROOT / d for d in dirs]
+
+
+BACKEND_DIRS = load_scan_dirs()
 
 EXCLUDED_DIRS = [
     "__pycache__",

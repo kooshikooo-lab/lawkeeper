@@ -1,3 +1,118 @@
 {
-  "violations": []
+  "violations": [
+    [
+      "scripts\\adversarial_review_checker.py",
+      "module_size",
+      [
+        563
+      ]
+    ],
+    [
+      "scripts\\compliance_watchdog.py",
+      "module_mutable",
+      [
+        "EXCLUDED_DIRS L66",
+        "EXCLUDED_FILES L73",
+        "OVERSIZED_ALLOWLIST L79",
+        "SUBSYSTEM_TABLE L148",
+        "TRIGGER_TYPES L160"
+      ]
+    ],
+    [
+      "scripts\\compliance_watchdog.py",
+      "module_size",
+      [
+        549
+      ]
+    ],
+    [
+      "scripts\\guard_governance.py",
+      "module_mutable",
+      [
+        "GOVERNANCE_FILES L19"
+      ]
+    ],
+    [
+      "scripts\\mine_failure_patterns.py",
+      "module_mutable",
+      [
+        "REPOS L55"
+      ]
+    ],
+    [
+      "scripts\\system_audit.py",
+      "module_mutable",
+      [
+        "HOOK_WIRING L40",
+        "GUARD_SCRIPTS L47"
+      ]
+    ],
+    [
+      "scripts\\toolcheck.py",
+      "module_mutable",
+      [
+        "PACKAGE_ALIASES L29",
+        "FREECAD_MODULES L52",
+        "EXTERNAL_APP_MODULES L58",
+        "LOCAL_ROOTS L61",
+        "STDLIBISH L65"
+      ]
+    ],
+    [
+      "scripts\\validate_commit_msg.py",
+      "module_mutable",
+      [
+        "GOVERNANCE_FILES L16",
+        "PROVISIONAL_KEYWORDS L27"
+      ]
+    ],
+    [
+      "scripts\\validate_imports.py",
+      "module_mutable",
+      [
+        "DELETED_MODULES L22"
+      ]
+    ],
+    [
+      "scripts\\validate_pre_commit.py",
+      "hardcoded_ip",
+      [
+        "100.64.0.0"
+      ]
+    ],
+    [
+      "scripts\\validate_pre_commit.py",
+      "module_mutable",
+      [
+        "PLACEMENT_RULES L20",
+        "REGENERABLE_SUFFIXES L40",
+        "REGENERABLE_PATHS L45",
+        "OVERSIZED_ALLOWLIST L48",
+        "PLACEMENT_ALLOWLIST L121"
+      ]
+    ],
+    [
+      "src\\guardrail\\laws\\law_14_audit_before_commit.py",
+      "module_mutable",
+      [
+        "REQUIRED_FILES L13"
+      ]
+    ],
+    [
+      "src\\guardrail\\laws\\law_16_enforcement.py",
+      "module_mutable",
+      [
+        "GUARD_SCRIPTS L13",
+        "REQUIRED_TESTS L22"
+      ]
+    ],
+    [
+      "src\\guardrail\\laws\\law_18_test_governance.py",
+      "module_mutable",
+      [
+        "REQUIRED_FILES L18",
+        "REQUIRED_DIRS L22"
+      ]
+    ]
+  ]
 }
