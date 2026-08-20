@@ -207,3 +207,34 @@ written.
 already-planned idea-organizer app's Phase 0 voice-transcription spike
 (see the plan file above). Treat the two as the same underlying
 requirement, not separate efforts.
+
+## [NEW 2026-08-20] Law 23 mechanical enforcement (Layers 1+2, in progress now)
+
+Direct follow-up to the Law 23 incident (orbital-study evolution loop
+scored a text card as a good "game"). Three-layer plan, agreed with the
+user: (1) `Human-check:` required commit-message field for human-facing
+paths, mechanically enforced like the existing `Tests:`/`Verification:`
+fields; (2) ground `vision_review.py`'s quality prompt in the literal
+request text instead of an abstract score; (3) a surfacing tool for
+periodic independent spot-checks (design, not build, pending a real
+decision on how independent it needs to be). Layers 1+2 approved and
+being built now, in this session. Layer 3 explicitly not started.
+
+**Re-check when:** Layers 1+2 land (should be this session); revisit
+Layer 3's design once there's real `Human-check:` data in git history to
+build the surfacing tool against.
+
+## [NEW 2026-08-20] Governance mechanism audit — full scope, not yet started
+
+Full scoping doc: `docs/RESEARCH_governance_mechanism_audit.md`. The
+bigger ask behind the Law 23 fix: audit whether the whole governance
+system (constitution prose + hooks/checker code + adaptive memory
+mechanisms) actually works, empirically, across every repo where it's
+applicable — using a controlled-comparison methodology (varied rule-set
+branches, comparable-not-identical tasks) rather than just re-reading the
+code. Explicitly bigger than Law 23's own fix and not scoped to start
+tonight.
+
+**Re-check when:** a multi-hour unattended window is available for real
+parallel-branch comparisons (per the scoping doc's own note), or before
+the next major governance change is proposed.
