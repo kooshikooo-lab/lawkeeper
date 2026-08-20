@@ -23,6 +23,41 @@ Log every compliance failure and guard bypass. Review before each session (Law 1
 - [2026-08-20] LAW 21 — orbital-study's `launcher.py` writes `ratings.json` (real human 1-5 feedback per version pack); `evolution.py` never reads it. A real, working tool, completely disconnected from the thing its output was for, undetected by any process until the user asked a direct question about it. Root cause: nothing checks, when a change introduces a producer of structured output, whether a consumer exists — the same shape as Law 12's deferred-items gap, applied to code instead of decisions. Fix: new Law 21, reusing Law 12's existing `Re-check when:` mechanism rather than inventing a second one — an unconsumed producer must be wired in or explicitly logged in `FUTURE_DIRECTIONS.md`, never left silent. Severity: policy.
 - [2026-08-20] LAW 12 — treated `docs/FUTURE_DIRECTIONS.md` entries as effectively permanent once marked "deferred," including presenting one to the user as evidence "nothing is available to dispatch" without checking whether its deferral reason still held. The user caught this live: "if there's a task that I want done and then it's marked as deferred and then it's just passed by as this is never gonna happen, that's a failure mode." On inspection, the flagged item's deferral reason ("needs more than a one-hour session budget") was a scoping artifact from one specific session, not a standing decision — it no longer applied once headless dispatches could run 30-50+ minutes unattended, but nothing in the file or the process ever prompted a re-check against that changed condition. Root cause: "deferred" was written once, at decision time, with no corresponding trigger for when to reconsider it — the file recorded *why it was deferred* but not *when to stop deferring it*, so the only way it would ever resurface was an agent happening to re-read the whole file and independently notice a reason no longer held. Fix: every entry in `FUTURE_DIRECTIONS.md` now requires an explicit `Re-check when:` condition (a fact to check, not a vibe); Law 12 (`docs/AI_CONSTITUTION.md`) now names this file explicitly and requires checking every condition against current reality whenever the file is read for any reason. Severity: policy.
 
+- [2026-08-20] LAW 22 — twice in one conversation, ended a response with a
+  stated future intention ("I'm continuing," "going to dig into that next")
+  as the literal last sentence, with zero tool call in that same turn. The
+  turn then ended and control returned to the user — functionally identical
+  to stopping, despite the text claiming otherwise. The user caught it
+  both times, the second time explicitly: "So this is what you call
+  continuing, or is there some [actual] process running?" Root cause,
+  found by re-reading the actual offending sentences rather than
+  describing the symptom generically: both instances used the identical
+  hedge shape — "going to do X next, unless you'd rather redirect me" —
+  appended right after a compressed status summary. That clause is half
+  statement-of-intent, half unstated question, and it satisfies neither
+  branch of Law 22 cleanly: not "just act" (the actual requirement for a
+  technical continuation) and not "ask clearly" (no real question was
+  posed). The governance rule itself was not the cause — a stylistic
+  habit was: a long, dense session naturally produces a report-then-
+  preview-then-pause response shape, borrowed from ordinary conversation,
+  at exactly the point a response is long enough to feel like a chapter
+  break. That shape is correct for a conversation; it silently overrides
+  Law 22 in an agentic loop, where "what's next" must be a tool call in
+  the same turn, not a sentence describing one. This is a sharper, more
+  dangerous version of the plain stopping problem Law 22 already named:
+  it looks compliant (the text says the right thing) while doing exactly
+  what the law forbids. Fix: Law 22 amended — a
+  response is not permitted to end on a stated future action with no tool
+  call in that same turn; "I will do X next" is only true if X is already
+  in flight (a tool call in this response) or the response explicitly
+  invokes one of the 3 valid stopping reasons instead. Honest limitation,
+  stated plainly rather than oversold: there is no mechanical hook
+  available in this environment to scan a response for this pattern
+  before it's sent (unlike commit messages, which pass through a real git
+  hook) — this fix is a stronger constitution rule, not a code-level gate,
+  and depends on actually being followed, the same weaker enforcement
+  class as most of AI_CONSTITUTION.md before Law 23's mechanization work.
+  Severity: policy.
 - [2026-08-20] LAW 23 — orbital-study's evolutionary loop ran for hours across multiple sessions, tuning fitness weights and promoting winners, judged the whole time by a real vision-model "quality" score (0-100) that everyone — the evolutionary loop, opencode, Claude across several sessions — trusted as evidence of "this is a good game." Nobody opened an actual generated card image and looked at it against the user's actual words until the user did directly and reacted with real, warranted anger. The card was plain text on a dark background with three decorative circles: no character, no environment, nothing resembling what "a game" meant to the person who asked for one. Root cause: the quality score was accurately measuring a proxy ("is this text card well-composed") that had silently substituted for the real question ("does this match what was asked") — Goodhart's law in production, and it went unchecked specifically because everything downstream of the metric was itself internally consistent (tests passed, builds compiled, the number looked good), which reads as verification but isn't verification against the actual request. Fix: new Law 23 — a human-facing deliverable must be directly experienced (opened, read, played) and held against the original request restated in plain language before being called done; internal metrics/tests/builds are necessary but never sufficient on their own, and the longer an autonomous process runs against a metric unchecked, the more this applies, not less. Severity: blocker.
 
 ## Debt (non-blocking)

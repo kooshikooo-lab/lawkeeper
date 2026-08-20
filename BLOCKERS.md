@@ -2,6 +2,21 @@
 
 Every entry here is a real, checked prerequisite gap (a missing key, a missing install, unavailable hardware) with exactly what would unblock it. Nothing here means "impossible" — it means "needs this specific thing."
 
+## consensus_review.py's 'claude' reviewer driver (2026-08-20T20:26:58.567342+00:00)
+- **Missing:** an authenticated claude CLI reachable from a subprocess
+- **Why:** this session authenticates via OAuth, which does not propagate to a freshly-spawned child `claude -p` process, and no ANTHROPIC_API_KEY is set
+- **To fix:** either run this tool from a terminal where `claude /login` has already been done directly (not nested inside another Claude Code session), or set ANTHROPIC_API_KEY in the environment
+
+## consensus_review.py's 'claude' reviewer driver (2026-08-20T20:25:28.336437+00:00)
+- **Missing:** an authenticated claude CLI reachable from a subprocess
+- **Why:** this session authenticates via OAuth, which does not propagate to a freshly-spawned child `claude -p` process, and no ANTHROPIC_API_KEY is set
+- **To fix:** either run this tool from a terminal where `claude /login` has already been done directly (not nested inside another Claude Code session), or set ANTHROPIC_API_KEY in the environment
+
+## consensus_review.py's 'claude' reviewer driver (2026-08-20T20:07:36.467677+00:00)
+- **Missing:** an authenticated claude CLI reachable from a subprocess
+- **Why:** this session authenticates via OAuth, which does not propagate to a freshly-spawned child `claude -p` process, and no ANTHROPIC_API_KEY is set
+- **To fix:** either run this tool from a terminal where `claude /login` has already been done directly (not nested inside another Claude Code session), or set ANTHROPIC_API_KEY in the environment
+
 ## consensus_review.py's 'claude' reviewer driver (2026-08-20T20:04:13.276958+00:00)
 - **Missing:** an authenticated claude CLI reachable from a subprocess
 - **Why:** this session authenticates via OAuth, which does not propagate to a freshly-spawned child `claude -p` process, and no ANTHROPIC_API_KEY is set
