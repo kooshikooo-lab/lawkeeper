@@ -54,6 +54,13 @@
       ]
     ],
     [
+      "scripts\\team_chat.py",
+      "module_mutable",
+      [
+        "OTHER L222"
+      ]
+    ],
+    [
       "scripts\\toolcheck.py",
       "module_mutable",
       [
@@ -68,8 +75,8 @@
       "scripts\\validate_commit_msg.py",
       "module_mutable",
       [
-        "GOVERNANCE_FILES L16",
-        "PROVISIONAL_KEYWORDS L27"
+        "GOVERNANCE_FILES L24",
+        "PROVISIONAL_KEYWORDS L35"
       ]
     ],
     [

@@ -3,6 +3,8 @@
   "machines": ["desktop", "laptop"],
   "canonical_branches": ["main"],
   "scan_dirs": ["src", "scripts"],
+  "team_discussion": 2,
+  "human_facing_paths": [],
   "subsystem_table": {
     "Core primitives/reasoning/runner": ["src/guardrail/core/primitives.py", "src/guardrail/core/reasoning.py", "src/guardrail/core/runner.py", "src/guardrail/core/registry.py"],
     "Laws (mechanical checks)": ["src/guardrail/laws/"],
