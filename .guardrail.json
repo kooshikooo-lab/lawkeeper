@@ -2,5 +2,14 @@
   "project_name": "lawkeeper",
   "machines": ["desktop", "laptop"],
   "canonical_branches": ["main"],
-  "scan_dirs": ["src", "scripts"]
+  "scan_dirs": ["src", "scripts"],
+  "subsystem_table": {
+    "Core primitives/reasoning/runner": ["src/guardrail/core/primitives.py", "src/guardrail/core/reasoning.py", "src/guardrail/core/runner.py", "src/guardrail/core/registry.py"],
+    "Laws (mechanical checks)": ["src/guardrail/laws/"],
+    "Memory providers": ["src/guardrail/memory/provider.py", "src/guardrail/memory/failure_pattern_provider.py", "src/guardrail/memory/user_preference_provider.py"],
+    "CLI/config": ["src/guardrail/cli.py", "src/guardrail/config.py", "src/guardrail/choices.py"],
+    "Git-hook guards": ["scripts/validate_commit_msg.py", "scripts/validate_pre_commit.py", "scripts/guard_branch.py"],
+    "Compliance/audit tooling": ["scripts/compliance_watchdog.py", "scripts/system_audit.py", "scripts/mine_failure_patterns.py", "scripts/adversarial_review_checker.py", "scripts/code_compliance_checker.py"],
+    "Tests": ["tests/"]
+  }
 }

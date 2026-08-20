@@ -21,15 +21,14 @@
         "EXCLUDED_DIRS L66",
         "EXCLUDED_FILES L73",
         "OVERSIZED_ALLOWLIST L79",
-        "SUBSYSTEM_TABLE L148",
-        "TRIGGER_TYPES L160"
+        "TRIGGER_TYPES L167"
       ]
     ],
     [
       "scripts\\compliance_watchdog.py",
       "module_size",
       [
-        549
+        559
       ]
     ],
     [

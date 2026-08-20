@@ -145,17 +145,24 @@ def load_architecture_docs() -> list[str]:
     cfg = load_guardrail_config()
     return list(cfg.get("required_architecture_docs", []))
 
-SUBSYSTEM_TABLE = {
-    "Geometry": ["geometry.py", "spline_bore.py"],
-    "Acoustic solver": ["tmm_acoustics.py", "tmm_acoustics_jax.py"],
-    "Optimization": ["pareto_optimizer.py", "jax_optimizer.py"],
-    "Sound analysis": ["sound_analysis.py"],
-    "Pipeline": ["design_from_wav.py", "design_from_unconventional.py", "design_pipeline.py"],
-    "Generative agent": ["generative_agent.py", "instrument_knowledge.py"],
-    "CAD/Manufacturing": ["cadquery_export.py"],
-    "GUI": ["woodwind_designer/", "web/"],
-    "Tests": ["tests/"],
-}
+def load_subsystem_table() -> dict[str, list[str]]:
+    """Subsystem -> representative-files table for the `--boot` checklist.
+
+    Was hardcoded to Windwright's own module names (geometry.py,
+    tmm_acoustics.py, design_from_wav.py, ...) -- same class of bug as
+    BACKEND_DIRS above (task #79), just feeding a human-readable printout
+    instead of the actual scan, so it never silently broke anything, only
+    ever printed a wrong/irrelevant checklist for any project that isn't
+    Windwright. Deferred as task #90 pending the more urgent scan-path fix;
+    fixed now the same way: config-driven via `.guardrail.json`, defaults
+    to empty for a generic project rather than another project's names.
+    """
+    cfg = load_guardrail_config()
+    table = cfg.get("subsystem_table", {})
+    return {str(k): [str(f) for f in v] for k, v in table.items()}
+
+
+SUBSYSTEM_TABLE = load_subsystem_table()
 
 TRIGGER_TYPES = ["timer", "before-code", "after-tests", "drift-feel"]
 
@@ -417,8 +424,11 @@ def print_boot_sequence():
         print(f"   {d} [{status}]")
     print()
     print("Step 3 - Identify your subsystem:")
-    for sub, files in SUBSYSTEM_TABLE.items():
-        print(f"   {sub}: {', '.join(files)}")
+    if SUBSYSTEM_TABLE:
+        for sub, files in SUBSYSTEM_TABLE.items():
+            print(f"   {sub}: {', '.join(files)}")
+    else:
+        print("   (none configured -- add `subsystem_table` to .guardrail.json)")
     print()
     print("Step 4 - Search before building")
     print("Step 5 - Produce an implementation plan")
