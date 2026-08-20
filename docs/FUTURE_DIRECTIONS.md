@@ -283,3 +283,47 @@ identified mechanical pieces not wired in yet:
 **Re-check when:** the peer-review benchmark (the user's real long-term
 goal for this whole automated-research track) is revisited with enough
 time to actually clone/evaluate sciwrite-lint, not just reference it.
+
+## [NEW 2026-08-20] Verify the Claude Code Stop hook actually fires
+
+**Deferred:** built `scripts/claude_stop_hook.py` (mechanical version of
+Law 22's hedge-phrase amendment) + wired it into `install_hooks.py`.
+Script itself verified correct in isolation (12 real tests, plus a
+direct manual run reproducing both real historical failures). Live test
+inside this session's actual environment: registered in
+`E:\Admin\Lawkeeper\.claude\settings.json` (this session's real project
+root, not the git repo -- see below), deliberately ended a turn on a
+matching hedge phrase, and the turn stopped normally -- the hook did not
+fire. Root cause unresolved: this session runs inside a managed host
+environment (scheduled tasks, Browser pane, deferred tool loading), not
+a bare local `claude` CLI terminal, and it's genuinely unclear whether
+hooks are sandboxed/unsupported there for real security reasons, or
+whether the hot-reload watcher simply missed a settings.json written
+mid-session (recent Claude Code versions are supposed to hot-reload
+hook config, per current docs -- but that's documented for the
+standard CLI, not confirmed for this hosted surface).
+
+**Real next step, not yet done:** test the exact same
+`.claude/settings.json` registration in a plain, freshly-started local
+`claude` CLI terminal session (not this managed one) and see if it
+fires there. If it does, the cause is hosted-environment-specific and
+the fix (if any) may be out of this repo's control. If it doesn't even
+fire in a bare CLI session, the cause is something in the hook
+config/script itself despite the isolated tests passing, and needs
+further real debugging.
+
+**Separately, a real structural finding surfaced along the way:** this
+session's actual Claude Code project root (`E:\Admin\Lawkeeper`, from
+the system prompt's own "Primary working directory") is not the git
+repo being worked in (`C:\Users\Admin\Desktop\lawkeeper`) -- it's a
+bare, non-git harness directory. All of tonight's real git work reached
+the right repo via explicit `cd`/absolute paths in Bash, so this hasn't
+caused any actual harm, but it means `install_hooks.py`'s
+`${CLAUDE_PROJECT_DIR}`-relative Stop-hook registration (correct for a
+normal install where the project root *is* the repo) does not reach
+this session at all -- worth understanding/resolving at some point, not
+urgent tonight.
+
+**Re-check when:** a plain local `claude` CLI session is available to
+test in, or Anthropic's docs clarify hook support across different
+Claude Code deployment surfaces.

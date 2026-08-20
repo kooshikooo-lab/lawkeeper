@@ -305,6 +305,15 @@ was done and continue, don't end the turn waiting to be told to keep
 going. The user's own words: "you're not allowed to just stop because you
 feel like it or whatever."
 
+**Added 2026-08-20, caught twice in one session:** a stated intention to
+continue is not continuing. Ending a response on "I'll do X next" or "X,
+unless you'd rather redirect me" with no tool call in that same turn is
+indistinguishable from stopping — it just narrates compliance instead of
+being compliant. If the next step is technical, take it in this turn,
+not after. If it's genuinely directional, ask a real, specific question —
+don't hedge with a soft "unless you want..." that isn't actually a
+question and leaves the turn waiting for a reply nothing requested.
+
 **The test:** a choice is *technical* (proceed without asking) when
 reversing it later costs little and it doesn't change what the output
 represents or means. A choice is *directional* (ask, or hold and flag in
