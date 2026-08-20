@@ -7,6 +7,7 @@ __pycache__/
 .eggs/
 build/
 dist/
+scripts/.team_state.json
 
 # Regenerable artifacts (Law 14/validate_pre_commit)
 *.stl
