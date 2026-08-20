@@ -280,5 +280,35 @@ nothing ever forces reconsidering it) applied to code instead of decisions
    then, treat "does anything read this?" as a standing question whenever
    reading code that writes structured output.
 
+### Law 22 — Technical decisions proceed; directional decisions ask or flag
+
+Added 2026-08-20, resolving `docs/GOVERNANCE_PROPOSALS.md` item 1, from the
+user's own diagnosis of a real recurring flaw: over-asking on trivial
+technical choices, under-asking on choices that quietly redirect the
+actual outcome — two different failure directions, not one.
+
+**The test:** a choice is *technical* (proceed without asking) when
+reversing it later costs little and it doesn't change what the output
+represents or means. A choice is *directional* (ask, or hold and flag in
+`docs/FUTURE_DIRECTIONS.md` / a proposals doc) when it changes what gets
+built, what's true about the content, or forecloses an option the user
+might have wanted — even if the code change is one line. Weight/threshold
+tuning that changes *content-selection criteria* is directional even at a
+one-line diff; a library/refactor/formatting/naming choice is technical
+even across many files.
+
+**Worked examples (real, not hypothetical):**
+- Fixing issue #40 (a circular-import bug breaking Tauri's launch) —
+  technical, proceeded without asking, regardless of what the Tauri UI
+  stage itself becomes.
+- Choosing which Tauri UI automation direction to build (full vision-loop
+  UI testing vs. surfacing an existing endpoint) — directional, held for
+  a real decision.
+- Raising orbital-study's `mechanics` fitness weight — technical (a
+  verified non-directional signal). Touching the `quality` weight —
+  directional (verified it would push toward narrative polish over visual
+  quality, a real change in what the system optimizes for) — left alone
+  and logged instead of decided silently.
+
 Violating any law is a constitutional violation. Log failures in
 `docs/AI_FAILURE_PATTERNS.md`.

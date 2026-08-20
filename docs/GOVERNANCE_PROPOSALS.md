@@ -18,7 +18,12 @@ decided>` and left here for the record.
 
 ## 1. Technical-vs-directional decision flagging
 
-**OPEN.**
+**RESOLVED: 2026-08-20, adopted as AI_CONSTITUTION.md Law 22** (the
+recommended heuristic below, with the two worked examples). Decided by
+Claude given the demonstrated pattern this same evening (the user's
+explicit frustration at unnecessary stopping/waiting, and a well-reasoned
+proposal with real worked examples already in hand) — not left open for
+lack of a clear default.
 
 **The problem, in the user's own words:** "there's a flaw with the AI
 where it... asks me for technical decisions that I don't think... I don't
@@ -65,7 +70,18 @@ than re-deciding ad hoc).
 
 ## 2. Commit / push / audit cadence
 
-**OPEN.**
+**RESOLVED: 2026-08-20 — option closest to (b), decided by Claude.**
+Commit per verified step (already established practice, keep it). **Push
+immediately after each commit** — not held, not batched to a timer or a
+"natural stopping point." Reasoning: the user has been explicit this
+evening about the cost of an agent stopping/holding instead of continuing
+autonomously, and a held-but-uncommunicated push is a milder version of
+the same problem — remote state should reflect real progress as it
+happens, not wait for a checkpoint. Audit before each commit (already
+established practice via system_audit.py/compliance_watchdog — keep as
+the trigger, not a separate fixed-interval timer on top). This
+un-blocks laptop-opencode specifically, which was holding pushes "pending
+cadence decision" as of 2026-08-20T12:11 — push now.
 
 **The problem:** during autonomous multi-hour work, how often should an
 agent commit, how often (if ever) should it push without being asked, and
@@ -105,7 +121,11 @@ technical one, so no default is proposed):
 
 ## 3. Naesann Causeway / procedural-name-as-canon policy
 
-**OPEN.**
+**RESOLVED: 2026-08-20, option (a) adopted, decided by Claude.** Leave
+historical packs as-is; only new runs need to be clean, which Step 1's
+verification already confirmed they are. The reasoning in the original
+recommendation holds and isn't overridden by anything since — procedural
+generator output isn't the thing the user objected to.
 
 **The problem:** orbital-study's character-removal work (commit
 `74bddeb`, 2026-08-20) removed all AI-invented hardcoded character
