@@ -1,0 +1,44 @@
+test_id: test_memory_provider
+theory: >
+  New subsystem (src/guardrail/memory/): a MemoryProvider abstraction
+  adopted from Hermes Agent's pattern, per docs/FUTURE_DIRECTIONS.md's
+  "Adopt Hermes's memory-provider pattern (not its verification model)".
+  The concrete FailurePatternMemoryProvider retrieves relevant
+  AI_FAILURE_PATTERNS.md entries for a query via TF-IDF-weighted token
+  overlap. This scoring function specifically needed tests to get right --
+  two earlier scoring schemes (overlap/query-length, then Jaccard) were
+  each written, believed correct, and found wrong by these same tests
+  before TF-IDF weighting was tried. The tests exist to keep that
+  regression from silently recurring, not just to check the code runs.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    retrieval correctness verified against the real, live AI_FAILURE_PATTERNS.md
+    corpus (via scripts/mine_failure_patterns.py's existing collect_corpus(),
+    not a mock) using a query built from wording drawn from one specific,
+    known real entry -- asserting that entry's distinctive term
+    ("external_directory") actually appears in the top results, not just
+    that *some* results come back. Ranking-order and limit behavior are
+    checked independently of the relevance-score's specific formula.
+acceptance: "prefetch() returns the actually-relevant entry for a query built from that entry's own real wording, ranked among the top results, not just any non-empty result; results are sorted by relevance descending; limit is respected; empty/nonsense queries return nothing; the abstract base class cannot be instantiated directly."
+blind_spot: >
+  Tests run against the real corpus as it exists at test time, not a
+  frozen fixture -- if AI_FAILURE_PATTERNS.md changes wording enough that
+  the target entry no longer shares tokens with the test's query, this
+  test could start failing for a reason unrelated to the code (documented
+  in the test's own docstring). TF-IDF weighting is verified to fix the
+  two documented biases it fixes; it is not proven optimal or tested
+  against adversarial/pathological corpora, only against this repo's real
+  one. sync_turn/shutdown are tested only as safe no-ops, not for any
+  concrete provider that actually overrides them (none exists yet).
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in the scoring function, the corpus-loading path, or the module-loading sys.modules fix
+  crash: the dynamic import of mine_failure_patterns.py breaking (path resolution, missing sys.modules registration regressing)
+  pass: retrieval finds real, relevant entries from the live corpus and ranks/limits correctly
+debug:
+  - a failure in test_prefetch_finds_relevant_entry_for_a_real_query most likely means the scoring function regressed toward one of the two documented biases (favoring long records, or favoring thin/sparse ones) -- check failure_pattern_provider.py's scoring comment for what was already tried and rejected
+  - a crash in initialize()/prefetch() likely means the sys.modules registration in _load_miner() was removed or broken -- see that function's docstring for why it's required
+  - test_memory_provider_is_abstract failing means MemoryProvider stopped being a proper ABC (a concrete method was added to an @abstractmethod, or the decorator was removed)

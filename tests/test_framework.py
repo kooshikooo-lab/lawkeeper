@@ -111,7 +111,8 @@ class TestRunnerOnGovernedRepo:
         for name in ["commit-msg", "pre-commit"]:
             (tmp_path / "scripts/git-hooks" / name).write_text("", encoding="utf-8")
         (tmp_path / "tests").mkdir()
-        (tmp_path / "tests/test_guard_scripts.py").write_text("", encoding="utf-8")
+        for name in ["test_guard_scripts.py", "test_adversarial_review_checker.py", "test_code_compliance_checker.py"]:
+            (tmp_path / "tests" / name).write_text("", encoding="utf-8")
         (tmp_path / "test_governance/cards").mkdir(parents=True)
         (tmp_path / "test_governance/cards/example.yaml").write_text("test_id: x\n", encoding="utf-8")
         (tmp_path / "scripts/guard_branch.py").write_text("", encoding="utf-8")
@@ -250,6 +251,8 @@ class TestLaw16:
             "scripts/validate_pre_commit.py",
             "scripts/validate_commit_msg.py",
             "tests/test_guard_scripts.py",
+            "tests/test_adversarial_review_checker.py",
+            "tests/test_code_compliance_checker.py",
             ".guardrail.json",
         ]:
             path = root / p

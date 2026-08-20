@@ -81,7 +81,8 @@ def _scaffold_governed(tmp_path: Path) -> Path:
     for name in ["pre-commit", "commit-msg", "pre-push"]:
         (hooks / name).write_text("", encoding="utf-8")
     (repo / "tests").mkdir()
-    (repo / "tests/test_guard_scripts.py").write_text("", encoding="utf-8")
+    for name in ["test_guard_scripts.py", "test_adversarial_review_checker.py", "test_code_compliance_checker.py"]:
+        (repo / "tests" / name).write_text("", encoding="utf-8")
     (repo / "test_governance/cards").mkdir(parents=True)
     (repo / "test_governance/cards/test_guard_scripts.yaml").write_text(
         "test_id: test_guard_scripts\n"
