@@ -84,5 +84,7 @@ is the natural next-level version of that mining tool (see
 
 ## Status snapshot
 
-Living document — see the published dashboard for the current priority
-order and open loose ends, kept current rather than duplicated here.
+Living document — see `ROADMAP.md` (repo root) for the current priority
+order and phased plan, kept current rather than duplicated here. (This
+line previously pointed at "the published dashboard," which doesn't exist
+anywhere in this repo -- corrected 2026-08-20 rather than left stale.)
