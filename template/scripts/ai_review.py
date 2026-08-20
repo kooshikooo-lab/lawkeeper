@@ -163,7 +163,17 @@ def call_model(model: str, user_message: str, max_tokens: int = 4000, timeout: i
     if resp.status_code != 200:
         raise RuntimeError(f"OpenRouter error {resp.status_code}: {resp.text[:500]}")
     data = resp.json()
-    review = data["choices"][0]["message"]["content"]
+    try:
+        review = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError) as exc:
+        # Found live (Law 23): status 200 with a body missing the expected
+        # shape is a real, if intermittent, upstream condition -- a bare
+        # KeyError like "'choices'" told the caller nothing useful about
+        # what actually came back.
+        raise RuntimeError(
+            f"OpenRouter returned 200 but the response body was missing "
+            f"{exc!r}: {json.dumps(data)[:500]}"
+        ) from exc
     usage = data.get("usage", {})
     print(f"Model response received in {elapsed:.1f}s (prompt_tokens={usage.get('prompt_tokens')}, completion_tokens={usage.get('completion_tokens')})")
     return review

@@ -258,3 +258,28 @@ proceed" situation -- use `report_blocker()` there instead of inventing
 new ad hoc wording, and consider whether older scripts with existing
 "can't do X" messages (e.g. get_api_key() in ai_review.py) should be
 retrofitted to use it too.
+
+## [NEW 2026-08-20] Wire real mechanical checks into the science panel
+
+**Deferred:** the "science" panel in `scripts/consensus_review.py` was
+built 2026-08-20 to judge what genuinely needs judgment (methodological
+soundness, reasonable interpretation, source quality) -- explicit user
+principle: mechanically enforce everything that CAN be hardcoded, don't
+make an LLM panel guess at things a real tool checks reliably. Two real,
+identified mechanical pieces not wired in yet:
+1. **Citation existence/accuracy** -- `sciwrite-lint`
+   (github.com/authentic-research-partners/sciwrite-lint, arXiv:2604.08501)
+   is a real, open-source, local-first tool (single consumer GPU,
+   open-weight models) that checks reference existence, retraction
+   status, and whether a citation actually supports the claim attached to
+   it. The panel's checklist item 6 (citation support) should receive
+   this tool's real output as evidence, not have an LLM guess from
+   parametric memory.
+2. **P-hacking detection** -- real, semi-mechanical signals exist
+   (multiple-comparison counts, pre-registration cross-checks) that
+   checklist item 2 currently asks the LLM panel to judge from text
+   alone, a known, real limitation of the current implementation.
+
+**Re-check when:** the peer-review benchmark (the user's real long-term
+goal for this whole automated-research track) is revisited with enough
+time to actually clone/evaluate sciwrite-lint, not just reference it.

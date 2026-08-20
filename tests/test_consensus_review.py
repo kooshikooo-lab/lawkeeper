@@ -74,7 +74,7 @@ class TestDegradedConsensus:
         monkeypatch.setattr(consensus_review, "REVIEWERS", {"a": "model/a", "b": "model/b"})
         consensus_review.draft(spec_file, 1)
 
-        def fake_ask(name, brief):
+        def fake_ask(name, brief, panel="general"):
             if name == "a":
                 return "F1: AGREE | fine", None
             return None, "simulated failure"
@@ -100,6 +100,42 @@ class TestDegradedConsensus:
         case_dir = consensus_review._case_dir(spec_file)
         ledger = json.loads((case_dir / "_ledger.json").read_text(encoding="utf-8"))
         assert ledger[-1]["responded"] == ledger[-1]["total"] == 1
+
+
+class TestSciencePanel:
+    """The peer-review benchmark the user set: a 'science' panel with a
+    real, grounded checklist, selectable per-round, not hardcoded to the
+    generic reviewer prompt."""
+
+    def test_science_panel_registered(self):
+        assert "science" in consensus_review.PANELS
+        assert "science" in [c for c in consensus_review.PANELS]
+
+    def test_science_prompt_contains_real_checklist_items(self):
+        prompt = consensus_review.PANELS["science"]
+        for term in ("p-hacking", "Reproducibility", "Reasonable interpretation",
+                     "Methodological soundness", "Source quality"):
+            assert term in prompt, f"expected '{term}' in the science panel prompt"
+
+    def test_run_passes_selected_panel_to_reviewer(self, spec_file, tmp_path, monkeypatch):
+        monkeypatch.setattr(consensus_review, "CONSENSUS_DIR", tmp_path / "consensus")
+        monkeypatch.setattr(consensus_review, "REVIEWERS", {"a": "model/a"})
+        consensus_review.draft(spec_file, 1)
+        seen_panels = []
+
+        def fake_ask(name, brief, panel="general"):
+            seen_panels.append(panel)
+            return "1: PASS | fine\nOVERALL: PASSES REVIEW | fine", None
+
+        with patch.object(consensus_review, "ask_reviewer", side_effect=fake_ask):
+            consensus_review.run(spec_file, 1, approved=True, panel="science")
+        assert seen_panels == ["science"]
+
+    def test_unknown_panel_rejected(self, spec_file, tmp_path, monkeypatch):
+        monkeypatch.setattr(consensus_review, "CONSENSUS_DIR", tmp_path / "consensus")
+        consensus_review.draft(spec_file, 1)
+        with pytest.raises(SystemExit):
+            consensus_review.run(spec_file, 1, approved=True, panel="not-a-real-panel")
 
 
 class TestAskClaudeAuthDetection:

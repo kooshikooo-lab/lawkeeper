@@ -32,6 +32,13 @@
       ]
     ],
     [
+      "scripts\\consensus_review.py",
+      "module_mutable",
+      [
+        "PANELS L126"
+      ]
+    ],
+    [
       "scripts\\guard_governance.py",
       "module_mutable",
       [

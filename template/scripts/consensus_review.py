@@ -64,6 +64,70 @@ REVIEW_SYSTEM_PROMPT = (
     "agree to be agreeable."
 )
 
+# "science" panel: the real long-term benchmark named by the user is
+# whether automated-research output could pass real peer review -- a high
+# bar, not reached immediately, but worth building toward now. Grounded in
+# real reviewer-guideline structure (Taylor & Francis's reviewer checklist,
+# ACM CHI's reviewing guide, CONSORT/STROBE-style methodological reporting
+# standards -- 2026-08-20 research pass), not invented from scratch.
+#
+# Explicit design principle (user, 2026-08-20): mechanically enforce
+# everything that CAN be hardcoded; this panel exists only for what can't
+# be. Per checklist item below:
+#   1 Methodological soundness  -- JUDGMENT (this panel's real job)
+#   2 Statistical validity      -- PARTIALLY mechanical: real p-hacking
+#     detectors exist (multiple-comparison counts, pre-registration
+#     checks) and should be wired in as real evidence over time; today
+#     the panel judges this from the brief's text alone, which is a real,
+#     known limitation, not a permanent design choice.
+#   3 Source quality            -- JUDGMENT (is a source actually
+#     authoritative for this claim), separate from #6 below
+#   4 Reasonable interpretation -- JUDGMENT (this panel's real job)
+#   5 Reproducibility           -- JUDGMENT (is there *enough* detail),
+#     though checklist-completeness against CONSORT/STROBE could be
+#     partially mechanized later
+#   6 Citation SUPPORT          -- JUDGMENT (does this citation actually
+#     support this claim); citation EXISTENCE/accuracy is explicitly NOT
+#     this panel's job at all -- an LLM checking its own or another LLM's
+#     citations from parametric memory is exactly the hallucinated-
+#     citation failure mode a real mechanical tool exists to catch:
+#     sciwrite-lint (github.com/authentic-research-partners/sciwrite-lint,
+#     arXiv:2604.08501). The brief should carry real citation-verification
+#     results as evidence when available -- not built here yet, a real
+#     follow-up (docs/FUTURE_DIRECTIONS.md), not silently deferred.
+SCIENCE_PANEL_PROMPT = (
+    "You are one independent reviewer on a scientific peer-review panel. "
+    "Read the brief (a claim, a piece of research, or a proposed finding) "
+    "and evaluate it against this checklist, grounded in real reviewer "
+    "practice (journal reviewer guidelines, CONSORT/STROBE-style reporting "
+    "standards):\n\n"
+    "1. Methodological soundness -- does the research design actually fit "
+    "the question asked? Are confounds addressed?\n"
+    "2. Statistical validity -- signs of p-hacking (multiple comparisons "
+    "without correction, post-hoc hypothesis framing, cherry-picked "
+    "subgroups, an implausibly clean result)?\n"
+    "3. Source quality -- are claims backed by peer-reviewed sources, "
+    "preprints, or weaker material, and is that distinction made honestly?\n"
+    "4. Reasonable interpretation -- does the stated conclusion actually "
+    "follow from the evidence presented, or does it overclaim?\n"
+    "5. Reproducibility -- is there enough methodological detail that "
+    "someone else could actually attempt to reproduce this?\n"
+    "6. Citation support (NOT existence -- assume citation-existence "
+    "checking was done separately) -- if citation-verification evidence is "
+    "included in the brief, does the finding's use of each citation match "
+    "what that evidence says it actually supports?\n\n"
+    "Reply with ONE line per checklist item in this format:\n"
+    "  1: PASS | reasoning   (or FLAG | reasoning, or N/A | why it doesn't apply)\n"
+    "Then a final line: OVERALL: PASSES REVIEW | NEEDS REVISION | REJECT, "
+    "with a one-sentence justification. A bare verdict with no reasoning "
+    "on any line is invalid -- this is a real evaluation, not a vote."
+)
+
+PANELS = {
+    "general": REVIEW_SYSTEM_PROMPT,
+    "science": SCIENCE_PANEL_PROMPT,
+}
+
 # Reviewer registry. "claude" is special-cased (real CLI, no API key needed).
 # Everything else is an OpenRouter model id, called via ai_review.call_model.
 #
@@ -132,7 +196,7 @@ def dispatch_path(case_dir: Path, round_number: int, reviewer: str) -> Path:
     return d / f"{reviewer}.txt"
 
 
-def ask_claude(brief: str) -> str:
+def ask_claude(brief: str, system_prompt: str = REVIEW_SYSTEM_PROMPT) -> str:
     """The real Claude Code CLI. Reliable: no OCR, no window, just the CLI
     that's already authenticated and running on this machine.
 
@@ -140,13 +204,18 @@ def ask_claude(brief: str) -> str:
     a plain ["claude", ...] list arg fails there with WinError 2, since
     subprocess doesn't apply PATHEXT resolution the way a shell would.
     Found by actually running this, not assumed (Law 23).
+
+    `-p` has no separate system-message channel, so the panel's system
+    prompt is prepended to the brief text -- functionally the same effect
+    as the OpenRouter reviewers' system_prompt parameter.
     """
     claude_path = shutil.which("claude")
     if not claude_path:
         raise RuntimeError("claude CLI not found on PATH")
     cmd = [claude_path, "-p", "--output-format", "text"]
+    full_input = system_prompt + "\n\n=== BRIEF ===\n\n" + brief
     proc = subprocess.run(
-        cmd, input=brief, capture_output=True, timeout=900,
+        cmd, input=full_input, capture_output=True, timeout=900,
         encoding="utf-8", errors="replace", cwd=str(REPO_ROOT),
     )
     text = (proc.stdout or "").strip()
@@ -178,14 +247,15 @@ def ask_claude(brief: str) -> str:
     return text
 
 
-def ask_reviewer(name: str, brief: str) -> tuple[str | None, str | None]:
+def ask_reviewer(name: str, brief: str, panel: str = "general") -> tuple[str | None, str | None]:
     """Returns (reply_text, error). Exactly one is None. Never raises --
     a failed reviewer is data (an error string), not a silent gap."""
+    system_prompt = PANELS.get(panel, REVIEW_SYSTEM_PROMPT)
     try:
         if name == "claude":
-            return ask_claude(brief), None
+            return ask_claude(brief, system_prompt=system_prompt), None
         model_id = REVIEWERS[name]
-        reply = call_model(model_id, brief, system_prompt=REVIEW_SYSTEM_PROMPT)
+        reply = call_model(model_id, brief, system_prompt=system_prompt)
         return reply, None
     except Exception as exc:  # noqa: BLE001 -- a reviewer failing is expected, must be reported not crash the round
         return None, str(exc)
@@ -208,7 +278,9 @@ def draft(spec_path: Path, round_number: int) -> None:
     print("Approve and send with: run --approved")
 
 
-def run(spec_path: Path, round_number: int, approved: bool) -> None:
+def run(spec_path: Path, round_number: int, approved: bool, panel: str = "general") -> None:
+    if panel not in PANELS:
+        raise SystemExit(f"ERROR: unknown panel {panel!r}. Known: {', '.join(PANELS)}")
     case_dir = _case_dir(spec_path)
     p = draft_path(case_dir, round_number)
     if not approved:
@@ -221,9 +293,9 @@ def run(spec_path: Path, round_number: int, approved: bool) -> None:
 
     results: dict[str, dict] = {}
     for name in REVIEWERS:
-        print(f"[{name}] asking...")
+        print(f"[{name}] asking (panel={panel})...")
         t0 = time.time()
-        reply, error = ask_reviewer(name, brief)
+        reply, error = ask_reviewer(name, brief, panel=panel)
         elapsed = time.time() - t0
         out_path = dispatch_path(case_dir, round_number, name)
         out_path.write_text(reply if reply is not None else f"ERROR: {error}", encoding="utf-8")
@@ -275,13 +347,15 @@ def main() -> int:
     parser.add_argument("--spec", required=True, help="path to the case spec JSON")
     parser.add_argument("--round", type=int, default=1)
     parser.add_argument("--approved", action="store_true")
+    parser.add_argument("--panel", default="general", choices=list(PANELS),
+                         help="reviewer role/checklist to use (default: general)")
     args = parser.parse_args()
 
     spec_path = Path(args.spec)
     if args.cmd == "draft":
         draft(spec_path, args.round)
     elif args.cmd == "run":
-        run(spec_path, args.round, args.approved)
+        run(spec_path, args.round, args.approved, panel=args.panel)
     elif args.cmd == "show":
         show(spec_path)
     return 0
