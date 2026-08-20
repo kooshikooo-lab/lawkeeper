@@ -328,5 +328,50 @@ even across many files.
   quality, a real change in what the system optimizes for) — left alone
   and logged instead of decided silently.
 
+### Law 23 — A metric is not the request. Check the artifact, not the proxy.
+
+Added 2026-08-20, from a real, severe failure: orbital-study's evolutionary
+loop had a real "quality" score (a vision model judging each generated
+card, 0-100) that every session, across an entire night, trusted as
+evidence of "this is a good game." Nobody — not the evolutionary loop, not
+opencode, not Claude across multiple sessions — ever opened the actual
+card image and looked at it against the user's actual words until the
+user did, directly, and reacted. The card was plain text on a dark
+background with three decorative circles: no character, no environment,
+nothing resembling what "a game" meant to the person who asked for one.
+The metric wasn't lying — it was accurately scoring "is this text card
+well-composed," a proxy that had silently substituted for the real
+question and was never re-checked against it. This is Goodhart's law in
+production: a target that gets optimized stops being a good measure of
+the thing it was originally supposed to represent, and the gap grows
+invisibly for as long as nobody checks the raw thing itself.
+
+1. **Before calling any human-facing deliverable done, experience it the
+   way the human will** — open the image, read the actual rendered text,
+   run the actual interaction — not just "tests pass," "the API returned
+   200," "the build compiled," or "the internal quality score cleared a
+   threshold." Those verify the artifact is internally consistent. None of
+   them verify it is the thing that was asked for. Both checks are
+   required; neither substitutes for the other.
+2. **Restate the original request in plain language and hold the actual
+   artifact up against it directly, from scratch — not against a
+   downstream metric, rubric, or fitness function**, even one that was
+   itself built in good faith to serve the request. A metric that hasn't
+   been re-validated against the literal original ask, recently, is not
+   trustworthy evidence of fit — it is evidence the metric hasn't drifted
+   *from itself*, which is a different and much weaker claim.
+3. **The longer an autonomous process runs against a metric without a raw
+   check, the more this law applies, not less.** Hours of real, verified,
+   internally-consistent work (real tests, real commits, real passing
+   builds) can still be pointed at entirely the wrong target the whole
+   time — volume and technical correctness are not evidence of fit to the
+   actual request.
+4. This does not indict the underlying method. Evolutionary search with a
+   good fitness signal is genuinely powerful (real external precedent:
+   DeepMind's AlphaEvolve broke a 56-year-old matrix-multiplication record
+   this way — see `docs/RESEARCH_AUTOMATED_DISCOVERY.md`). The failure
+   mode this law targets is a mis-scoped proxy going unchecked, not
+   evolutionary/automated methods themselves being unreliable.
+
 Violating any law is a constitutional violation. Log failures in
 `docs/AI_FAILURE_PATTERNS.md`.
