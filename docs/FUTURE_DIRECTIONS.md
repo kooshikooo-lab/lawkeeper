@@ -42,6 +42,14 @@ version: candidate governance rules/checkers as the population, fitness =
 how many real historical failure records a candidate would have caught,
 evolved instead of hand-picked.
 
+**Real external grounding (2026-08-19, `docs/RESEARCH_AUTOMATED_DISCOVERY.md`):**
+this exact architecture — LLM-guided evolutionary search with a
+mechanical fitness function — is not a bespoke idea; it's the same
+pattern behind DeepMind's AlphaEvolve/FunSearch, with a real,
+independently-verified result (a new 48-multiplication 4x4 matrix
+algorithm, the first improvement on Strassen's 56-year-old record). This
+item is genuinely well-precedented, not speculative.
+
 **If this gets picked back up again** (e.g. the dispatch above didn't
 finish or didn't land): the corpus format `mine_failure_patterns.py`
 already produces (`FailureRecord`: repo, id, date, law_or_theme, problem,
