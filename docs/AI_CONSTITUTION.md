@@ -65,7 +65,11 @@ dependency: its absence must never block work or require pausing.
 ### Law 12 — Read before you act
 A machine that posts but never reads is as broken as one that never posts. Every
 session re-reads the session state, the reminders, and pending team messages
-before touching code, and re-checks on a schedule.
+before touching code, and re-checks on a schedule. This includes
+`docs/FUTURE_DIRECTIONS.md`: a deferred item with no re-check trigger silently
+becomes permanent, which is a failure (2026-08-20). Every entry there carries a
+`Re-check when:` condition; check it against current reality whenever the file
+is read for any reason, not only when hunting for new work.
 
 ### Law 13 — Missing dependencies are bugs
 A declared dependency that is not installed is a BUG, same severity as a failing

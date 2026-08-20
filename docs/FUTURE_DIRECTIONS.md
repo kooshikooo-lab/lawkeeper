@@ -7,12 +7,27 @@ picking one back up doesn't require re-deriving why it mattered. See also
 task #85 in the session tracker and the `hermes-comparison-deferred` memory
 note (Claude's persistent memory) — both point back here.
 
+**Every entry below MUST have a `Re-check when:` line** — a concrete,
+checkable condition, not "someday" or "later." A deferred item with no
+re-check trigger is a failure mode (see `docs/AI_FAILURE_PATTERNS.md`,
+2026-08-20 entry): it silently becomes permanent, indistinguishable from
+"never." Whenever an agent reads this file for any reason, check every
+`Re-check when:` condition against current reality, not just the one entry
+that prompted the read — a condition that now holds means the item is
+un-deferred as of that session, not "still someday."
+
 ---
 
-## Point Falcun's evolutionary methodology at the failure-pattern corpus
+## [UN-DEFERRED 2026-08-20] Point Falcun's evolutionary methodology at the failure-pattern corpus
 
 **Deferred:** 2026-08-19, explicitly scoped out of the same-day session
 that built `scripts/mine_failure_patterns.py`, per the plan's own Step 3.
+**Re-check when:** an unattended/headless session has enough time budget to
+do real design+implementation work, not just a live one-hour interactive
+session. **Un-deferred:** 2026-08-20 — exactly that condition held (a
+headless dispatch can run 30-50+ minutes unattended), caught when the user
+pushed back on treating "deferred" as permanent. Dispatched to falcun via
+headless `opencode run`; see Windwright Discussion #23 for live status.
 
 **Context:** the miner does real, valuable work today (parsed 19 real
 failure records across Windwright and lawkeeper into themes by hand,
@@ -27,15 +42,8 @@ version: candidate governance rules/checkers as the population, fitness =
 how many real historical failure records a candidate would have caught,
 evolved instead of hand-picked.
 
-**Why not attempted today:** real scoping call, not an oversight —
-designing a fitness function against ~19-21 records, wiring Falcun's
-evolve loop to a different domain than code-bug-hunting, and validating
-the result all needs more than the remaining time in a one-hour session
-budget. The miner and its manual categorization are a complete, useful
-thing on their own; this is a genuine upgrade, not a missing piece of
-today's deliverable.
-
-**If this gets picked back up:** the corpus format `mine_failure_patterns.py`
+**If this gets picked back up again** (e.g. the dispatch above didn't
+finish or didn't land): the corpus format `mine_failure_patterns.py`
 already produces (`FailureRecord`: repo, id, date, law_or_theme, problem,
 root_cause, fix, severity, theme) is the natural input — no need to
 re-parse `AI_FAILURE_PATTERNS.md` again, just feed the existing structured
@@ -47,6 +55,11 @@ output into whatever Falcun population/fitness setup gets built.
 
 **Deferred:** 2026-08-19, by the user. Explicitly "a direction worth
 considering, but not now."
+**Re-check when:** lawkeeper becomes an active project again (see the
+"Status" note below for what that means concretely) — this session's
+multi-agent claim/release work (2026-08-20) is lawkeeper-adjacent
+tooling, not lawkeeper itself becoming active; don't let that be
+mistaken for the trigger firing.
 
 **Context:** lawkeeper's original vision was a coding-assistant harness /
 governance system robust enough to make even a weaker model do good work,
@@ -100,6 +113,11 @@ project right now; revisit this note when that changes.
 **Deferred:** 2026-08-19, by the user, refining [[ai-independence-goal]]
 (Claude's memory) after an earlier pass that incorrectly framed this as
 "fully offline." Corrected the same day, same conversation.
+**Re-check when:** the project reaches real architecture/infrastructure
+decisions for an actual product (choosing a hosting setup, picking an
+open-weight model to serve, or scoping a first release) — this is a
+design note to consult at that point, not a task with its own start
+condition.
 
 **The correction:** the tool isn't meant to be offline-only. Most people's
 hardware can't run a genuinely capable local model, so the design needs a
@@ -136,6 +154,10 @@ that remote path actually touches.
 
 **Deferred:** 2026-08-19, by the user, as a reflection on voice-recognition
 quality during this session — "something that lawkeeper should have."
+**Re-check when:** idea-organizer reaches its Phase 0 voice-transcription
+spike (`C:\Users\Admin\.claude\plans\golden-puzzling-raccoon.md`) — that's
+the concrete, already-planned milestone this piggybacks on; check that
+plan's status directly rather than guessing whether it's been reached.
 
 **The problem, as described:** current voice recognition (a) doesn't use
 conversation/project context to disambiguate what was actually said, and
