@@ -238,3 +238,23 @@ tonight.
 **Re-check when:** a multi-hour unattended window is available for real
 parallel-branch comparisons (per the scoping doc's own note), or before
 the next major governance change is proposed.
+
+## [NEW 2026-08-20] Roll out scripts/blockers.py more broadly
+
+**Deferred:** built and wired into consensus_review.py's one concrete
+case (claude-CLI-auth-not-available) as the first real usage, 2026-08-20.
+Explicitly not rolled out further per the user's own instruction not to
+get sidetracked ("continue with your work... just make a note of this").
+
+**Context:** structured blocker reporting (BLOCKERS.md, `report_blocker()`)
+-- explicit user requirement that a missing API key/program/hardware must
+always be reported as a concrete, actionable note (what's missing, why,
+how to fix), never as "not possible." Real precedents already existed
+before the module (the laptop's SDXL/GPU report, consensus_review.py's
+own claude-auth case) -- this generalizes the pattern into one place.
+
+**Re-check when:** the next time any script hits a real "needs X to
+proceed" situation -- use `report_blocker()` there instead of inventing
+new ad hoc wording, and consider whether older scripts with existing
+"can't do X" messages (e.g. get_api_key() in ai_review.py) should be
+retrofitted to use it too.
