@@ -327,3 +327,30 @@ urgent tonight.
 **Re-check when:** a plain local `claude` CLI session is available to
 test in, or Anthropic's docs clarify hook support across different
 Claude Code deployment surfaces.
+
+## [NEW 2026-08-21] Real scheduled loose-thread audits, not just cadence rules
+
+**Proposed by the user directly:** the governance-recall skill (above)
+and Law 12's "Re-check when" mechanism both depend on an agent choosing
+to follow a written cadence rule -- real, but the same weaker
+enforcement class discussed elsewhere. A genuinely time-triggered check
+is different and stronger: two real cadences requested --
+1. Once per real user day (their calendar day, not a session or model
+   token-boundary) -- a lighter check.
+2. Every few real days -- a deeper "were things left behind" audit,
+   closer to what this session's own round-up (2026-08-21,
+   `docs/SESSION_ROUNDUP_2026-08-21.md` if it exists by the time this
+   is read) demonstrates doing by hand.
+
+Real mechanism available, not yet explored: `mcp__scheduled-tasks__*`
+tools (create/list/update/delete) -- genuine harness-level scheduled
+triggers, distinct from `ScheduleWakeup` (which is specifically for
+`/loop` dynamic-pacing mode) and distinct from a skill's written
+cadence instructions. Needs real investigation: what these tools
+actually support (can they fire independent of an active conversation?
+what identifies "one real user day" -- timezone handling matters here),
+before designing the actual audit content each cadence would run.
+
+**Re-check when:** next session with time to actually investigate the
+`mcp__scheduled-tasks__*` tool schemas (via ToolSearch) and design what
+each cadence's real check content should be.
