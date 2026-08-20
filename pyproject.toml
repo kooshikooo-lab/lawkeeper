@@ -24,17 +24,18 @@ where = ["src"]
 guardrail = ["template/**/*"]
 
 [tool.pytest.ini_options]
-python_files = [
-    "test_guard_scripts.py",
-    "test_template.py",
-    "test_framework.py",
-    "test_e2e.py",
-    "test_reasoning.py",
-    "test_choices.py",
-    "test_adversarial_review_checker.py",
-    "test_code_compliance_checker.py",
-    "test_check_declared_dependencies.py",
-]
+# Was an exact-filename allowlist -- switched 2026-08-20 after it silently
+# excluded new test files from the suite for the third time in one night
+# (test_memory_provider.py and test_user_preference_provider.py both
+# passed when run directly but were never collected by `pytest -q`,
+# each requiring someone to notice the total-count mismatch by hand).
+# Verified before switching, not assumed: the Law 18 theory-card gate
+# (scripts/validate_pre_commit.py) checks git-staged files under tests/
+# directly and does not read this setting -- glob discovery here cannot
+# weaken that gate. Standard pytest discovery, matches this repo's own
+# test file naming convention exactly (every file already starts with
+# test_).
+python_files = ["test_*.py"]
 
 [tool.ruff]
 line-length = 100

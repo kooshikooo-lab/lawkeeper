@@ -1,0 +1,45 @@
+test_id: test_user_preference_provider
+theory: >
+  New subsystem (src/guardrail/memory/user_preference_provider.py): the
+  second real MemoryProvider consumer, tracking explanation-style
+  corrections (too much jargon / too dumbed-down) and an ADHD-mode toggle
+  via explicit keyword triggers, persisted to a small JSON file. Unlike
+  FailurePatternMemoryProvider (read-only), this one actually exercises
+  sync_turn() -- the tests exist specifically to prove the write path
+  works and persists, not just that the class instantiates. One real bug
+  was already caught by these tests during development: a typo in a
+  trigger pattern ("load of jargon" instead of "lot of jargon") that
+  would have silently made jargon-correction detection never fire for
+  that phrasing -- found by a failing test, not code review.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    behavior verified against real trigger phrases a user would actually
+    say ("that's a whole lot of jargon", "don't dumb it down", "get to
+    the point"), not synthetic test-only strings chosen to match the
+    regex; persistence verified by constructing a second, independent
+    provider instance pointed at the same store file and checking it
+    reads back the same state, not by inspecting the first instance's own
+    in-memory state after writing.
+acceptance: "explicit correction phrases are detected and change the stored style/adhd_mode fields; unrelated text does not change anything; a corrupted store file falls back to defaults instead of crashing; state persists across independent provider instances via the same file; a default (uncorrected) profile injects nothing via prefetch()."
+blind_spot: >
+  Trigger detection is keyword/regex-based and deliberately narrow --
+  many real phrasings of "too much jargon" or "don't dumb it down" will
+  not match and will be silently ignored (no correction recorded, but
+  also no error). This is a stated scope limit
+  (docs/ADAPTIVE_INTERFACE_PLAN.md), not a hidden one: vocabulary/jargon-
+  familiarity tracking (which specific terms a user already knows) is
+  explicitly NOT built here. The word-boundary test only checks one
+  known-risky pattern ("dumbwaiter" containing "dumb"), not an exhaustive
+  scan of every trigger for similar false-positive risk.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in trigger detection, persistence, or the corrupted-file fallback
+  crash: the JSON read/write path breaking, or a missing directory not being created
+  pass: explicit corrections are detected, persisted, and correctly reflected in prefetch() output
+debug:
+  - a failure in a trigger-detection test likely means a regex pattern regressed -- check _JARGON_RE/_DUMBED_DOWN_RE/_ADHD_RE in user_preference_provider.py directly, they are meant to be human-readable and inspectable
+  - a failure in the persistence test means the JSON read/write path broke -- check _save() and initialize()'s file handling
+  - the corrupted-store test failing (i.e. it starts raising) means the try/except around json.loads in initialize() was removed or narrowed

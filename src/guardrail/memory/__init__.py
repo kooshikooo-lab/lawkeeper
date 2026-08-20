@@ -8,5 +8,9 @@ See docs/FUTURE_DIRECTIONS.md, "Adopt Hermes's memory-provider pattern
 
 from .provider import MemoryEntry, MemoryProvider
 from .failure_pattern_provider import FailurePatternMemoryProvider
+from .user_preference_provider import UserPreferenceProvider
 
-__all__ = ["MemoryEntry", "MemoryProvider", "FailurePatternMemoryProvider"]
+__all__ = [
+    "MemoryEntry", "MemoryProvider",
+    "FailurePatternMemoryProvider", "UserPreferenceProvider",
+]
