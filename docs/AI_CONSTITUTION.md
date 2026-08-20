@@ -247,5 +247,38 @@ needing it more.
 5. **Do not fabricate.** Never invent numbers, results, timings, or
    precedents. If you do not know, say so and go find out.
 
+### Law 21 — A capability with no consumer is a bug, not neutral
+Added 2026-08-20 from a real, live example: orbital-study's `launcher.py`
+writes `ratings.json` (real human feedback — 1-5 scores per version pack)
+and has done so for a while; `evolution.py` — the thing that actually
+decides what gets bred next — never reads it. The tool was built, worked
+correctly, and was completely disconnected from anything that used its
+output. Nothing in the codebase or the process ever flagged this; it
+surfaced only because the user asked a direct question about a specific
+feature and an agent happened to grep for it.
+
+This is the same root shape as Law 12's deferred-items gap (a thing exists,
+nothing ever forces reconsidering it) applied to code instead of decisions
+— so it reuses that fix rather than inventing a second mechanism (Law 3):
+
+1. **When a change introduces something that produces output meant to be
+   consumed** (a data file, a report, an API endpoint, a log another
+   process is supposed to read) **— name the consumer, in the same
+   session, before considering the work done.** "I wrote the data" is not
+   "the data does something."
+2. **If there is no consumer yet, that is not automatically wrong — but it
+   must be an explicit, logged decision, not silence.** Add an entry to
+   `docs/FUTURE_DIRECTIONS.md` with a real `Re-check when:` condition
+   (Law 12), the same discipline already required for deferred ideas.
+   A tool sitting unconsumed with no such entry is exactly the failure
+   mode this law exists to prevent.
+3. **When auditing existing code** (Law 14, Law 20), a producer/consumer
+   mismatch is worth actively checking for, not just the specific thing
+   being audited — this is how tonight's instance was found: investigating
+   an unrelated feature request surfaced it as a byproduct, not a
+   dedicated search. A dedicated periodic check is worth building; until
+   then, treat "does anything read this?" as a standing question whenever
+   reading code that writes structured output.
+
 Violating any law is a constitutional violation. Log failures in
 `docs/AI_FAILURE_PATTERNS.md`.
