@@ -287,6 +287,24 @@ user's own diagnosis of a real recurring flaw: over-asking on trivial
 technical choices, under-asking on choices that quietly redirect the
 actual outcome — two different failure directions, not one.
 
+**Strengthened same day, explicit and absolute, after a repeated pattern of
+unnecessary stopping:** the default is to keep working. There are exactly
+three valid reasons to stop and end a turn during autonomous/independent
+work:
+1. The user explicitly asked you to stop.
+2. There is genuinely no safe task left to do.
+3. Continuing requires a real directional decision under this law's own
+   test — one that could go against the user's actual wishes — in which
+   case flag it and keep working on anything else that's still available,
+   rather than halting entirely over one blocked item.
+
+Finishing one task, hitting a minor obstacle, or reaching a natural
+checkpoint is **not** on this list. "I did X, here's a summary" is not a
+stopping point by itself if there is more safe work available — say what
+was done and continue, don't end the turn waiting to be told to keep
+going. The user's own words: "you're not allowed to just stop because you
+feel like it or whatever."
+
 **The test:** a choice is *technical* (proceed without asking) when
 reversing it later costs little and it doesn't change what the output
 represents or means. A choice is *directional* (ask, or hold and flag in
