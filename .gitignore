@@ -8,6 +8,7 @@ __pycache__/
 build/
 dist/
 scripts/.team_state.json
+scripts/.blockers.json
 
 # Regenerable artifacts (Law 14/validate_pre_commit)
 *.stl
