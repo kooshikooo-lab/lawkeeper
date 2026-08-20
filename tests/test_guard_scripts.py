@@ -109,8 +109,11 @@ class TestBranchDeleteGuard:
 
     def test_feature_delete_content_proven_by_presence(self, monkeypatch):
         # Guard logic: a feature branch whose content is preserved passes;
-        # one not preserved is flagged. We don't touch real branches — just
-        # stub content_preserved to exercise both branches of the logic.
+        # one not preserved is flagged. We stub BOTH run_git (so this test
+        # doesn't depend on a specific branch actually existing in whatever
+        # repo happens to run the suite) and content_preserved, to isolate
+        # the pure decision logic.
+        monkeypatch.setattr(guard_branch, "run_git", lambda args: ("deadbeef", 0))
         monkeypatch.setattr(guard_branch, "content_preserved", lambda sha: True)
         monkeypatch.delenv("GUARD_BRANCH_ALLOW_DELETE", raising=False)
         assert guard_branch.check_delete("opencode/some-feature/laptop") == []
@@ -118,6 +121,18 @@ class TestBranchDeleteGuard:
         monkeypatch.setattr(guard_branch, "content_preserved", lambda sha: False)
         vs = guard_branch.check_delete("opencode/some-feature/laptop")
         assert any("not provably present" in v for v in vs)
+
+    def test_feature_delete_fails_closed_when_branch_unresolvable(self, monkeypatch):
+        # Regression: if `git rev-parse` can't resolve the branch at all
+        # (bad ref, race condition, not actually a git repo), the guard
+        # must REFUSE the deletion, not silently allow it. The old code
+        # only checked `if sha and not content_preserved(sha)` — an empty
+        # sha short-circuited straight past the check to "no violation".
+        monkeypatch.setattr(guard_branch, "run_git", lambda args: ("", 128))
+        monkeypatch.delenv("GUARD_BRANCH_ALLOW_DELETE", raising=False)
+        vs = guard_branch.check_delete("opencode/some-feature/laptop")
+        assert vs, "an unresolvable branch must be blocked, not silently allowed"
+        assert any("could not resolve" in v for v in vs)
 
 
 class TestOriginHead:

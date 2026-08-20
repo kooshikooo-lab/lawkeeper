@@ -148,15 +148,30 @@ def call_model(model: str, user_message: str, max_tokens: int = 4000, timeout: i
     # users -- a 429 there is a real, expected, transient condition (found
     # by actually running this against real free models, not assumed), not
     # a broken model id. Retry with backoff; anything else fails immediately.
+    #
+    # Some providers (Kimi/Moonshot observed directly -- user's own real
+    # experience, not a guess) signal the same "shared pool is full, try
+    # again shortly" condition inside a 200 response body instead of a 429
+    # status code -- phrased as "high demand" / "please try again" text
+    # rather than an HTTP-level retry signal. Treat that the same way: it's
+    # not a broken model or a real answer, it's the same transient
+    # congestion under a different provider's wording.
+    _SOFT_RATE_LIMIT_PHRASES = ("high demand", "please try again", "try again later",
+                                 "too many requests", "temporarily unavailable")
     start = time.time()
     resp = None
     for attempt in range(max_retries):
         resp = requests.post(API_URL, headers=headers, json=payload, timeout=timeout)
-        if resp.status_code != 429:
+        soft_limited = (
+            resp.status_code == 200
+            and any(p in resp.text.lower() for p in _SOFT_RATE_LIMIT_PHRASES)
+        )
+        if resp.status_code != 429 and not soft_limited:
             break
         if attempt < max_retries - 1:
             wait = 2 ** attempt
-            print(f"OpenRouter 429 (rate-limited) for {model}, retrying in {wait}s "
+            reason = "429 (rate-limited)" if resp.status_code == 429 else "soft rate-limit text in a 200 response"
+            print(f"OpenRouter {reason} for {model}, retrying in {wait}s "
                   f"(attempt {attempt + 1}/{max_retries})")
             time.sleep(wait)
     elapsed = time.time() - start

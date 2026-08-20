@@ -1,0 +1,40 @@
+test_id: test_init_smoke
+theory: >
+  Every other test in this suite imports guardrail/scripts directly from
+  the source checkout, so none of them would ever notice if the
+  PACKAGED wheel is broken -- which is exactly what happened before this
+  test existed: pyproject.toml declared package-data relative to a
+  template/ folder that didn't actually live inside the installable
+  package, so a real `pip install`-ed wheel shipped zero template files
+  and `lawkeeper init` reported success while writing nothing. This test
+  closes that gap by doing what a real user does: build a real wheel,
+  install it into a clean venv, and run `lawkeeper init` against a real
+  git repo, asserting the governance files actually land on disk.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    Checks real filesystem state after a real subprocess run of the
+    installed `lawkeeper` entry point (docs/AI_CONSTITUTION.md,
+    scripts/install_hooks.py, .guardrail.json actually existing on
+    disk), not the CLI's own stdout claims of success -- the exact
+    "reported success but wrote nothing" failure mode this test exists
+    to catch would pass a stdout-only check.
+acceptance: "a real pip-installed wheel's `lawkeeper init` writes the real constitution/hooks/config files to disk; init refuses to run outside a git repo and never scaffolds anything there; a second init without --force refuses, and --force actually works."
+blind_spot: >
+  Marked `slow` (builds a real wheel + venv per run) and skips itself
+  entirely if `git` or `python -m build` aren't available in the
+  environment -- a green run does not by itself prove those tools were
+  present; check for a skip, not just a pass. Also only exercises
+  `lawkeeper init`'s own file-writing path, not any of the guard
+  scripts' behavior once installed.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in what `lawkeeper init` actually writes, or in package-data shipping the template files inside the built wheel
+  crash: the build or venv-creation step itself failed, or the installed entry point is missing/broken
+  pass: a real installed wheel's `lawkeeper init` writes real governance files, and its safety guards (git-repo check, no silent reinit) hold
+debug:
+  - a failure in test_init_writes_the_constitution means either the wheel's package-data is missing template files again, or `lawkeeper init`'s writer logic broke -- check pyproject.toml's [tool.setuptools.package-data] path first
+  - a failure in test_init_refuses_outside_a_git_repo means init could now scaffold into a non-repo directory -- treat as high severity, this guards against clobbering an unrelated folder
+  - a failure in test_init_refuses_to_silently_reinit means --force or the reinit guard regressed

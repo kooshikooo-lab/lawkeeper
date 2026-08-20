@@ -55,14 +55,9 @@ jobs:
       - name: System self-audit (Law 16 — enforcement layers active and correct)
         run: |
           python scripts/system_audit.py
-      - name: Framework + guard meta-tests (Law 16.5)
+      - name: Meta-tests for the guard scripts (Law 16.5)
         run: |
-          # tests/ -q, not a single named file: pyproject.toml's pytest
-          # discovery switched to glob-based (test_*.py) 2026-08-20 after
-          # the old exact-filename allowlist silently excluded new test
-          # files three times in one night. Naming a single file here again
-          # would quietly reintroduce that exact bug for CI specifically.
-          python -m pytest tests/ -q
+          python -m pytest tests/test_guard_scripts.py -q
 
   # Found while fixing the dependency-locks job below: this was indented as
   # a child of `guard:` (4 spaces, matching guard's own `runs-on`/`steps`

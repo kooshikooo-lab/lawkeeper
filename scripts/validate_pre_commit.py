@@ -12,6 +12,7 @@ Used by the pre-commit hook in scripts/git-hooks/pre-commit.
 import ast
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -217,6 +218,51 @@ def check_module_size(path: Path, root: Path) -> str | None:
     return f"{rel}: {lines} lines (exceeds 500; split or add to OVERSIZED_ALLOWLIST)"
 
 
+def find_rust_checker() -> str | None:
+    """Locate the lawkeeper-checker binary, if available.
+
+    Checked in order: LAWKEEPER_CHECKER_BIN env var (explicit override),
+    then PATH. Returns None — not an error — if not found, since most
+    Lawkeeper users won't have Rust installed or this prototype built.
+    A missing optional tool must never break the commit hook for everyone
+    else; that's the same "fail loud only when it's actually broken, not
+    just absent" principle applied to `lawkeeper init`'s template check.
+    """
+    override = os.environ.get("LAWKEEPER_CHECKER_BIN")
+    if override and Path(override).is_file():
+        return override
+    return shutil.which("lawkeeper-checker")
+
+
+def check_rust_files(rust_files: list[str], repo_root: Path) -> list[str]:
+    """Run the Rust syntax checker on staged .rs files, if it's available.
+
+    Returns violation lines to add to the blocking error list. Returns an
+    empty list (never blocks) if the checker binary isn't found — this is
+    an optional additional enforcement layer, not a hard requirement, since
+    it's a separate prototype tool most Lawkeeper installs won't have.
+    """
+    checker = find_rust_checker()
+    if checker is None:
+        print(
+            "  (note: lawkeeper-checker not found — skipping edit-time Rust "
+            "syntax checks; install it and set LAWKEEPER_CHECKER_BIN or add "
+            "it to PATH to enable this layer)"
+        )
+        return []
+    violations = []
+    for rel in rust_files:
+        result = subprocess.run(
+            [checker, str(repo_root / rel)],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        if result.returncode != 0:
+            for line in result.stdout.splitlines():
+                if line.strip() and not line.startswith("lawkeeper-checker:"):
+                    violations.append(f"[rust] {line}")
+    return violations
+
+
 def main():
     repo_root = Path(subprocess.run(
         ["git", "rev-parse", "--show-toplevel"],
@@ -312,6 +358,11 @@ def main():
                     f"Add a card with theory/oracle/acceptance/blind_spot/trust_level "
                     f"(Law 18, docs/TEST_THEORY.md) or run scripts/governed_test.py."
                 )
+
+    # 9. Edit-time Rust syntax constitution (optional — see lawkeeper-checker)
+    rust_files = [rel for rel in files if rel.endswith(".rs")]
+    if rust_files:
+        errors.extend(check_rust_files(rust_files, repo_root))
 
     if warnings:
         print("WARNINGS (non-blocking):")

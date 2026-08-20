@@ -10,7 +10,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ROOT = REPO_ROOT
-TEMPLATE = REPO_ROOT / "template"
+# The shipped template lives INSIDE the package (src/guardrail/template) so
+# that setuptools package-data can actually include it in a built wheel.
+# A template/ folder at the repo root (sibling of src/) looks convenient in
+# a source checkout but silently does not ship — that was the root cause of
+# `lawkeeper init` succeeding with zero files once installed from a wheel.
+TEMPLATE = REPO_ROOT / "src" / "guardrail" / "template"
 
 ROOT_DIRS = ["scripts", "scripts/git-hooks"]
 ROOT_SCRIPT_FILES = [

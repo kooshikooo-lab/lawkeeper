@@ -4,7 +4,9 @@ Run this before merging branches from another machine (especially cross-OS or
 when one machine has installed optional extras the other has not). It flags
 packages that are:
   - declared in pyproject.toml (any extra), and
-  - imported by the live code (backend/, scripts/, woodwind_designer/), but
+  - imported by the live code (see scan_config.get_scan_paths - configurable
+    via .guardrail.json's "scan_paths", auto-detects src/<package>/ from
+    pyproject.toml otherwise), but
   - NOT installed in the current interpreter.
 
 Usage:
@@ -24,6 +26,16 @@ from importlib import metadata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+try:
+    from scan_config import get_scan_paths  # normal `python scripts/x.py` run
+except ImportError:
+    # See compliance_watchdog.py's identical fallback for why: a plain
+    # sibling import only works when Python put scripts/ on sys.path
+    # itself (running the file directly), not when loaded via
+    # importlib.util.spec_from_file_location (tests/test_guard_scripts.py).
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from scan_config import get_scan_paths
 
 
 def _installed() -> set[str]:
@@ -78,14 +90,17 @@ def _imported_roots() -> set[str]:
         "winsound", "venv", "ensurepip", "this", "antigravity", "turtle",
         "tkinter", "webbrowser", "zipimport",
     }
-    local_roots = {"backend", "woodwind_designer", "tests", "scripts", "conftest", "blender_addon"}
+    scan_paths = get_scan_paths(ROOT)
+    # "conftest" is a generic pytest convention (not tied to any specific
+    # project's directory layout), kept alongside whatever get_scan_paths
+    # actually resolves for this project.
+    local_roots = {p.name for p in scan_paths} | {"conftest"}
     imported = set()
 
     def _is_local(root: str) -> bool:
         if root in local_roots:
             return True
-        for base in local_roots:
-            base_dir = ROOT / base
+        for base_dir in scan_paths:
             if not base_dir.exists():
                 continue
             candidate = base_dir / root
@@ -114,8 +129,7 @@ def _imported_roots() -> set[str]:
                     if not _is_local(root) and root not in stdlibish:
                         imported.add(root)
 
-    for d in ["backend", "scripts", "woodwind_designer"]:
-        base = ROOT / d
+    for base in scan_paths:
         if base.exists():
             for path in base.rglob("*.py"):
                 if "__pycache__" in str(path):

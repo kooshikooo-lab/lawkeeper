@@ -11,27 +11,46 @@ Commands:
 from __future__ import annotations
 
 import argparse
-import importlib
-import shutil
+import importlib.resources
 import subprocess
 import sys
 from pathlib import Path
 
 from guardrail import __version__
 
-TEMPLATE_ROOT = Path(__file__).resolve().parent.parent.parent / "template"
+# Resolved via importlib.resources rather than a path relative to this file's
+# disk location. A path like Path(__file__).parent.parent.parent only works
+# for an editable/source-checkout install; once the package is built into a
+# wheel and installed normally, cli.py lives directly under site-packages/
+# guardrail/ and that ".parent.parent.parent" walk lands somewhere that isn't
+# even part of this package. importlib.resources resolves relative to the
+# installed package itself, so it works the same way in every install mode
+# (editable, wheel, zipapp). The template MUST live at src/guardrail/template
+# (inside the package) for this — and for the wheel's package-data — to work.
+def _template_root() -> Path:
+    return Path(str(importlib.resources.files("guardrail") / "template"))
 
 
-def _repo_root(start: Path = Path.cwd()) -> Path:
+def _repo_root(start: Path = Path.cwd()) -> Path | None:
+    """Return the git repo root containing `start`, or None if there isn't one.
+
+    (The previous version returned `Path(out.stdout.strip()) or start` —
+    but a Path object is always truthy, even Path(""), so on failure it
+    silently returned `start` disguised as a valid repo root instead of
+    signaling failure. Callers must be able to tell "no repo" from "found
+    a repo", so this returns None explicitly.)
+    """
     try:
         out = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
             cwd=start, capture_output=True, text=True,
             encoding="utf-8", errors="replace"
         )
-        return Path(out.stdout.strip()) or start
     except OSError:
-        return start
+        return None
+    if out.returncode != 0 or not out.stdout.strip():
+        return None
+    return Path(out.stdout.strip())
 
 
 def _render(src: Path, dst: Path, project_name: str) -> None:
@@ -44,36 +63,69 @@ def _render(src: Path, dst: Path, project_name: str) -> None:
 
 def cmd_init(args: argparse.Namespace) -> int:
     target = Path(args.dir or ".").resolve()
-    root = target if (target / ".git").exists() else None
+
+    # Find the git repo root WITHOUT silently falling back to the filesystem
+    # root. If target isn't inside a git repo, refuse and say so — never
+    # guess. (The old code walked parent-by-parent until it ran out of
+    # parents, and on a directory with no .git anywhere would happily
+    # settle on "/" or "C:\" and try to scaffold there.)
+    root = _repo_root(target)
     if root is None:
-        # walk up for a git repo; else treat target as new
-        walk = target
-        while walk != walk.parent and not (walk / ".git").exists():
-            walk = walk.parent
-        root = walk
-    if (root / ".guardrail.json").exists():
-        print(f"lawkeeper: {root} already has a .guardrail.json — refusing to overwrite.")
+        print(
+            f"lawkeeper: {target} is not inside a git repository.\n"
+            f"Run `git init` first (lawkeeper governs a git project; it "
+            f"will not guess where your project root is).",
+            file=sys.stderr,
+        )
         return 1
-    if (root / "docs/AI_CONSTITUTION.md").exists():
-        print(f"lawkeeper: {root} already looks governed (has docs/AI_CONSTITUTION.md). "
-              f"Re-run with --force only if you intend to replace it.")
+
+    already_governed = (root / ".guardrail.json").exists() or (root / "docs/AI_CONSTITUTION.md").exists()
+    if already_governed and not args.force:
+        print(
+            f"lawkeeper: {root} already looks governed "
+            f"(.guardrail.json or docs/AI_CONSTITUTION.md present).\n"
+            f"Re-run with --force if you intend to overwrite the existing governance files.",
+            file=sys.stderr,
+        )
+        return 1
+
+    template_root = _template_root()
+    if not template_root.exists():
+        print(
+            f"lawkeeper: internal error — template directory not found at "
+            f"{template_root}. This is a packaging bug, not a project problem; "
+            f"please report it rather than proceeding.",
+            file=sys.stderr,
+        )
         return 1
 
     project_name = args.name or root.name
     dst_root = root
 
-    # Copy template tree (rendering placeholders).
-    for rel in TEMPLATE_ROOT.rglob("*"):
+    # Copy template tree (rendering placeholders), tracking what we wrote so
+    # we can verify afterward instead of just trusting the loop ran.
+    written: list[Path] = []
+    for rel in template_root.rglob("*"):
         if rel.is_dir():
             continue
-        rel_target = rel.relative_to(TEMPLATE_ROOT)
+        rel_target = rel.relative_to(template_root)
         dst = dst_root / rel_target
         dst.parent.mkdir(parents=True, exist_ok=True)
-        if rel.suffix in (".tmpl",):
-            dst_final = dst.with_suffix(rel.suffix.replace(".tmpl", ""))
+        if rel.suffix == ".tmpl":
+            dst_final = dst.with_suffix("")
         else:
             dst_final = dst
         _render(rel, dst_final, project_name)
+        written.append(dst_final)
+        # Git hooks must be executable or git silently no-ops them (just a
+        # soft "hint", commit still succeeds) — found by actually running
+        # `git commit` against a freshly-scaffolded project: install_hooks.py
+        # reported "hooks ACTIVE" and the commit sailed through with zero
+        # enforcement. write_text() doesn't preserve the +x bit, so every
+        # freshly scaffolded hook was silently inert until a human happened
+        # to chmod it manually.
+        if dst_final.parent.name == "git-hooks":
+            dst_final.chmod(dst_final.stat().st_mode | 0o111)
 
     # Write project config.
     import json
@@ -83,8 +135,28 @@ def cmd_init(args: argparse.Namespace) -> int:
         "canonical_branches": ["main"],
     }
     (dst_root / ".guardrail.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
+    written.append(dst_root / ".guardrail.json")
 
-    print(f"lawkeeper: scaffolding written to {dst_root}")
+    # FAIL LOUDLY if nothing meaningful was actually written. A silent
+    # zero-file "success" is the worst outcome for a governance tool: the
+    # user believes they're protected and they are not.
+    required = [
+        dst_root / "docs" / "AI_CONSTITUTION.md",
+        dst_root / "scripts" / "install_hooks.py",
+        dst_root / ".guardrail.json",
+    ]
+    missing = [str(p) for p in required if not p.exists()]
+    if missing or len(written) < 3:
+        print(
+            "lawkeeper: init did not complete correctly — expected files are "
+            "missing after the copy step:\n  " + "\n  ".join(missing or ["(fewer files written than expected)"]) +
+            "\nDo NOT treat this project as governed. This is a bug in lawkeeper "
+            "itself, not something you did wrong.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"lawkeeper: scaffolding written to {dst_root} ({len(written)} files)")
     print("Next steps:")
     print("  1. pip install -e .   # from the project root")
     print("  2. python scripts/install_hooks.py   # installs pre-commit, commit-msg, pre-push")
@@ -97,6 +169,9 @@ def cmd_init(args: argparse.Namespace) -> int:
 def cmd_status(_: argparse.Namespace) -> int:
     """Human-safe summary of enforcement layers. Never destructive."""
     root = _repo_root()
+    if root is None:
+        print("lawkeeper: not inside a git repository.")
+        return 1
     print(f"repo: {root}")
     print(f"project: {(root / '.guardrail.json').exists() and 'governed' or 'NOT governed by lawkeeper'}")
     hooks = root / ".git" / "hooks"

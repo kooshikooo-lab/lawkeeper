@@ -24,6 +24,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+try:
+    from scan_config import get_oversized_allowlist, get_scan_paths  # normal `python scripts/x.py` run
+except ImportError:
+    # Same fallback pattern as guard_branch.py's load_config(): a plain
+    # sibling import only works when Python itself put scripts/ on
+    # sys.path (running the file directly). tests/test_guard_scripts.py
+    # loads this module via importlib.util.spec_from_file_location
+    # instead, which does not - insert the directory explicitly.
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from scan_config import get_oversized_allowlist, get_scan_paths
 DOCS_DIR = REPO_ROOT / "docs"
 SCRIPTS_DIR = REPO_ROOT / "scripts"
 COMPLIANCE_LOG = SCRIPTS_DIR / "compliance_log.jsonl"
@@ -41,28 +52,6 @@ def load_guardrail_config():
         pass
     return {}
 
-def load_scan_dirs() -> list[Path]:
-    """Directories to scan for Python compliance checks.
-
-    Was hardcoded to `backend/` and `woodwind_designer/` -- Windwright's
-    layout, not any project this script actually runs in (lawkeeper has
-    neither directory). The scanner silently found zero files and reported
-    "0 violations" every single run -- deterministically checking nothing,
-    not the non-determinism task #79 was originally filed against, but a
-    more fundamental version of the same "the scan can't be trusted" family
-    of bug (found + fixed 2026-08-19). A project declares its own real
-    source directories in `.guardrail.json` as `scan_dirs: [...]`; falls
-    back to `src/` (this repo's own layout) if unset, so `--once` reports
-    something real by default rather than nothing.
-    """
-    cfg = load_guardrail_config()
-    declared = cfg.get("scan_dirs")
-    dirs = declared if declared else ["src"]
-    return [REPO_ROOT / d for d in dirs]
-
-
-BACKEND_DIRS = load_scan_dirs()
-
 EXCLUDED_DIRS = [
     "__pycache__",
     ".git",
@@ -73,23 +62,6 @@ EXCLUDED_DIRS = [
 EXCLUDED_FILES = [
     "__init__.py",
 ]
-
-# Known oversized modules (architectural debt, tracked for future refactoring).
-# These don't cause FAIL but are reported for awareness.
-OVERSIZED_ALLOWLIST = {
-    "backend\\ai_advisor.py",
-    "backend\\benchmark_all.py",
-    "backend\\cadquery_export.py",
-    "backend\\inverse_design.py",
-    "backend\\modular_components.py",
-    "backend\\pareto_optimizer.py",
-    "backend\\tmm_acoustics.py",
-    "backend\\trumpet_acoustics.py",
-    "backend\\trumpet_openwind.py",
-    "backend\\stl_verifier.py",
-    "woodwind_designer\\engine\\design_server.py",
-    "woodwind_designer\\engine\\instrument_library.py",
-}
 
 # ── Boot sequence knowledge ─────────────────────────────────────────
 
@@ -150,7 +122,8 @@ def load_subsystem_table() -> dict[str, list[str]]:
 
     Was hardcoded to Windwright's own module names (geometry.py,
     tmm_acoustics.py, design_from_wav.py, ...) -- same class of bug as
-    BACKEND_DIRS above (task #79), just feeding a human-readable printout
+    the scan-path resolution now in scan_config.py (task #79), just
+    feeding a human-readable printout
     instead of the actual scan, so it never silently broke anything, only
     ever printed a wrong/irrelevant checklist for any project that isn't
     Windwright. Deferred as task #90 pending the more urgent scan-path fix;
@@ -172,7 +145,7 @@ TRIGGER_TYPES = ["timer", "before-code", "after-tests", "drift-feel"]
 
 def find_python_files():
     files = []
-    for d in BACKEND_DIRS:
+    for d in get_scan_paths(REPO_ROOT):
         if not d.exists():
             continue
         for root, dirs, names in os.walk(d):
@@ -314,6 +287,7 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
     }
 
     files = find_python_files()
+    oversized_allowlist = get_oversized_allowlist(REPO_ROOT)
 
     bare_excepts_total = 0
     mutable_total = 0
@@ -321,12 +295,20 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
     oversized_modules = []
 
     for f in files:
-        rel = f.relative_to(REPO_ROOT)
+        # .as_posix(), not str() - str(Path) uses backslashes on Windows,
+        # forward slashes on Linux/mac. compliance_baseline.json is a
+        # committed, cross-platform-shared file: a baseline recorded on
+        # Windows would never match the same violations found by Linux CI
+        # (or vice versa), since the "file" field is compared as a plain
+        # string. Found by actually running the real CI job, not by
+        # inspection - passed locally on Windows because the baseline was
+        # also generated on Windows, so the mismatch was invisible there.
+        rel = f.relative_to(REPO_ROOT).as_posix()
         try:
             bare = check_bare_excepts(f)
             if bare:
                 results["violations"].append({
-                    "file": str(rel),
+                    "file": rel,
                     "check": "bare_except",
                     "lines": bare,
                 })
@@ -338,7 +320,7 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
             mutables = check_module_mutables(f)
             if mutables:
                 results["violations"].append({
-                    "file": str(rel),
+                    "file": rel,
                     "check": "module_mutable",
                     "items": mutables,
                 })
@@ -350,7 +332,7 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
             ips = check_hardcoded_ips(f)
             if ips:
                 results["violations"].append({
-                    "file": str(rel),
+                    "file": rel,
                     "check": "hardcoded_ip",
                     "ips": ips,
                 })
@@ -359,9 +341,9 @@ def run_checks(subsystem: str | None = None, trigger: str = "timer") -> dict:
             pass
 
         try:
-            rel_str = str(rel)
+            rel_str = rel
             size = check_module_size(f)
-            if size and rel_str not in OVERSIZED_ALLOWLIST:
+            if size and rel_str not in oversized_allowlist:
                 oversized_modules.append({"file": rel_str, "lines": size})
                 results["violations"].append({
                     "file": rel_str,

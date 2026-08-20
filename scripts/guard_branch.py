@@ -93,8 +93,53 @@ def content_preserved(sha: str) -> bool:
 
 
 def origin_head_points_at_main() -> bool:
-    out, _ = run_git(["symbolic-ref", "refs/remotes/origin/HEAD"])
-    return out.rstrip("/") in ("refs/remotes/origin/main", "refs/remotes/origin/main/")
+    """Law 15.6: the remote's default branch should be main.
+
+    Three layers, cheapest/most-local first, each only tried when the
+    previous one couldn't answer - found by actually hitting each gap in
+    practice across two separate real failures, not by inspection:
+
+    1. Local origin/HEAD symref, when git has set it (a real `git clone`
+       always does). No network call.
+    2. refs/remotes/origin/main existing locally. Still no network call -
+       covers a normal fetch that didn't run `git remote set-head`. This
+       was tried alone first and was NOT enough: a `pull_request`-event
+       checkout via actions/checkout@v4 checks out a synthetic merge ref
+       directly and never creates refs/remotes/origin/main locally at
+       all, even though the remote's real default branch is main.
+    3. `git ls-remote --symref origin HEAD` - asks the remote directly.
+       Needs network + a reachable `origin` URL, which is exactly the
+       situation CI is always in. Kept as the last resort, not the first
+       check, so normal local dev usage of this law never needs network
+       access for something a local ref can already answer.
+
+    If a remote is configured but every layer still can't determine an
+    answer (offline, unreachable, all local refs missing), or no remote
+    is configured at all (a brand-new local-only project - the originally
+    documented case), returns True: nothing here indicates a real
+    violation, and this check must not manufacture a false FAIL out of
+    "I couldn't determine the answer."
+    """
+    out, code = run_git(["symbolic-ref", "refs/remotes/origin/HEAD"])
+    if code == 0:
+        return out.rstrip("/") in ("refs/remotes/origin/main", "refs/remotes/origin/main/")
+
+    _, remote_code = run_git(["remote", "get-url", "origin"])
+    if remote_code != 0:
+        return True  # no remote configured yet - nothing to violate this against
+
+    _, main_code = run_git(["rev-parse", "--verify", "refs/remotes/origin/main"])
+    if main_code == 0:
+        return True
+
+    ls_out, ls_code = run_git(["ls-remote", "--symref", "origin", "HEAD"])
+    if ls_code != 0:
+        return True  # remote unreachable - can't determine, don't false-fail
+    for line in ls_out.splitlines():
+        if line.startswith("ref:"):
+            parts = line.split()
+            return len(parts) >= 2 and parts[1] == "refs/heads/main"
+    return True  # no symref line in the response - can't determine
 
 
 NAMESPACED_ZERO = "0" * 40
@@ -169,8 +214,19 @@ def check_delete(name: str) -> list[str]:
             f"DELETE {name}: deletion of a canonical branch requires explicit human "
             f"approval (set GUARD_BRANCH_ALLOW_DELETE={name}). Law 15.8."
         ]
-    sha, _ = run_git(["rev-parse", name])
-    if sha and not content_preserved(sha):
+    sha, code = run_git(["rev-parse", name])
+    if code != 0 or not sha:
+        # git couldn't resolve the branch at all (bad ref, not a git repo,
+        # transient failure, whatever). The old code treated "I don't know"
+        # as "no violation" and let the deletion through unchecked. A guard
+        # that can't verify safety should refuse, not shrug.
+        return [
+            f"DELETE {name}: could not resolve this branch with `git rev-parse` "
+            f"(exit {code}) — refusing to approve deletion of something that "
+            f"can't be verified. If you're sure this is safe, delete it manually "
+            f"outside lawkeeper."
+        ]
+    if not content_preserved(sha):
         return [f"DELETE {name}: content not provably present on a canonical branch or main. Law 15.5."]
     return []
 

@@ -1,59 +1,58 @@
 {
   "violations": [
     [
-      "scripts\\adversarial_review_checker.py",
+      "scripts/adversarial_review_checker.py",
       "module_size",
       [
         563
       ]
     ],
     [
-      "scripts\\check_declared_dependencies.py",
+      "scripts/check_declared_dependencies.py",
       "module_mutable",
       [
         "IMPORT_NAME_OVERRIDES L31"
       ]
     ],
     [
-      "scripts\\compliance_watchdog.py",
+      "scripts/compliance_watchdog.py",
       "module_mutable",
       [
-        "EXCLUDED_DIRS L66",
-        "EXCLUDED_FILES L73",
-        "OVERSIZED_ALLOWLIST L79",
-        "TRIGGER_TYPES L167"
+        "EXCLUDED_DIRS L55",
+        "EXCLUDED_FILES L62",
+        "TRIGGER_TYPES L140"
       ]
     ],
     [
-      "scripts\\compliance_watchdog.py",
+      "scripts/compliance_watchdog.py",
       "module_size",
       [
-        559
+        541
       ]
     ],
     [
-      "scripts\\consensus_review.py",
+      "scripts/consensus_review.py",
       "module_mutable",
       [
         "PANELS L126"
       ]
     ],
     [
-      "scripts\\guard_governance.py",
+      "scripts/guard_governance.py",
       "module_mutable",
       [
         "GOVERNANCE_FILES L19"
       ]
     ],
     [
-      "scripts\\mine_failure_patterns.py",
+      "scripts/mine_failure_patterns.py",
       "module_mutable",
       [
         "REPOS L55"
       ]
     ],
     [
-      "scripts\\system_audit.py",
+      "scripts/system_audit.py",
       "module_mutable",
       [
         "HOOK_WIRING L40",
@@ -61,14 +60,14 @@
       ]
     ],
     [
-      "scripts\\team_chat.py",
+      "scripts/team_chat.py",
       "module_mutable",
       [
         "OTHER L222"
       ]
     ],
     [
-      "scripts\\toolcheck.py",
+      "scripts/toolcheck.py",
       "module_mutable",
       [
         "PACKAGE_ALIASES L29",
@@ -79,7 +78,7 @@
       ]
     ],
     [
-      "scripts\\validate_commit_msg.py",
+      "scripts/validate_commit_msg.py",
       "module_mutable",
       [
         "GOVERNANCE_FILES L24",
@@ -87,39 +86,39 @@
       ]
     ],
     [
-      "scripts\\validate_imports.py",
+      "scripts/validate_imports.py",
       "module_mutable",
       [
         "DELETED_MODULES L22"
       ]
     ],
     [
-      "scripts\\validate_pre_commit.py",
+      "scripts/validate_pre_commit.py",
       "hardcoded_ip",
       [
         "100.64.0.0"
       ]
     ],
     [
-      "scripts\\validate_pre_commit.py",
+      "scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L20",
-        "REGENERABLE_SUFFIXES L40",
-        "REGENERABLE_PATHS L45",
-        "OVERSIZED_ALLOWLIST L48",
-        "PLACEMENT_ALLOWLIST L121"
+        "PLACEMENT_RULES L21",
+        "REGENERABLE_SUFFIXES L41",
+        "REGENERABLE_PATHS L46",
+        "OVERSIZED_ALLOWLIST L49",
+        "PLACEMENT_ALLOWLIST L122"
       ]
     ],
     [
-      "src\\guardrail\\laws\\law_14_audit_before_commit.py",
+      "src/guardrail/laws/law_14_audit_before_commit.py",
       "module_mutable",
       [
         "REQUIRED_FILES L13"
       ]
     ],
     [
-      "src\\guardrail\\laws\\law_16_enforcement.py",
+      "src/guardrail/laws/law_16_enforcement.py",
       "module_mutable",
       [
         "GUARD_SCRIPTS L13",
@@ -127,11 +126,131 @@
       ]
     ],
     [
-      "src\\guardrail\\laws\\law_18_test_governance.py",
+      "src/guardrail/laws/law_18_test_governance.py",
       "module_mutable",
       [
         "REQUIRED_FILES L18",
         "REQUIRED_DIRS L22"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/compliance_watchdog.py",
+      "module_mutable",
+      [
+        "EXCLUDED_DIRS L55",
+        "EXCLUDED_FILES L62",
+        "TRIGGER_TYPES L140"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/compliance_watchdog.py",
+      "module_size",
+      [
+        541
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/consensus_review.py",
+      "module_mutable",
+      [
+        "PANELS L126"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/guard_governance.py",
+      "module_mutable",
+      [
+        "GOVERNANCE_FILES L19"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/system_audit.py",
+      "module_mutable",
+      [
+        "HOOK_WIRING L40",
+        "GUARD_SCRIPTS L47"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/team_chat.py",
+      "module_mutable",
+      [
+        "OTHER L222"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/toolcheck.py",
+      "module_mutable",
+      [
+        "PACKAGE_ALIASES L29",
+        "FREECAD_MODULES L52",
+        "EXTERNAL_APP_MODULES L58",
+        "LOCAL_ROOTS L61",
+        "STDLIBISH L65"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/validate_commit_msg.py",
+      "module_mutable",
+      [
+        "GOVERNANCE_FILES L24",
+        "PROVISIONAL_KEYWORDS L35"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/validate_imports.py",
+      "module_mutable",
+      [
+        "DELETED_MODULES L22"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/validate_pre_commit.py",
+      "hardcoded_ip",
+      [
+        "100.64.0.0"
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/validate_pre_commit.py",
+      "module_mutable",
+      [
+        "PLACEMENT_RULES L21",
+        "REGENERABLE_SUFFIXES L41",
+        "REGENERABLE_PATHS L46",
+        "OVERSIZED_ALLOWLIST L49",
+        "PLACEMENT_ALLOWLIST L122"
+      ]
+    ],
+    [
+      "tests/test_choices.py",
+      "module_mutable",
+      [
+        "SAMPLE L16"
+      ]
+    ],
+    [
+      "tests/test_e2e.py",
+      "module_mutable",
+      [
+        "STUB_GUARD_SCRIPTS L48"
+      ]
+    ],
+    [
+      "tests/test_guard_scripts.py",
+      "hardcoded_ip",
+      [
+        "100.69.113.41"
+      ]
+    ],
+    [
+      "tests/test_template.py",
+      "module_mutable",
+      [
+        "ROOT_DIRS L20",
+        "ROOT_SCRIPT_FILES L21",
+        "ROOT_DOCS L32",
+        "HOOKS L39"
       ]
     ]
   ]
