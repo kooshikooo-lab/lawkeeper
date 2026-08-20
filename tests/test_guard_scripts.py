@@ -5,6 +5,7 @@ guards (the very code that prevents failure) is caught. They must not depend on
 the real git state or network, only on the scripts' importable functions.
 """
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -166,6 +167,73 @@ class TestCommitMsgGuard:
 
     def test_governance_marker_present(self):
         assert validate_commit_msg.GOVERNANCE_MARKER == "GOVERNANCE-UPDATE"
+
+    def test_human_check_pattern_required(self):
+        """Law 23: a human-facing commit must declare a direct check, not
+        just a metric/test result."""
+        ok = "fix UI\n\nHuman-check: opened the page, button works as described"
+        assert validate_commit_msg.HUMAN_CHECK_PATTERN.search(ok) is not None
+        bad = "fix UI\n\nTests: 5 passed"
+        assert validate_commit_msg.HUMAN_CHECK_PATTERN.search(bad) is None
+
+
+class TestHumanFacingGate:
+    """Law 23 mechanization: real end-to-end coverage, not just regex unit
+    tests -- load_human_facing_patterns() reads a real file, and
+    human_facing_changed() runs a real `git diff --cached` against a real
+    repo, so a mocked-only test wouldn't catch a real integration bug in
+    either (Law 18: a test must discriminate against real breakage)."""
+
+    def _init_repo(self, tmp_path, monkeypatch):
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
+        monkeypatch.chdir(tmp_path)
+
+    def test_no_config_means_rule_never_fires(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / "dashboard.html").write_text("<html></html>")
+        subprocess.run(["git", "add", "dashboard.html"], cwd=tmp_path, check=True)
+        assert validate_commit_msg.load_human_facing_patterns() == []
+        assert validate_commit_msg.human_facing_changed() is False
+
+    def test_configured_pattern_matches_staged_file(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"human_facing_paths": ["dashboard.html", "web/src/components/*.tsx"]})
+        )
+        (tmp_path / "dashboard.html").write_text("<html></html>")
+        subprocess.run(["git", "add", "dashboard.html", ".guardrail.json"], cwd=tmp_path, check=True)
+        assert validate_commit_msg.load_human_facing_patterns() == [
+            "dashboard.html", "web/src/components/*.tsx"
+        ]
+        assert validate_commit_msg.human_facing_changed() is True
+
+    def test_configured_pattern_does_not_match_unrelated_file(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"human_facing_paths": ["dashboard.html"]})
+        )
+        (tmp_path / "server.py").write_text("x = 1\n")
+        subprocess.run(["git", "add", "server.py", ".guardrail.json"], cwd=tmp_path, check=True)
+        # .guardrail.json itself is staged too, but it isn't a human-facing
+        # path, and server.py doesn't match "dashboard.html" -- must be False.
+        assert validate_commit_msg.human_facing_changed() is False
+
+    def test_glob_pattern_matches_nested_path(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"human_facing_paths": ["web/src/components/*.tsx"]})
+        )
+        (tmp_path / "web" / "src" / "components").mkdir(parents=True)
+        (tmp_path / "web" / "src" / "components" / "AnalyzeTab.tsx").write_text("export {}")
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+        assert validate_commit_msg.human_facing_changed() is True
+
+    def test_malformed_config_fails_safe_to_empty(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text("{not valid json")
+        assert validate_commit_msg.load_human_facing_patterns() == []
 
 
 # ── validate_pre_commit: file checks ───────────────────────────────────
