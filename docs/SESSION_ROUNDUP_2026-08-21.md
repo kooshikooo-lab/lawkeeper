@@ -168,18 +168,26 @@ self-references were correctly subtracted -- the cruder check was
 wrong, corrected here rather than left standing.)
 
 ## Recommended next actions, in priority order
-1. **`team_chat_monitor.py`** -- smallest fix, highest value: directly
-   prevents a friction pattern that hit this exact session multiple
-   times tonight. Run it / wire it in.
-2. **`train_lora.py` + `prepare_training_data.py`** -- real,
-   substantial work toward the user's own stated long-term local-model
-   goal, abandoned mid-thread. Worth a real decision: pick back up, or
-   explicitly mark superseded/abandoned with a reason (matching the
-   "no permanent limbo" discipline used earlier tonight on Windwright's
-   ADRs).
-3. **`gamification_test.py`** -- real verification tool for whether
-   Evolve-a-Life is actually engaging, never run. Cheap to actually run
-   once and get a real answer.
-4. **`github_mcp.py`** -- check the real MCP config before concluding
-   anything; the zero-references signal may be a false negative for
-   this specific file.
+
+1. **`team_chat_monitor.py`** -- DONE, same session. Real gap found and
+   fixed (channel list never covered falcun#1, the actual channel with
+   tonight's friction); live-verified with `--once`; now running
+   continuously in the background across all 3 channels.
+2. **`gamification_test.py`** -- DONE, same session. Actually run for
+   the first time: `quit_rate=0.00` for both player strategies across
+   20 real runs, root cause traced through the actual code (the quit
+   mechanic is effectively disabled by the simulation's own mutation
+   rate, independent of player strategy). Real, precise conclusion
+   logged in falcun's `WORKPLAN.md` Phase 6 -- this is evidence the
+   *test* can't currently differentiate strategies, not evidence the
+   game is or isn't engaging. Fixing the metric design is real,
+   separate follow-up work, not done here.
+3. **`github_mcp.py`** -- checked. Confirmed genuinely unregistered
+   anywhere (searched opencode config directories directly, zero
+   matches) -- the earlier hypothesis that this was a false negative
+   (MCP tools register via config, not Python imports) did not hold up;
+   this one really does look unused.
+4. **`train_lora.py` + `prepare_training_data.py`** -- not acted on.
+   This is a real directional decision (pick the local-model effort
+   back up, or mark it explicitly abandoned with a reason), not a
+   technical fix -- left for the user.
