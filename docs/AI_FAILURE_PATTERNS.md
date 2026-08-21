@@ -76,6 +76,38 @@ Log every compliance failure and guard bypass. Review before each session (Law 1
   file-level corruption twice now; if a third occurrence turns up, treat
   it as a pattern needing a real cause (disk issue? antivirus quarantine?
   interrupted installs?) rather than a one-off. Severity: debt.
+- [2026-08-21] **Third and fourth occurrence, same session, escalating
+  as the prior entry said to.** Installing `claude-agent-sdk` for the
+  lawkeeper prototype work hit two separate corrupted packages back to
+  back: `pywin32` (`win32con` importable as a `.pyc` in `__pycache__`
+  but the real `.py` source genuinely absent from disk — 31 real files
+  present in `win32/lib/` against 33 cached `.pyc` files, confirmed by
+  listing both directories directly, not assumed) and then
+  `pydantic_settings` (`pydantic_settings.sources.providers.cli`
+  missing the same way, hit only after fixing the first). Both fixed
+  the same way as the anyio case: `pip install --force-reinstall
+  --no-deps <package>`; both re-verified by re-importing
+  `claude_agent_sdk` and confirming `ClaudeSDKClient`,
+  `ClaudeAgentOptions`, `HookMatcher` all present.
+  **Real pattern now worth naming, not just re-flagging**: every
+  instance so far shares the same shape — a `.pyc` compiled cache
+  exists in `__pycache__`, but the real `.py` source it was compiled
+  from is missing from disk, i.e. the file was successfully imported at
+  least once before something removed only the source, not the whole
+  package. This is a specific, real signature, not generic "corruption"
+  -- it matches how some disk-cleanup/"debloat" utilities prune source
+  files once a compiled cache exists, to reclaim space, treating the
+  source as redundant. Worth connecting to the same session's other
+  real finding: `WSLService` was found explicitly disabled at the
+  Windows service level with no clear cause, a similarly-shaped
+  "something on this machine aggressively strips things it shouldn't"
+  pattern. Real, concrete next step, not done here (out of scope for
+  mid-session firefighting): check Windows Task Scheduler and installed
+  "optimizer"/cleanup software for anything matching this behavior,
+  rather than continuing to treat each new instance as independent.
+  Severity: debt, but the recurrence itself (4 known instances now)
+  argues for treating the *pattern* as a real, standing risk to any
+  future pip install on this machine, not background noise.
 - [2026-08-20] Mechanical follow-through on the LAW 12 entry above: three genuinely-directional questions surfaced live this same session (decision-flagging heuristic, commit/push/audit cadence, orbital-study procedural-name-as-canon scope) were correctly *not* silently decided, but were only ever logged as scattered team-channel comments — exactly the "logged, no findable home, will quietly stop mattering" shape LAW 12 already names. Fix: drafted `docs/GOVERNANCE_PROPOSALS.md` with a recommendation (where one applies) for each, explicitly marked OPEN pending the user's actual decision; each carries its own `Re-check when:` per the LAW 12 convention. Severity: debt.
 - Pre-existing orphan branches outside Law 15 namespaces: clean up via #23; canonical branches are NOT deleted without human approval.
 - [2026-08-07T16:40] Initial `git merge-tree` probe falsely reported "no conflict" because the repo's default branch was `master`, so `checkout main` created a non-divergent branch. `merge_gate.py` itself is NOT broken — a corrected probe (sibling branches from a single base) returns rc 1 with `CONFLICT (content)` as expected. Debt: re-verify `merge_gate` e2e against real git conflicts on Linux CI before relying on it. Severity: debt.

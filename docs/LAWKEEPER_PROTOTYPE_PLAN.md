@@ -220,9 +220,17 @@ precondition that makes the adaptive one safe to want.
   finding above (hooks are native async callbacks, not subprocess
   scripts; corrected the plan accordingly rather than leaving the
   original, less accurate assumption standing).
-- Confirm the Agent SDK's real Python package name/install command
-  works cleanly in this environment (`pip install claude-agent-sdk`,
-  requires Python 3.10+) -- not yet tested here.
+- [x] Confirm the Agent SDK's real Python package name/install command
+  works cleanly in this environment -- done 2026-08-21. Installed
+  cleanly (`claude-agent-sdk-0.2.143`, Python 3.12.10 satisfies the
+  3.10+ requirement), but importing it surfaced two real, pre-existing
+  local environment corruption bugs (unrelated to the SDK itself --
+  `pywin32` and `pydantic_settings` both had `.pyc` caches with the
+  real `.py` source missing from disk). Both fixed with
+  `pip install --force-reinstall --no-deps <package>`; full detail and
+  a real pattern hypothesis in `AI_FAILURE_PATTERNS.md`. Re-verified
+  after fixing: `claude_agent_sdk` imports cleanly, `ClaudeSDKClient`/
+  `ClaudeAgentOptions`/`HookMatcher` all present as documented.
 - Read Anthropic's Commercial Terms of Service in full before any
   plan to distribute this beyond personal/testing use -- real,
   necessary step for the platform-cooperative vision specifically, not
