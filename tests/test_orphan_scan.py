@@ -42,6 +42,19 @@ class TestIsOneOffTaskScript:
         assert orphan_scan.is_one_off_task_script("validate_trumpet_baseline")
         assert orphan_scan.is_one_off_task_script("test_something")
 
+    def test_matches_2026_08_21_added_patterns(self):
+        """Real false positives found by actually reading all 11
+        remaining Windwright candidates from the 2026-08-21 round-up --
+        10 of 11 were legitimate one-off utilities, not forgotten code."""
+        assert orphan_scan.is_one_off_task_script("debug_chalumier_compare")
+        assert orphan_scan.is_one_off_task_script("verify_cone_theory")
+        assert orphan_scan.is_one_off_task_script("view_browser")
+        assert orphan_scan.is_one_off_task_script("propose_tasks")
+        assert orphan_scan.is_one_off_task_script("_run_benchmark_live")
+        assert orphan_scan.is_one_off_task_script("blender_render_stl")
+        assert orphan_scan.is_one_off_task_script("validate_chromatic_flute")
+        assert orphan_scan.is_one_off_task_script("phase5_export_all")
+
     def test_does_not_match_real_infrastructure_names(self):
         assert not orphan_scan.is_one_off_task_script("train_lora")
         assert not orphan_scan.is_one_off_task_script("team_chat_monitor")

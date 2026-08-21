@@ -52,6 +52,15 @@ ONE_OFF_TASK_PATTERNS = [
         r"^diagnose_", r"^investigate_", r"^compare_", r"^bracket_check_",
         r"^experiment_", r"^benchmark_.*_dask$", r"^v2_validation_runner$",
         r"^test_",
+        # Added 2026-08-21 after actually reading all 11 remaining
+        # Windwright candidates from the round-up: 10 of them were real,
+        # legitimate one-off diagnostic/manual-run utilities that just
+        # didn't match the patterns above -- confirmed by reading each
+        # one's real content, not assumed from the name alone. Broadened
+        # here so future scans don't re-flag the same real non-issues.
+        r"^debug_", r"^verify_", r"^view_", r"^propose_", r"^_run_",
+        r"^blender_render_", r"^validate_chromatic_",
+        r"^phase\d+_export",
     ]
 ]
 
