@@ -16,7 +16,10 @@ dependencies = ["pyyaml>=6.0"]
 # maintainer scripts that call OpenRouter/team-chat (ai_review.py,
 # consensus_review.py, team_chat.py) -- dev-only, same reasoning as
 # pytest/build here.
-dev = ["pytest>=7", "build>=1.0", "requests>=2.28"]
+# beautifulsoup4: same reasoning, used by scripts/hardware_scanner/'s
+# adapters (real HTML parsing for inet.se/refurbed.se), not the shipped
+# guardrail package.
+dev = ["pytest>=7", "build>=1.0", "requests>=2.28", "beautifulsoup4>=4.12"]
 # claude-agent-sdk: real, shipped-package dependency for
 # guardrail.agent's Stage-1 downloadable-prototype integration
 # (docs/LAWKEEPER_PROTOTYPE_PLAN.md) -- kept optional rather than a
