@@ -8,6 +8,23 @@ owned capital) applied to the most literal resource: CPU/GPU cycles.
 Kept grounded to what two real machines can actually do; the bigger
 vision is real context, not something this plan claims to solve.
 
+## Real, immediate to-do (blocked on you, not automatable)
+
+**Enable SVM Mode in BIOS on this desktop (ASUS PRIME X370-PRO, AMD).**
+WSL2 genuinely cannot start without it -- confirmed directly via
+`systeminfo`: "Virtualization Enabled In Firmware: No" (everything else
+the CPU needs -- VM Monitor Mode Extensions, SLAT, DEP -- is already
+fine). This is a firmware-level setting, not something fixable from
+Windows or remotely.
+- Restart -> press `Del` repeatedly during boot -> if EZ Mode, press
+  `F7` for Advanced Mode -> Advanced -> CPU Configuration -> SVM Mode
+  -> Enabled -> `F10` to save and exit.
+- After rebooting into Windows: `wsl --list --verbose` should then
+  successfully start WSL2 instead of erroring on virtualization.
+- Deferred to whenever next convenient (2026-08-21 was very late/tired
+  by this point) -- real, not forgotten, logged here specifically so it
+  doesn't join the round-up's own "built then forgotten" pattern.
+
 ## Terms, defined plainly (you said you don't know half of them — no
 assumption you should)
 
@@ -82,16 +99,33 @@ the laptop's keyboard).
 
 ## Plan, in order
 
-### Step 1 — Enable Tailscale SSH on both machines (the real baby step)
-- **This desktop**: `tailscale up --ssh` (or the equivalent toggle in
-  the Tailscale admin console) — real, single command, safe,
-  reversible.
-- **The laptop**: same command, needs to be run there directly (by you,
-  or by whichever agent has an active session on it) since it's
-  currently offline and I have no way to reach it yet.
-- **Verify**: `tailscale status --json` should show `SSHHostKeys`
-  populated for both nodes once enabled — this is a real, checkable
-  fact, not a guess.
+### Step 1 — Real remote access, corrected after actually trying it
+
+**Real correction, found by running the command, not assumed:**
+`tailscale up --ssh` on this desktop returned "The Tailscale SSH server
+is not supported on windows" — verified as a genuine, current Tailscale
+limitation (checked against Tailscale's own docs and a live GitHub
+issue tracking the feature request), not a one-off error. Tailscale SSH
+*server* mode is Linux/macOS-only; Windows can only be an SSH *client*
+under Tailscale SSH, never a target. Since both this desktop and the
+laptop are Windows, Tailscale's own SSH feature doesn't work for either
+end of this pair.
+
+**Real fix:** use Windows' own OpenSSH Server (a built-in optional
+Windows feature, separate from Tailscale) as the actual SSH server on
+each machine, with Tailscale providing the network layer underneath
+(Tailscale-as-client works fine on Windows) — i.e. "SSH over Tailscale,"
+not "Tailscale SSH." Concretely: enable the Windows OpenSSH Server
+feature, then connect via the machine's Tailscale IP (already known:
+this desktop `100.69.113.41`, laptop `100.100.66.117`) using standard
+SSH key auth.
+- **This desktop**: enable OpenSSH Server (Settings > Optional Features,
+  or `Add-WindowsCapability -Online -Name OpenSSH.Server`), generate/
+  register a key pair.
+- **The laptop**: same, needs to be done there directly since it's
+  currently offline and unreachable from here.
+- **Verify**: `ssh laptop-tailscale-ip "echo ok"` actually returning
+  `ok` from this desktop's Bash tool — a real, checkable fact.
 
 ### Step 2 — Real remote-execution test
 Once both nodes show SSH-enabled and the laptop is online: a real,
@@ -144,6 +178,75 @@ written up once, generically, and referenced from each repo that needs
 it — likely a `docs/DISTRIBUTED_COMPUTE.md` template in lawkeeper's own
 `src/guardrail/template/`, matching how governance docs already
 propagate via `lawkeeper init`, rather than copy-pasted per repo.
+
+## Volunteer compute — what "safely" actually means (real research, not guessed)
+
+The user's real next-step vision, stated directly: eventually let
+friends/acquaintances donate compute to a shared network, **and get
+compute back when they need it** — a reciprocal exchange, not one-way
+charity (closer to the "membership as reciprocal citizenship" idea
+already in [[virtual-nation-cooperative-vision]] than to SETI@home-style
+pure donation). This is a real, serious escalation in risk profile from
+"me and my own laptop" to "code running on strangers' machines, and
+strangers' results feeding back into a shared system" — worth being
+concrete and honest about, not just reassuring.
+
+**Critical, direct finding, not softened: Dask itself is not safe for
+this.** Dask's scheduler sends *arbitrary pickled Python objects* to
+workers for execution — this is real, standard Dask behavior, not a
+misconfiguration, and it means any Dask worker (or anyone who can talk
+to a Dask scheduler) can execute arbitrary code on every other node in
+the cluster. This is fine, even good, for two machines you personally
+own and trust completely (the desktop+laptop pair this plan starts
+with). It is a genuine, serious security hole the moment a third,
+untrusted party's machine joins the same cluster. This is not a
+reason to avoid the bigger vision — it's a reason the *mechanism* has
+to change before volunteers are involved, not just scaled up.
+
+**The real, established answer is BOINC** (Berkeley Open Infrastructure
+for Network Computing) — the actual framework SETI@home, Folding@Home,
+and Rosetta@home are built on, decades of real-world volunteer-compute
+security experience, not something to reinvent from scratch. Its real
+security model, in plain terms:
+
+1. **Sandboxing** — volunteer tasks run under a specially-created,
+   restricted account with no access to files outside the sandbox
+   directory (the lighter-weight option), or inside a real virtual
+   machine via a VirtualBox wrapper for untrusted code specifically
+   (the stronger option). Translated: a volunteer's task should never
+   be able to touch their real files, browser data, or anything outside
+   an isolated box — regardless of what the task's own code does,
+   buggy or malicious.
+2. **Signed executables** — the actual code volunteers run is digitally
+   signed using a separate, offline signing machine, so a compromised
+   server can't push malicious code to volunteers even if the main
+   infrastructure is breached.
+3. **Result verification via replication** — because a volunteer's
+   machine and results can never be fully trusted (compromised, buggy,
+   or actively lying), the same task gets sent to multiple volunteers
+   independently; results are only accepted once independent replicas
+   agree. This is also the real, direct answer to the reciprocal-
+   exchange question: it's the same mechanism that would need to
+   prevent someone falsely claiming they contributed more compute than
+   they did ("credit falsification" is BOINC's own documented term for
+   exactly this).
+4. **Never trust a worker's claimed resource usage** — the same
+   replication/verification principle applies to "how much compute did
+   this volunteer actually contribute," which matters specifically
+   *because* this is reciprocal, not pure donation — fair accounting is
+   a real requirement here that pure-donation projects don't have to
+   solve as carefully.
+
+**What this means concretely for the plan:** Dask stays the right tool
+for Step 5 (you + the laptop, fully trusted). A real volunteer network
+is a different, later, separate architecture — most realistically
+either adopting BOINC directly (mature, real, already solves this) or
+building a much narrower custom system with the same real properties
+(sandboxed/containerized execution, signed task code, redundant
+verification) rather than extending Dask's trust model outward. Not
+attempting to design that system in this pass — flagging it as a real,
+separate, substantial piece of work with a real, existing answer to
+start from, not an unsolved problem.
 
 ## What this plan deliberately does not claim
 
