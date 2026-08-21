@@ -69,6 +69,18 @@ multi-agent claim/release work (2026-08-20) is lawkeeper-adjacent
 tooling, not lawkeeper itself becoming active; don't let that be
 mistaken for the trigger firing.
 
+**Real flag (2026-08-21):** this trigger condition looks fired.
+2026-08-20/21 was an entire marathon session of direct, active
+lawkeeper work (Law 22/23, the Stop hook, the orphan scanner, and now
+`docs/LAWKEEPER_PROTOTYPE_PLAN.md` — a real, concrete downloadable-
+prototype plan) — not lawkeeper-adjacent tooling, lawkeeper itself.
+Separately, real and concrete: the user installed Hermes Agent on the
+laptop the same session (clean install confirmed on Linux, not yet
+actually run/tried). Worth a real re-comparison once lawkeeper's own
+prototype work (the Agent SDK integration above) reaches its own real
+memory/context-loading design, since that's exactly where Hermes's
+`MemoryProvider` pattern would plug in.
+
 **Context:** lawkeeper's original vision was a coding-assistant harness /
 governance system robust enough to make even a weaker model do good work,
 with memory encoded into it — closely overlapping with what Hermes Agent
