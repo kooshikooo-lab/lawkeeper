@@ -17,6 +17,14 @@ dependencies = ["pyyaml>=6.0"]
 # consensus_review.py, team_chat.py) -- dev-only, same reasoning as
 # pytest/build here.
 dev = ["pytest>=7", "build>=1.0", "requests>=2.28"]
+# claude-agent-sdk: real, shipped-package dependency for
+# guardrail.agent's Stage-1 downloadable-prototype integration
+# (docs/LAWKEEPER_PROTOTYPE_PLAN.md) -- kept optional rather than a
+# hard dependency since most lawkeeper installs (the governance CLI
+# itself) don't need it; deferred-imported inside
+# build_governed_options() specifically so the rest of the package
+# stays importable/testable without it installed.
+agent = ["claude-agent-sdk>=0.2"]
 
 [project.scripts]
 lawkeeper = "guardrail.cli:main"
