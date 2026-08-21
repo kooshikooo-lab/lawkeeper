@@ -61,17 +61,36 @@ entry point already real and pip-installable)
 ## Real MVP scope, staged
 
 ### Stage 1 -- Prove the integration works at all
+
+**Real, corrected understanding of the hook mechanism** (checked
+2026-08-21 against the SDK's actual hooks documentation, not assumed
+from how Claude Code CLI hooks work): the Agent SDK's Python hooks are
+native `async def` callback functions registered directly in code via
+`ClaudeAgentOptions(hooks={"Stop": [HookMatcher(hooks=[my_callback])]})`
+-- not external subprocess scripts reading JSON from stdin the way
+`scripts/claude_stop_hook.py` currently works for the Claude Code CLI.
+`Stop` is confirmed supported in the Python SDK (not TypeScript-only).
+Real, corrected plan: the pattern-matching logic in
+`claude_stop_hook.py`'s `check()` function is directly reusable as-is;
+the wrapper around it needs a real rewrite into an async callback with
+the signature `async def stop_hook(input_data, tool_use_id, context) ->
+dict`, returning `{"hookSpecificOutput": {"hookEventName": "Stop", ...}}`
+to block, or `{}` to allow -- not a "near-direct port" as first assumed,
+a real but small rewrite of the interface layer around already-correct
+logic.
+
 - New module: `src/guardrail/agent.py`, a thin wrapper that starts a
   real Agent SDK session pointed at the current directory, with:
   - `ANTHROPIC_API_KEY` read from the environment (standard, no new
     mechanism needed)
   - Lawkeeper's constitution + relevant docs loaded as real context
-  - The Stop hook ported to the SDK's real hook registration format
+  - The Stop hook's real logic re-wrapped as a native async callback,
+    per the corrected understanding above
 - New CLI subcommand: `lawkeeper agent "<task>"` -- runs one real,
   governed agentic session.
 - **Real success criterion**: run it on a small, real, bounded task in
   this very repo and confirm (a) it actually reads/edits real files,
-  (b) the ported Stop hook actually fires and blocks a deliberately
+  (b) the re-wrapped Stop hook actually fires and blocks a deliberately
   triggered hedge-phrase response, the same live test attempted earlier
   tonight but inside a context where it's confirmed to actually work
   (a bare Agent SDK session isn't the same managed-environment surface
@@ -160,6 +179,31 @@ promise something the architecture can't keep):
   anyone who wants zero cloud dependency specifically, not something
   the cloud-model path can honestly claim to already be.
 
+**Real resolution to the tension above, proposed by the user**: don't
+make one product try to hold both claims at once -- ship distinct
+versions/editions with different, honest, real guarantees each:
+- **A fully offline edition** -- genuine zero-cloud-dependency, a real
+  local model, no external API calls at all. The strongest privacy
+  claim, and the only one that can honestly make the "no cloud
+  services, period" promise.
+- **A cloud/API-key edition** -- external services (Claude, GPT,
+  Gemini, Kimi, etc.) enabled via the user's own API keys, with an
+  explicit, clearly-stated boundary: lawkeeper's own code/platform
+  never mines or retains data, but a chosen external service's own
+  privacy terms and behavior are that service's responsibility, not
+  lawkeeper's. **User's own explicit instruction: this boundary must be
+  stated plainly and openly, up front, in the actual interface a person
+  sees while choosing or using this edition — not in small print, not
+  in a lengthy terms document nobody reads, not technically-disclosed-
+  but-practically-buried.** A person choosing this edition should know
+  exactly which guarantee they're getting and which they aren't, in
+  the same breath they're told about the edition itself, not several
+  clicks or paragraphs later.
+
+This is a real, honest structural fix: it turns "two claims that don't
+both fit one product" into "two real editions, each making only the
+claim it can actually keep."
+
 **Adaptive, but only because it's genuinely safe:** the AI should
 adapt to the user (matching the already-logged `adaptive-assistant-
 skill-vision` memory), and the user should be able to trust that
@@ -171,10 +215,11 @@ architecture isn't a separate feature from the adaptive one; it's the
 precondition that makes the adaptive one safe to want.
 
 ## Real, open items before Stage 1 starts
-- Read the Agent SDK's real hooks documentation in full
-  (`code.claude.com/docs/en/agent-sdk/hooks`) to confirm the exact
-  registration format before porting `claude_stop_hook.py` -- not yet
-  done, real next step.
+- [x] Read the Agent SDK's real hooks documentation in full
+  (`code.claude.com/docs/en/agent-sdk/hooks`) -- done 2026-08-21, real
+  finding above (hooks are native async callbacks, not subprocess
+  scripts; corrected the plan accordingly rather than leaving the
+  original, less accurate assumption standing).
 - Confirm the Agent SDK's real Python package name/install command
   works cleanly in this environment (`pip install claude-agent-sdk`,
   requires Python 3.10+) -- not yet tested here.
