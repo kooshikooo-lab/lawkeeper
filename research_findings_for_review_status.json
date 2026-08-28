@@ -1,0 +1,433 @@
+{
+  "document": "research_findings_for_review",
+  "timestamp": "2026-08-27T19:27:28.547545",
+  "summary": {
+    "total_claims": 27,
+    "verified": 0,
+    "unverified": 0,
+    "challenged": 25,
+    "incorrect": 2
+  },
+  "claims": [
+    {
+      "text": "Falcun's specific combination of agent-enforced boundaries, evidence-chain promotion, and computational independence appears novel in the literature.",
+      "line": 9,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Related work exists in fact-checking systems, scientific literature systems, and AI governance, including Google Fact Check Tools, Crossref, and AI governance frameworks.",
+      "line": 11,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        },
+        {
+          "persona": "Incentive-Aware Skeptic",
+          "severity": "medium",
+          "category": "independence",
+          "question": "Is this result independent verification or only from the same agent/code? Was it validated by someone/something else?"
+        }
+      ]
+    },
+    {
+      "text": "The research demonstrates that inability to search recent academic work from 2023-2024 due to no web access limits the novelty assessment.",
+      "line": 13,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "If prior art exists, it is critical to identify what it got right or wrong for Falcun's specific requirements.",
+      "line": 15,
+      "status": "INCORRECT",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        },
+        {
+          "persona": "Show-Me-The-Diff",
+          "severity": "critical",
+          "category": "proof",
+          "question": "You claim to have fixed something. Show the before/after code diff: (1) What was the wrong value? (2) What's the right value? (3) File name and line numbers?"
+        }
+      ]
+    },
+    {
+      "text": "The research establishes a concrete 4-level independence hierarchy from replication crisis and N-version programming literature.",
+      "line": 19,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Independence criteria range from strongest (different algorithms) to weakest (same everything except cycle ID).",
+      "line": 21,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Different implementation, different environment, different author/team, and different method are the key independence factors.",
+      "line": 23,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Shared dependencies and repeated runs of the same probe fail independence criteria.",
+      "line": 25,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Common-mode failure must be addressed in independence tracking to avoid false independence claims.",
+      "line": 27,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Provenance and identity derive independence, not cycle IDs or repeated execution alone.",
+      "line": 29,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Falcun's bug is a \"case-insensitive prefix collision\" which is a known failure class in regex validation.",
+      "line": 33,
+      "status": "INCORRECT",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        },
+        {
+          "persona": "Show-Me-The-Diff",
+          "severity": "critical",
+          "category": "proof",
+          "question": "You claim to have fixed something. Show the before/after code diff: (1) What was the wrong value? (2) What's the right value? (3) File name and line numbers?"
+        }
+      ]
+    },
+    {
+      "text": "The research identifies a comprehensive taxonomy of regex validator failure modes.",
+      "line": 35,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "The testing practice checklist includes property-based testing, adversarial fuzzing, and realistic corpus testing.",
+      "line": 37,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Industry commit-message validation practices were investigated to inform best practices.",
+      "line": 39,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Immediate recommendations for Falcun's validator improvement are provided based on the analysis.",
+      "line": 41,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Multi-model review works when there is clear ground truth, diverse models, and structured disagreement.",
+      "line": 45,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        },
+        {
+          "persona": "Incentive-Aware Skeptic",
+          "severity": "medium",
+          "category": "independence",
+          "question": "Is this result independent verification or only from the same agent/code? Was it validated by someone/something else?"
+        }
+      ]
+    },
+    {
+      "text": "Failure modes include shared context/priming, subjective domains, and simple majority voting.",
+      "line": 47,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Falcun's experience with priming effects validates the theoretical concerns about shared context.",
+      "line": 49,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "The research provides recommendations for improving the current multi-model review process.",
+      "line": 51,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "The current state shows that domain-specific systems work, but general discovery does not.",
+      "line": 55,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "Successful systems do things differently through domain specialization, structured representations, and iterative loops.",
+      "line": 57,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        },
+        {
+          "persona": "Incentive-Aware Skeptic",
+          "severity": "medium",
+          "category": "independence",
+          "question": "Is this result independent verification or only from the same agent/code? Was it validated by someone/something else?"
+        }
+      ]
+    },
+    {
+      "text": "The research validates Falcun's alignment with what works and identifies gaps in real experimental integration.",
+      "line": 59,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        },
+        {
+          "persona": "Incentive-Aware Skeptic",
+          "severity": "medium",
+          "category": "independence",
+          "question": "Is this result independent verification or only from the same agent/code? Was it validated by someone/something else?"
+        }
+      ]
+    },
+    {
+      "text": "Benchmark limitations, success rates, and task definitions are reported to provide context.",
+      "line": 61,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        },
+        {
+          "persona": "Incentive-Aware Skeptic",
+          "severity": "medium",
+          "category": "independence",
+          "question": "Is this result independent verification or only from the same agent/code? Was it validated by someone/something else?"
+        }
+      ]
+    },
+    {
+      "text": "Falcun should not infer too much from existing systems without validation against its specific requirements.",
+      "line": 63,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "The research demonstrates that inability to search recent academic work from 2023-2024 due to no web access limits the novelty assessment",
+      "line": 13,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "The research establishes a concrete 4-level independence hierarchy from replication crisis and N-version programming literature",
+      "line": 19,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    },
+    {
+      "text": "The current state shows that domain-specific systems work",
+      "line": 55,
+      "status": "CHALLENGED",
+      "confidence": "Medium",
+      "challenges": [
+        {
+          "persona": "Epistemologist",
+          "severity": "high",
+          "category": "citation",
+          "question": "This claim has no source citation. Is it empirical (needs measurement) or theoretical (needs derivation)? Please cite a paper, textbook, or equation number."
+        }
+      ]
+    }
+  ]
+}
