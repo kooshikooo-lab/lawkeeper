@@ -44,7 +44,16 @@ def load_config():
                 machines = ["desktop", "laptop"]
                 canonical_branches = ["main"]
                 placement_rules = {}
-                feature_regexes = lambda self: [re.compile(r"^opencode/[a-z0-9-]+/(?:desktop|laptop)$")]
+                # 2026-09-04: kept in sync with guardrail/config.py's real
+                # default -- both the new tool-agnostic "agent/..." prefix
+                # and the legacy "opencode/..." prefix are accepted here
+                # too, so this fallback path (used only when the guardrail
+                # package itself can't be imported) doesn't silently regress
+                # to pre-fix behavior.
+                feature_regexes = lambda self: [
+                    re.compile(r"^agent/[a-z0-9-]+/(?:desktop|laptop)$"),
+                    re.compile(r"^opencode/[a-z0-9-]+/(?:desktop|laptop)$"),
+                ]
                 canonical_branch_names = lambda self: {"main", "opencode/main/desktop", "opencode/main/laptop"}
             return _Fallback()
     return Config.load(REPO_ROOT)
