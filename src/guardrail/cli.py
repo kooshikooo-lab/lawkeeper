@@ -155,7 +155,43 @@ def cmd_init(args: argparse.Namespace) -> int:
         )
         return 1
 
+    # Seed a compliance baseline against the just-copied guard scripts
+    # themselves. Without this, `system_audit.py` FAILS on step 4 of this
+    # project's own quickstart, on every single freshly scaffolded project,
+    # before the user has written a line of code: compliance_watchdog.py's
+    # AST checks (module_mutable, module_size, ...) flag the guard scripts
+    # it was just handed (PLACEMENT_RULES, GOVERNANCE_FILES, and similar
+    # module-level constants all count as "mutable globals"), and with no
+    # baseline on disk yet, every one of those reads as a brand-new
+    # violation and blocks the audit. compliance_watchdog.py already has a
+    # documented mechanism for exactly this — "pre-existing debt does not
+    # fail the check, only violations absent from the baseline do" — it was
+    # just never invoked automatically. Found by actually running the
+    # documented quickstart against a fresh scaffold, not by inspection.
+    baseline_script = dst_root / "scripts" / "compliance_watchdog.py"
+    baseline_seeded = False
+    if baseline_script.exists():
+        result = subprocess.run(
+            [sys.executable, str(baseline_script), "--baseline"],
+            cwd=dst_root, capture_output=True, text=True,
+            encoding="utf-8", errors="replace",
+        )
+        baseline_file = dst_root / "scripts" / "compliance_baseline.json"
+        baseline_seeded = result.returncode == 0 and baseline_file.exists()
+        if baseline_seeded:
+            written.append(baseline_file)
+
     print(f"lawkeeper: scaffolding written to {dst_root} ({len(written)} files)")
+    if baseline_seeded:
+        print("lawkeeper: compliance baseline seeded — system_audit.py should PASS as-is.")
+    else:
+        print(
+            "lawkeeper: WARNING — could not seed the compliance baseline "
+            "automatically. Run `python scripts/compliance_watchdog.py "
+            "--baseline` yourself before system_audit.py, or it will FAIL "
+            "on the guard scripts' own module-level constants.",
+            file=sys.stderr,
+        )
     print("Next steps:")
     print("  1. pip install -e .   # from the project root")
     print("  2. python scripts/install_hooks.py   # installs pre-commit, commit-msg, pre-push")

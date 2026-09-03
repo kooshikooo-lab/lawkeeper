@@ -135,3 +135,39 @@ class TestInitFromRealInstall:
             [str(installed_lawkeeper), "init", ".", "--force"], cwd=repo, check=False,
         )
         assert forced.returncode == 0, "--force must actually work"
+
+    def test_init_seeds_a_baseline_that_lets_system_audit_pass(
+        self, installed_lawkeeper, tmp_path
+    ):
+        """A freshly scaffolded project must pass its own documented
+        quickstart (README's "Non-coder quickstart" step 4:
+        `system_audit.py` must PASS) with no extra undocumented command.
+
+        Before this test existed, `system_audit.py` FAILED immediately on
+        any brand-new scaffold: compliance_watchdog.py's own AST checks
+        flag the guard scripts init had just copied in (their module-level
+        constants like PLACEMENT_RULES read as "mutable globals"), and
+        with no baseline recorded yet, every one of those looked like a
+        new violation. Found by actually running the quickstart end to
+        end, not by inspection.
+        """
+        repo = tmp_path / "project3"
+        repo.mkdir()
+        _run(["git", "init", "-q"], cwd=repo)
+        _run([str(installed_lawkeeper), "init", "."], cwd=repo)
+
+        assert (repo / "scripts" / "compliance_baseline.json").is_file(), (
+            "init must seed a compliance baseline so system_audit.py's "
+            "regression check has something to compare against"
+        )
+
+        venv_python = installed_lawkeeper.parent / (
+            "python.exe" if installed_lawkeeper.suffix == ".exe" else "python"
+        )
+        audit = _run(
+            [str(venv_python), "scripts/system_audit.py"], cwd=repo, check=False,
+        )
+        assert audit.returncode == 0, (
+            "system_audit.py must PASS on a fresh, untouched scaffold — "
+            f"stdout:\n{audit.stdout}\nstderr:\n{audit.stderr}"
+        )
