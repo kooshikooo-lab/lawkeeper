@@ -54,11 +54,11 @@
       "scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L35",
-        "PLACEMENT_TREE_ALLOWLIST L65",
-        "REGENERABLE_SUFFIXES L70",
-        "REGENERABLE_PATHS L75",
-        "PLACEMENT_ALLOWLIST L132"
+        "PLACEMENT_RULES L36",
+        "PLACEMENT_TREE_ALLOWLIST L66",
+        "REGENERABLE_SUFFIXES L71",
+        "REGENERABLE_PATHS L76",
+        "PLACEMENT_ALLOWLIST L133"
       ]
     ],
     [
@@ -122,11 +122,11 @@
       "src/guardrail/template/scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L35",
-        "PLACEMENT_TREE_ALLOWLIST L65",
-        "REGENERABLE_SUFFIXES L70",
-        "REGENERABLE_PATHS L75",
-        "PLACEMENT_ALLOWLIST L132"
+        "PLACEMENT_RULES L36",
+        "PLACEMENT_TREE_ALLOWLIST L66",
+        "REGENERABLE_SUFFIXES L71",
+        "REGENERABLE_PATHS L76",
+        "PLACEMENT_ALLOWLIST L133"
       ]
     ],
     [

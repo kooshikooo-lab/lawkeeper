@@ -1,9 +1,22 @@
-"""Configuration for the guardrail enforcement system.
+"""Configuration for guard_branch.py's branch-governance checks.
 
-Guard scripts are project-agnostic: they read `.guardrail.json` (created by
-`guardrail init`) for machine names, canonical branches, placement rules, and
-artifact policies. Defaults work for a two-machine team with a clean `main`
+Reads `.guardrail.json` (created by `lawkeeper init`) for machine names and
+canonical branches. Defaults work for a two-machine team with a clean `main`
 trunk, so non-coders can adopt it with zero configuration.
+
+This dataclass used to also declare placement_rules, regenerable_suffixes,
+regenerable_paths, governance_files, feature_prefix, and merge_prefix — a
+second, unused copy of policy that validate_pre_commit.py, scan_config.py,
+and guard_governance.py each already implement (and actually read) on their
+own, hardcoded, with no connection to this class. Nothing in this repo ever
+read those six fields — not even this class's own methods, which hardcode
+their patterns directly rather than using self.feature_prefix/merge_prefix.
+A governance tool declaring rules it never enforces is worse than declaring
+none: it reads as documentation of real, checked behavior and isn't. Trimmed
+to the two fields (machines, canonical_branches) something actually loads
+and uses. If placement/regenerable/governance-file policy becomes genuinely
+configurable later, it should replace the *hardcoded* copies in those other
+files, not add a third parallel one here.
 """
 
 from __future__ import annotations
@@ -13,46 +26,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 DEFAULTS: dict = {
-    "project_name": "my-project",
     "machines": ["desktop", "laptop"],
     "canonical_branches": ["main"],
-    "feature_prefix": "opencode/{topic}/{machine}",
-    "merge_prefix": "merge/{topic}",
-    "placement_rules": {
-        "backend/": {".py"},
-        "tests/": {".py"},
-        "scripts/": {".py", ".ps1", ".sh", ".bat"},
-        "docs/": {".md", ".txt"},
-    },
-    "regenerable_suffixes": [
-        ".stl", ".step", ".stp", ".obj", ".ply", ".3mf",
-        ".json", ".jsonl", ".dat", ".log", ".txt",
-        ".png", ".jpg", ".jpeg", ".svg",
-    ],
-    "regenerable_paths": ["test_output/", "designs/", "chat-logs/", "wiki/"],
-    "governance_files": [
-        "docs/AI_CONSTITUTION.md",
-        "docs/CONSTRAINTS_AND_PREFERENCES.md",
-        "docs/COMPLIANCE_CHECK.md",
-        "docs/ARCHITECTURE_DECISIONS.md",
-        "docs/AI_FAILURE_PATTERNS.md",
-        "docs/REMINDERS.md",
-        "AGENTS.md",
-    ],
 }
 
 
 @dataclass
 class Config:
-    project_name: str = "my-project"
     machines: list[str] = field(default_factory=lambda: ["desktop", "laptop"])
     canonical_branches: list[str] = field(default_factory=lambda: ["main"])
-    feature_prefix: str = "opencode/{topic}/{machine}"
-    merge_prefix: str = "merge/{topic}"
-    placement_rules: dict = field(default_factory=dict)
-    regenerable_suffixes: list[str] = field(default_factory=list)
-    regenerable_paths: list[str] = field(default_factory=list)
-    governance_files: list[str] = field(default_factory=list)
 
     @classmethod
     def load(cls, repo_root: Path) -> "Config":
@@ -66,15 +48,8 @@ class Config:
                 # to defaults but let the audit flag it.
                 pass
         return cls(
-            project_name=data["project_name"],
             machines=list(data["machines"]),
             canonical_branches=list(data["canonical_branches"]),
-            feature_prefix=data["feature_prefix"],
-            merge_prefix=data["merge_prefix"],
-            placement_rules={k: set(v) for k, v in data["placement_rules"].items()},
-            regenerable_suffixes=list(data["regenerable_suffixes"]),
-            regenerable_paths=list(data["regenerable_paths"]),
-            governance_files=list(data["governance_files"]),
         )
 
     def canonical_branch_names(self) -> set[str]:

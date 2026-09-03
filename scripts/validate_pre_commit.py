@@ -30,8 +30,9 @@ except ImportError:
     from scan_config import get_oversized_allowlist
 
 # These are generic project boundaries; a project's own docs/ARCHITECTURE.md
-# (if it has one) may describe more. Configurable per project via
-# .guardrail.json's "placement_rules" - see config.py's DEFAULTS.
+# (if it has one) may describe more. Hardcoded, not yet read from
+# .guardrail.json — config.py's Config class intentionally does not
+# duplicate this; see that file's own docstring for why.
 PLACEMENT_RULES = {
     "backend/": {
         "allowed": {".py"},
