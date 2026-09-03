@@ -130,6 +130,25 @@ existence is itself an instance of the project's write-through rule
 ("nothing lives only in chat"), and the decision should follow the
 same discipline.
 
+## Note added 2026-09-04 (after this file was first written): a real example for task 4
+
+While fixing an unrelated problem (the `opencode/`-to-`agent/`
+branch-prefix rename, see `docs/WORKPLAN.md` in Falcun for the full
+story), a concrete, real instance of exactly what task 4 above asks to
+look for turned up: `src/guardrail/config.py`'s `Config.feature_prefix`
+was a documented, dataclass-level, user-configurable field —
+but `Config.feature_regexes()` never actually read it; it hardcoded
+the branch-prefix pattern as a literal string instead. Editing
+`feature_prefix` in a repo's `.guardrail.json` silently did nothing,
+for as long as that code existed. Now fixed (see commit `a40e152` on
+`opencode/framework-mvp/desktop`) — `feature_regexes()` genuinely
+derives its pattern from `self.feature_prefix`. Worth treating as a
+concrete precedent when doing task 4's review: at least one other
+field in this config surface was decorative rather than load-bearing,
+so don't assume the rest of `Config`'s fields are actually consumed
+just because they're documented and typed — check each one the same
+way.
+
 ## Re-check when
 
 A Falcun (or Windwright) session actually starts this investigation,
