@@ -40,8 +40,18 @@ everyone compliant.
    commits, unauthorized edits to the constitution, provisional work without an
    `AUDIT:` marker, and — crucially — any **deletion or force-push of a canonical
    branch** (the "stale = safe to delete" failure mode that breaks repos).
-2. **CI backstop** (`governance-guard.yml`): re-runs the same checks on every push/PR
-   so a machine that disabled local hooks is still stopped.
+2. **CI backstop** (`scripts/ci_checks.py`, triggered by `governance-guard.yml`):
+   re-runs the same checks on every push/PR so a machine that disabled local
+   hooks is still stopped. **The real protection here is host-independent —
+   `ci_checks.py` is plain Python with zero GitHub dependency, and works the
+   same from GitLab CI, Bitbucket Pipelines, Jenkins, or a local pre-push
+   hook.** `governance-guard.yml` is only the GitHub Actions trigger wrapper
+   lawkeeper ships by default; it does nothing on another host. If you're
+   not on GitHub, wire your own CI to call `python scripts/ci_checks.py`
+   (add `--on-push` on a push-style trigger, never on a PR/MR-style one) —
+   don't assume the YAML file travels with you. Layer 1 (local hooks) is
+   what actually protects you regardless of host; this layer is a backstop
+   for when those were bypassed or never installed.
 3. **Self-audit** (`system_audit.py`): verifies the other two layers are actually
    active (hooks wired, laws parse, baseline current, guards importable), so a
    dead guard is caught — not trusted on faith.

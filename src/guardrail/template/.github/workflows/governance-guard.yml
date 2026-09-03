@@ -27,37 +27,25 @@ jobs:
         run: |
           pip install -e ".[dev]"
           python scripts/install_hooks.py
-      - name: Block unauthorized governance edits and unmarked provisional work
-        # push-only, not pull_request: on a pull_request event this repo
-        # checks out GitHub's synthetic test-merge commit (an ephemeral
+      - name: Run the governance checks
+        # ci_checks.py is the actual, host-agnostic source of truth for this
+        # sequence (works the same from GitLab CI, Bitbucket, a local
+        # pre-push hook, ...) — this workflow is just the GitHub-specific
+        # trigger wrapper around it. See that script's own docstring.
+        #
+        # --on-push only, not on pull_request: on a pull_request event this
+        # repo checks out GitHub's synthetic test-merge commit (an ephemeral
         # "Merge <sha> into <sha>" commit that never carries a Tests:/
         # Verification: line and often isn't even the commit that ends up
-        # on main - e.g. a rebase merge lands the PR's real commits
-        # as-is, each already validated by this exact script when they
-        # were made). Checking that synthetic commit made every PR
-        # unmergeable regardless of how compliant its real commits were -
-        # found by actually trying to merge a real PR, not by inspection.
-        # On push, HEAD is the actual commit landing on main, which is
-        # what this check is meant to validate.
-        if: github.event_name == 'push'
+        # on main - e.g. a rebase merge lands the PR's real commits as-is,
+        # each already validated by this exact check when they were made).
+        # Checking that synthetic commit made every PR unmergeable
+        # regardless of how compliant its real commits were - found by
+        # actually trying to merge a real PR, not by inspection. On push,
+        # HEAD is the actual commit landing on main, which is what the
+        # commit-message check is meant to validate.
         run: |
-          python scripts/validate_commit_msg.py
-      - name: Check local dependencies are present for imported declared packages
-        run: |
-          python scripts/check_local_dependencies.py --warn
-      - name: Compliance watchdog — constitution laws match, no new violations vs baseline
-        run: |
-          python scripts/compliance_watchdog.py --check-laws
-          python scripts/compliance_watchdog.py --check-baseline
-      - name: Dependency tool registry (phantom / orphan / unwired)
-        run: |
-          python scripts/toolcheck.py
-      - name: System self-audit (Law 16 — enforcement layers active and correct)
-        run: |
-          python scripts/system_audit.py
-      - name: Meta-tests for the guard scripts (Law 16.5)
-        run: |
-          python -m pytest tests/test_guard_scripts.py -q
+          python scripts/ci_checks.py ${{ github.event_name == 'push' && '--on-push' || '' }}
 
   # Found while fixing the dependency-locks job below: this was indented as
   # a child of `guard:` (4 spaces, matching guard's own `runs-on`/`steps`

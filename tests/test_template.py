@@ -27,6 +27,7 @@ ROOT_SCRIPT_FILES = [
     "scripts/guard_governance.py",
     "scripts/compliance_watchdog.py",
     "scripts/install_hooks.py",
+    "scripts/ci_checks.py",
 ]
 ROOT_DOCS = [
     "docs/AI_CONSTITUTION.md",
@@ -66,6 +67,15 @@ class TestTemplateSync:
     def test_validate_pre_commit_sync(self):
         self._check("scripts/validate_pre_commit.py", "scripts/validate_pre_commit.py")
 
+    def test_ci_checks_sync(self):
+        self._check("scripts/ci_checks.py", "scripts/ci_checks.py")
+
+    def test_governance_workflow_sync(self):
+        self._check(
+            ".github/workflows/governance-guard.yml",
+            ".github/workflows/governance-guard.yml",
+        )
+
     def test_constitution_sync(self):
         self._check("docs/AI_CONSTITUTION.md", "docs/AI_CONSTITUTION.md")
 
@@ -88,5 +98,5 @@ class TestTemplateCompleteness:
         assert (TEMPLATE / ".github/workflows/governance-guard.yml").is_file()
 
     def test_template_has_guard_scripts(self):
-        for s in ["guard_branch.py", "merge_gate.py", "system_audit.py"]:
+        for s in ["guard_branch.py", "merge_gate.py", "system_audit.py", "ci_checks.py"]:
             assert (TEMPLATE / "scripts" / s).is_file()
