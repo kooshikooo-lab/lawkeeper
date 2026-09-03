@@ -141,16 +141,61 @@ wasn't on PATH, and was correctly BLOCKED with the exact violation message
 once the checker was made available — then went through again once the
 violation was actually fixed in the source.
 
-## Not fixed here — still open, out of scope for this pass
+## Status update (2026-09-04) — this list had gone stale
 
-- `scripts/compliance_watchdog.py` and `scripts/check_local_dependencies.py`
-  still hardcode `backend/`/`woodwind_designer/` scan paths inherited
-  verbatim from Windwright. Lawkeeper's real code (`src/guardrail/`) is
-  still invisible to its own audit and dependency checker.
-- CI's `dependency-locks` job still calls `scripts/compile_requirements.py`,
-  which doesn't exist anywhere in the repo — that job will still fail.
-- `validate_commit_msg.py`'s governance-file check is effectively inert in
-  CI (it checks `git diff --cached`, but a fresh checkout has nothing
-  staged) and, when run outside CI with no message-file argument, silently
-  uses an empty string for the commit message instead of reading the actual
-  last commit.
+Two of the three items originally logged below as "still open" were fixed in
+later commits, without this file ever being updated to say so — which
+defeats the point of keeping a debt log at all. Corrected in place rather
+than left to mislead the next reader:
+
+- ~~CI's `dependency-locks` job calls nonexistent `compile_requirements.py`~~
+  — **fixed** (commit `c7339de`): the job was removed outright, along with a
+  separately-discovered bug where `powershell-lint` was mis-indented under
+  `guard:` and had genuinely never run. See `.github/workflows/governance-guard.yml`.
+- ~~`validate_commit_msg.py` silently uses an empty string for the commit
+  message outside CI~~ — **fixed** (commit `ac64aef`): it now falls back to
+  `git log -1 --format=%B` when run without a message-file argument, which
+  is exactly what CI's push-only step needs.
+- `scripts/compliance_watchdog.py`/`check_local_dependencies.py` hardcoding
+  `backend/`/`woodwind_designer/` — **fixed** (commit `e0739f3`, generalized
+  further in a later guardrail-fit-investigation pass): `scan_config.py` now
+  auto-detects real `src/<package>/` directories, and every guard that used
+  to hardcode those two names (`toolcheck.py`, `validate_pre_commit.py`'s
+  placement rules and oversized-module allowlist, `validate_imports.py`'s
+  deleted-module list, `compliance_watchdog.py`'s subsystem table) now uses
+  it or reads project config instead. See
+  `docs/GUARDRAIL_FIT_INVESTIGATION_2026-09-04.md` for the full audit.
+
+Also fixed in that same later pass, not part of the original three:
+`lawkeeper init` used to leave a freshly scaffolded project unable to pass
+its own documented quickstart (`system_audit.py` FAILed immediately, before
+any code was written, because the just-copied guard scripts tripped their
+own rules with no baseline recorded yet); `init` now seeds one automatically.
+The CI backstop's check sequence was also GitHub-Actions-only in practice
+(the sequence existed nowhere outside that YAML) despite this project's own
+stated goal of host independence; it's now `scripts/ci_checks.py`, a plain
+script any CI (or none) can call. And `config.py` declared a whole
+placement/regenerable/governance-files schema that nothing — not even its
+own methods — ever read; deleted rather than left as unenforced-looking
+documentation.
+
+## Still genuinely open
+
+- **`validate_pre_commit.py`'s step 5 (schema validation for instrument
+  configs) calls `scripts/validate_instrument_configs.py`, which does not
+  exist anywhere in this repo.** Found while auditing the same file for the
+  `backend/`/`woodwind_designer/` cleanup above, but not fixed in that pass
+  (different kind of bug — a missing script, not a blind spot — and this
+  file had already grown a large diff). Currently harmless only because
+  nothing in this repo stages a `config/*.json` file. It is NOT harmless for
+  any project that adopts lawkeeper and organizes its own config under
+  `config/*.json` (a common convention) — their commit would be BLOCKED by a
+  subprocess call to a file that isn't there, with a confusing "config/*.json
+  schema validation failed" error rather than "this check doesn't apply to
+  you." This step is Windwright-specific domain logic (validating a specific
+  instrument-config JSON schema) with no generic equivalent — it should
+  likely be removed from the generic template entirely, the same reasoning
+  already applied to the guard-blindness fixes above, rather than patched to
+  degrade gracefully.
+- `pip install lawkeeper` vs. `name = "guardrail"` mismatch — not re-checked
+  in any later pass either; still exactly as originally logged below.
