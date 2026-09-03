@@ -47,6 +47,16 @@ class TestBranchClassify:
         ("opencode/main/laptop", "canonical"),
         ("opencode/mesh-repair/laptop", "feature"),
         ("opencode/branch-governance/desktop", "feature"),
+        # 2026-09-04: feature_prefix default changed from "opencode/..." to
+        # "agent/..." (tool-agnostic; the old prefix named OpenCode
+        # specifically, and now misattributes work by whatever tool
+        # replaced it). New branches should use "agent/", and legacy
+        # "opencode/..." feature branches must keep classifying as
+        # "feature" too -- existing branches are never retroactively
+        # orphaned by this change. See guardrail/config.py's DEFAULTS
+        # comment for the full reasoning.
+        ("agent/mesh-repair/laptop", "feature"),
+        ("agent/branch-governance/desktop", "feature"),
         ("merge/governance", "merge_staging"),
         ("experiment/unconventional-shapes", None),
         ("perf/tmm-refactor-copilot", None),

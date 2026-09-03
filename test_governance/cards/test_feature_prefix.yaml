@@ -1,0 +1,58 @@
+test_id: test_feature_prefix
+theory: >
+  Config.feature_regexes() derives the accepted feature-branch namespace
+  from Config.feature_prefix (fixing a bug where the field was configurable
+  but never actually consumed), while always additionally accepting the
+  pre-2026-09-04 default ("opencode/{topic}/{machine}") regardless of what
+  feature_prefix is configured to -- so a change to the default naming
+  convention can never retroactively orphan a branch created before the
+  change.
+oracle:
+  type: invariant
+  independence: independent
+  expression: >
+    for any configured feature_prefix P and machines list M: a branch
+    matching P's template (with {topic} substituted by [a-z0-9-]+ and
+    {machine} by one of M) is accepted; a branch matching the legacy
+    "opencode/{topic}/{machine}" template (with the same substitution
+    rules) is accepted regardless of P; a branch matching neither
+    template, or using a machine name outside M, is rejected; a
+    regex-hostile P cannot expand its own match semantics beyond its
+    literal characters.
+acceptance: >
+  default is tool-agnostic ("agent/{topic}/{machine}"); new-convention and
+  legacy-convention branches both accepted; invalid machine rejected in
+  both; an unrelated third prefix is not silently accepted; a
+  .guardrail.json-configured custom prefix is honored and does not
+  disable legacy acceptance; a custom machines list is reflected in both
+  regexes; a deliberately hostile prefix (containing raw regex
+  metacharacters) is escaped correctly, verified by checking it does NOT
+  match an unrelated branch name that would only match if the escaping
+  had failed.
+blind_spot: >
+  Tests Config.feature_regexes()' pure string/regex logic in isolation --
+  it does not exercise guard_branch.py's classify()/check_push()/
+  check_delete() call sites (those are covered separately in
+  test_guard_scripts.py::TestBranchClassify, extended in this same change
+  with two new parametrized cases for the new prefix), does not touch a
+  real git repository or real branch, and cannot verify that a config
+  authored by an adversarial (not just malformed) actor couldn't defeat
+  the guard through some channel other than feature_prefix's regex
+  template (e.g. a malicious canonical_branches list is out of scope
+  here). Pure config-derivation logic, not a git-integration or
+  security-boundary oracle.
+trust_level: T2
+adversarial_review: self
+failure_meaning:
+  failed: feature-branch naming convention logic regressed -- either the
+    new convention stopped being accepted, or (more dangerous) an
+    existing "opencode/..." branch would start being misclassified as an
+    orphan
+  crash: import failure in guardrail.config
+  pass: feature_prefix is genuinely load-bearing and both the new and
+    legacy branch-naming conventions are accepted as designed
+debug:
+  - check Config.feature_prefix's default and Config.feature_regexes()'s
+    template-to-regex conversion (_prefix_to_regex) directly
+  - re-run with a real .guardrail.json feature_prefix override to confirm
+    the configured value (not just the default) drives acceptance

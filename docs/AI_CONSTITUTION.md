@@ -94,8 +94,17 @@ four namespaces, each with a fixed lifetime:
    - `opencode/main/<machine>` — canonical per-machine branch. PERMANENT: never
      force-pushed, never renamed. Deleting a canonical branch requires explicit
      approval from the human user; never on a machine/agent's own initiative.
-   - `opencode/<topic>/<machine>` — feature/experiment branch. EPHEMERAL: merge
-     into the machine's canonical branch when done, then delete.
+   - `agent/<topic>/<machine>` — feature/experiment branch. EPHEMERAL: merge
+     into the machine's canonical branch when done, then delete. **Changed
+     2026-09-04** from `opencode/<topic>/<machine>` — the old prefix named a
+     specific tool (OpenCode), which now misattributes work by whatever tool
+     replaced it (surfaced when an OpenCode subscription ended). `agent/` is
+     tool-agnostic on purpose. Branches already created under the old
+     `opencode/<topic>/<machine>` convention remain a valid, accepted feature
+     namespace (see `guardrail/config.py`'s `feature_regexes()`) — only new
+     branches should use `agent/`. The canonical `opencode/main/<machine>`
+     namespace above is deliberately unchanged; it stays permanent per Law
+     15 regardless of this prefix change.
    - `merge/<topic>` — cross-machine merge staging. EPHEMERAL: rehearse the
      merge, promote, then delete.
    - Any branch outside a namespace is an orphan — rename or delete. "Stale/old/
