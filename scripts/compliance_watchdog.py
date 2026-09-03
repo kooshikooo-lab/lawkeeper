@@ -117,17 +117,22 @@ def load_architecture_docs() -> list[str]:
     cfg = load_guardrail_config()
     return list(cfg.get("required_architecture_docs", []))
 
-SUBSYSTEM_TABLE = {
-    "Geometry": ["geometry.py", "spline_bore.py"],
-    "Acoustic solver": ["tmm_acoustics.py", "tmm_acoustics_jax.py"],
-    "Optimization": ["pareto_optimizer.py", "jax_optimizer.py"],
-    "Sound analysis": ["sound_analysis.py"],
-    "Pipeline": ["design_from_wav.py", "design_from_unconventional.py", "design_pipeline.py"],
-    "Generative agent": ["generative_agent.py", "instrument_knowledge.py"],
-    "CAD/Manufacturing": ["cadquery_export.py"],
-    "GUI": ["woodwind_designer/", "web/"],
-    "Tests": ["tests/"],
-}
+def load_subsystem_table() -> dict[str, list[str]]:
+    """Subsystem name -> representative files, for the boot-sequence
+    printout's "Step 3: identify your subsystem" line.
+
+    Project-specific by nature (a generic governance tool has no built-in
+    idea of what a project's subsystems are) — declared in .guardrail.json
+    as "subsystems", same pattern as required_architecture_docs above.
+    Empty by default: a governed project that hasn't configured this just
+    gets no subsystem breakdown, which is honest. Used to hardcode one
+    specific project's table (Geometry, Acoustic solver, GUI: woodwind_designer/...
+    - the project this repo was extracted from) as if it were a sensible
+    default for every project, including this one, whose real "subsystems"
+    (cli.py, config.py, template/) it never described.
+    """
+    cfg = load_guardrail_config()
+    return dict(cfg.get("subsystems", {}))
 
 TRIGGER_TYPES = ["timer", "before-code", "after-tests", "drift-feel"]
 
@@ -397,10 +402,12 @@ def print_boot_sequence():
         status = "EXISTS" if p.exists() else "MISSING"
         print(f"   {d} [{status}]")
     print()
-    print("Step 3 - Identify your subsystem:")
-    for sub, files in SUBSYSTEM_TABLE.items():
-        print(f"   {sub}: {', '.join(files)}")
-    print()
+    subsystems = load_subsystem_table()
+    if subsystems:
+        print("Step 3 - Identify your subsystem:")
+        for sub, files in subsystems.items():
+            print(f"   {sub}: {', '.join(files)}")
+        print()
     print("Step 4 - Search before building")
     print("Step 5 - Produce an implementation plan")
     print("Step 6 - Implement (run compliance every 15 min)")

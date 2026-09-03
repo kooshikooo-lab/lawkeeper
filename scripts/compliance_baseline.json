@@ -6,15 +6,7 @@
       [
         "EXCLUDED_DIRS L55",
         "EXCLUDED_FILES L62",
-        "SUBSYSTEM_TABLE L120",
-        "TRIGGER_TYPES L132"
-      ]
-    ],
-    [
-      "scripts/compliance_watchdog.py",
-      "module_size",
-      [
-        530
+        "TRIGGER_TYPES L137"
       ]
     ],
     [
@@ -36,11 +28,11 @@
       "scripts/toolcheck.py",
       "module_mutable",
       [
-        "PACKAGE_ALIASES L29",
-        "FREECAD_MODULES L52",
-        "EXTERNAL_APP_MODULES L58",
-        "LOCAL_ROOTS L61",
-        "STDLIBISH L65"
+        "PACKAGE_ALIASES L41",
+        "FREECAD_MODULES L64",
+        "EXTERNAL_APP_MODULES L70",
+        "LOCAL_ROOTS L73",
+        "STDLIBISH L77"
       ]
     ],
     [
@@ -49,13 +41,6 @@
       [
         "GOVERNANCE_FILES L16",
         "PROVISIONAL_KEYWORDS L27"
-      ]
-    ],
-    [
-      "scripts/validate_imports.py",
-      "module_mutable",
-      [
-        "DELETED_MODULES L22"
       ]
     ],
     [
@@ -69,11 +54,11 @@
       "scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L21",
-        "REGENERABLE_SUFFIXES L41",
-        "REGENERABLE_PATHS L46",
-        "OVERSIZED_ALLOWLIST L49",
-        "PLACEMENT_ALLOWLIST L122"
+        "PLACEMENT_RULES L35",
+        "PLACEMENT_TREE_ALLOWLIST L65",
+        "REGENERABLE_SUFFIXES L70",
+        "REGENERABLE_PATHS L75",
+        "PLACEMENT_ALLOWLIST L132"
       ]
     ],
     [
@@ -82,15 +67,14 @@
       [
         "EXCLUDED_DIRS L55",
         "EXCLUDED_FILES L62",
-        "SUBSYSTEM_TABLE L120",
-        "TRIGGER_TYPES L132"
+        "TRIGGER_TYPES L137"
       ]
     ],
     [
       "src/guardrail/template/scripts/compliance_watchdog.py",
       "module_size",
       [
-        530
+        537
       ]
     ],
     [
@@ -112,11 +96,11 @@
       "src/guardrail/template/scripts/toolcheck.py",
       "module_mutable",
       [
-        "PACKAGE_ALIASES L29",
-        "FREECAD_MODULES L52",
-        "EXTERNAL_APP_MODULES L58",
-        "LOCAL_ROOTS L61",
-        "STDLIBISH L65"
+        "PACKAGE_ALIASES L41",
+        "FREECAD_MODULES L64",
+        "EXTERNAL_APP_MODULES L70",
+        "LOCAL_ROOTS L73",
+        "STDLIBISH L77"
       ]
     ],
     [
@@ -125,13 +109,6 @@
       [
         "GOVERNANCE_FILES L16",
         "PROVISIONAL_KEYWORDS L27"
-      ]
-    ],
-    [
-      "src/guardrail/template/scripts/validate_imports.py",
-      "module_mutable",
-      [
-        "DELETED_MODULES L22"
       ]
     ],
     [
@@ -145,11 +122,11 @@
       "src/guardrail/template/scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L21",
-        "REGENERABLE_SUFFIXES L41",
-        "REGENERABLE_PATHS L46",
-        "OVERSIZED_ALLOWLIST L49",
-        "PLACEMENT_ALLOWLIST L122"
+        "PLACEMENT_RULES L35",
+        "PLACEMENT_TREE_ALLOWLIST L65",
+        "REGENERABLE_SUFFIXES L70",
+        "REGENERABLE_PATHS L75",
+        "PLACEMENT_ALLOWLIST L132"
       ]
     ],
     [
@@ -165,8 +142,8 @@
       [
         "ROOT_DIRS L20",
         "ROOT_SCRIPT_FILES L21",
-        "ROOT_DOCS L31",
-        "HOOKS L37"
+        "ROOT_DOCS L32",
+        "HOOKS L38"
       ]
     ]
   ]

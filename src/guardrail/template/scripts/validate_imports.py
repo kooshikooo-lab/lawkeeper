@@ -18,16 +18,18 @@ import sys
 from pathlib import Path
 
 
-# Modules that are known to have been deleted/moved. Keep in sync with repo history.
-DELETED_MODULES = {
-    "backend.archived_optimizers",
-    "backend.legacy_optimizer",
-    "backend.bore_optimizer",
-    "backend.stage1_optimizer",
-    "backend.stage2_optimizer",
-    "backend_old",
-    "woodwind_designer",
-}
+# Modules that are known to have been deleted/moved from THIS project. Keep in
+# sync with this repo's own history — an import of one gets a clear "you're
+# importing something that used to exist and was removed" message instead of
+# the generic "cannot be resolved" from resolve_module() below (which still
+# catches it either way; this dict only makes the error friendlier).
+#
+# Used to hardcode entries (backend.archived_optimizers, woodwind_designer,
+# ...) inherited from the project this repo was extracted from — modules
+# that were never part of lawkeeper's own history and so could never
+# usefully match anything a lawkeeper contributor actually imports. Empty
+# until this project deletes/moves a module of its own.
+DELETED_MODULES: set[str] = set()
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
