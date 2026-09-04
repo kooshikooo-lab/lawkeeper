@@ -90,19 +90,27 @@ def load_constitution_laws() -> list[str]:
             "the file; do not trust the hardcoded fallback list."
         )
     # Only when the constitution file is genuinely absent do we fall back.
+    # Real bug found 2026-09-04 (same class as this file's own BACKEND_DIRS
+    # fix on 2026-08-19): this list had drifted stale -- Laws 4-7 were still
+    # Windwright's old physics/optimizer/UI text (fixed for real in
+    # AI_CONSTITUTION.md that day, ADR-quality fix; this fallback copy was
+    # missed), and Laws 11/12's titles didn't match the real file either.
+    # Updated to match the real file's current titles exactly, not just
+    # Laws 4-7 -- checked all 14 against AI_CONSTITUTION.md directly rather
+    # than assuming only the known-broken ones needed fixing.
     return [
         "Law 1 - Architecture over features",
         "Law 2 - No architectural invention",
-        "Law 3 - Never duplicate code",
-        "Law 4 - Geometry is separate from acoustics",
-        "Law 5 - Optimization chooses variables, physics computes results",
-        "Law 6 - The GUI never contains physics",
-        "Law 7 - One source of truth for every physical quantity",
+        "Law 3 - Never duplicate",
+        "Law 4 - Concerns stay separated",
+        "Law 5 - The CLI orchestrates; the checking logic is computed elsewhere",
+        "Law 6 - Inner layers don't leak back upward",
+        "Law 7 - One source of truth for every canonical value",
         "Law 8 - One responsibility per module",
         "Law 9 - Document architectural decisions",
         "Law 10 - When uncertain, stop and ask",
-        "Law 11 - Mandatory multi-machine communication protocol",
-        "Law 12 - Mandatory GitHub reading protocol",
+        "Law 11 - Multi-machine coordination protocol",
+        "Law 12 - Read before you act",
         "Law 13 - Missing dependencies are bugs",
         "Law 14 - Audit before you commit",
     ]

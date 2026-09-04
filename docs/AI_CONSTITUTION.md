@@ -23,21 +23,57 @@ Search before writing. Two implementations of the same thing diverge and break.
 Every new function/class must be justified by not already existing.
 
 ### Law 4 — Concerns stay separated
-Geometry, physics, optimization, and presentation do not live in the same module.
-Each layer has one responsibility and depends only on the layer below it.
+**Rewritten 2026-09-04** — the previous text (geometry/physics/optimization/
+presentation) was literal Windwright domain content, copied unadapted when
+this repo was scaffolded from Windwright's own constitution; it named a
+project this one is not (lawkeeper has no geometry, no physics, no
+optimizer). Found while porting `import-linter` from Windwright per a real
+user directive to check tools/content for cross-repo fit before assuming it
+applies (`docs/AI_FAILURE_PATTERNS.md`, 2026-09-04) — the same failure class
+already logged elsewhere for `template/.github/workflows/governance-guard.yml`'s
+phantom `compile_requirements.py` job and hardcoded `backend/`/
+`woodwind_designer/` scan paths, just hitting the constitution text itself
+this time.
 
-### Law 5 — The optimizer chooses variables; the physics is computed elsewhere
-Optimizer/pipeline code never contains domain equations. Physics is computed in
-a single source of truth; the optimizer calls it.
+`src/guardrail/`'s real layers: `core/` (primitives, registry, runner),
+`laws/` (one file per law's actual check), and `memory/` (provider
+abstraction) are the inner layers; `cli.py`/`config.py` are the outer
+composition layer that wires them together for a human/CI to invoke. Each
+layer has one responsibility and depends only on the layer(s) below it —
+never the reverse.
 
-### Law 6 — The UI never contains physics
-Presentation code never computes results. It formats and displays; it does not
-encode physical assumptions.
+### Law 5 — The CLI orchestrates; the checking logic is computed elsewhere
+**Rewritten 2026-09-04**, same pass as Law 4 (was: "the optimizer chooses
+variables; the physics is computed elsewhere" — Windwright-specific).
+`cli.py`/`core/runner.py` never contain a law's actual checking logic
+inline; each law's real logic lives in exactly one place under `laws/`,
+invoked by the runner, never duplicated. `core/`, `laws/`, and `memory/`
+never import `cli.py` back — mechanically enforced, not just stated (see
+`.importlinter`'s `core-laws-memory-never-import-cli` contract, ADR-010).
 
-### Law 7 — One source of truth for every physical quantity
-Each physical constant or canonical value lives in exactly one module and is
-imported everywhere else. Hardcoded duplicates are a constitutional violation and
-are caught by the pre-commit hook.
+### Law 6 — Inner layers don't leak back upward
+**Rewritten 2026-09-04**, same pass (was: "the UI never contains physics" —
+Windwright-specific). Within `src/guardrail/`'s own inner layers: `laws/`
+may depend on `core/` primitives, never the reverse; `memory/` (the
+provider abstraction) has no dependency on `core/` or `laws/` in either
+direction — it is wired in separately, by whatever consumes it (today:
+`scripts/memory_query.py`, not `cli.py` itself — a real, smaller, separate
+gap, not this law's concern). Mechanically enforced, not just stated (see
+`.importlinter`'s `laws-depend-on-core-not-reverse`,
+`memory-does-not-import-core-or-laws`, and
+`core-and-laws-do-not-import-memory` contracts, ADR-010).
+
+### Law 7 — One source of truth for every canonical value
+**Rewritten 2026-09-04**, same pass (was: "one source of truth for every
+physical quantity" — Windwright-specific; the general principle survives,
+the domain example doesn't). Each canonical value or config path (a scan
+path, a threshold, a branch-naming pattern) lives in exactly one module and
+is imported everywhere else — a hardcoded duplicate is a constitutional
+violation, the same failure class as Law 3 but for *values* rather than
+*logic*. `scripts/scan_config.py` is the real, positive example already in
+this repo: one shared resolver used by 4+ scripts, built specifically
+because the duplicated-hardcoded-paths version of this bug already
+happened once (`docs/AI_FAILURE_PATTERNS.md`, 2026-08-19 LAW 9 entry).
 
 ### Law 8 — One responsibility per module
 Modules stay small (<500 lines by default) and focused. Split or record debt.
