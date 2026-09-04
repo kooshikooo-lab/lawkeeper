@@ -1,5 +1,7 @@
 # Shared Memory Index
 
+- [Verification technique: cross-validate against a paper's own worked examples](windwright-verification-technique-cross-validate-against-worked-examples-2026-09-04.md) — when implementing a general method from a paper, symbolically re-derive any fully-worked example it provides and cross-check your general formula against that, independent of your own test cases; caught a real numerical-stiffness finding (not a bug) this way in Windwright tonight.
+
 One line per entry, newest-relevant first. See `README.md` for the format
 and how any agent should use this. Keep this list in sync when adding or
 retiring entries.
