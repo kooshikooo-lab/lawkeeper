@@ -99,12 +99,15 @@ Rather than duplicate ~300 lines of detail here, both are real files on
 
 - **`docs/QUALITY_AND_GOVERNANCE_IMPROVEMENT_PLAN_2026-09-04.md`** —
   the quality initiative itself. Covers mutation testing tool research
-  (Cosmic Ray vs. mutmut, sourced — Cosmic Ray recommended first: active,
-  TOML-configured, real build-tool integration, and confirmed to run
-  natively on Windows with no WSL needed, unlike mutmut which requires
-  it), a proposed new constitutional rule for the exact "hardcoded
-  machine-specific literal" bug class found today (explicitly NOT added
-  unilaterally — flagged as a directional decision per this repo's own
+  (Cosmic Ray vs. mutmut — sources listed in that doc's own "Sources
+  consulted for Phase A" line at the bottom: PyPI, official docs, GitHub,
+  and an IEEE + an ACM SBQS 2026 comparison paper. Cosmic Ray recommended
+  first there: active, TOML-configured, real build-tool integration — see
+  section 5 below for the separate, live-run confirmation of its
+  Windows/WSL behavior), a proposed new constitutional rule for the exact
+  "hardcoded machine-specific literal" bug class found today (explicitly
+  NOT added unilaterally — flagged as a directional decision per this
+  repo's own
   Law 22), cross-session coordination guidance, and a real architecture-
   research angle.
 - **`docs/ARCHITECTURE_REVIEW_2026-09-04.md`** — the deeper pass the
@@ -155,9 +158,15 @@ Windwright on this same physical machine:
   `team_chat.py` as the answer — that tool is for cross-machine
   coordination, not same-machine. Use the right one.
 - **Cosmic Ray needs no WSL on Windows**; it's `mutmut` that requires it.
-  Confirmed by a real, live mutation-testing run on this machine (once
-  against a toy function, once against a real Windwright module), not
-  assumed from documentation.
+  Reported by a Windwright session as a real, live mutation-testing run
+  on this machine (once against a toy function, once against a real
+  Windwright module) relayed into this conversation, not read from this
+  repo's own history — there is no file in *this* repo recording that
+  run, so treat it as a strong, first-hand claim from another session
+  rather than something independently auditable from lawkeeper alone. If
+  it matters for a decision here, ask that session (or check Windwright's
+  own repo) for where the run's output was saved, rather than citing this
+  paragraph as the source.
 
 ## 6. Outstanding work, explicitly delegatable (this cloud session cannot do these — no access to the other repos)
 
@@ -180,9 +189,13 @@ Windwright on this same physical machine:
   and consider a first pass against `src/guardrail/core/` and
   `src/guardrail/laws/` too, per the plan doc's Phase A.
 
-## 7. Current git/branch state
+## 7. Git/branch state as of 2026-09-04, right after this doc was written
 
-- `main` is current: `aed62fc3c95e4c6b20f1449796a59ce37733788c`.
+This section is a snapshot, not a live fact — `main` moves. Verify with
+`git log -1 main` rather than trusting the SHA below if any real time has
+passed since this doc was written.
+
+- `main` was at `aed62fc3c95e4c6b20f1449796a59ce37733788c` as of this writing.
 - PR kooshikooo-lab/lawkeeper#3 (the earlier, smaller investigation) is
   **closed**, superseded by #4.
 - PR kooshikooo-lab/lawkeeper#4 is **merged** (squash).
