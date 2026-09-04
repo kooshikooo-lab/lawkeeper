@@ -1,5 +1,16 @@
 # Lawkeeper Downloadable Prototype — Plan
 
+**Status update (2026-09-04):** Stage 1 (`src/guardrail/agent.py`) was
+removed. `docs/ARCHITECTURE_REVIEW_2026-09-04.md` found it had zero real
+callers weeks after being built — Stages 2-4 below never started, and it
+shipped as real dead weight in every `pip install lawkeeper` (plus an
+unused optional `claude-agent-sdk` dependency). User decision: remove
+Stage 1, keep this plan document as the record of the idea and the SDK
+research below (still accurate) in case the work resumes — see
+`docs/ARCHITECTURE_DECISIONS.md` ADR-008. Resurrect
+`src/guardrail/agent.py` from git history (`git log --all --
+src/guardrail/agent.py`) rather than rewriting it from scratch if so.
+
 Real, concrete plan for a downloadable lawkeeper prototype: your own
 Anthropic API key, real agentic coding capability, lawkeeper's existing
 governance apparatus wrapped around it from the start -- and, as a real

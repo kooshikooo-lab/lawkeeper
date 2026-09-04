@@ -39,15 +39,6 @@ except ImportError:
 
 # Libraries that are imported under a different name than the pip package.
 PACKAGE_ALIASES = {
-    # Real bug found 2026-09-04: this project's own optional agent
-    # dependency (pyproject.toml's [project.optional-dependencies].agent)
-    # was flagged PHANTOM despite being genuinely declared -- import name
-    # uses an underscore, the declared/PyPI name uses a hyphen, and
-    # _declared()/_imported() never normalized between the two (same class
-    # of mismatch this alias table exists to solve for bs4/yaml/etc, just
-    # never hit before now because toolcheck.py never scanned src/guardrail/
-    # -- the only place claude_agent_sdk is imported -- until this fix).
-    "claude_agent_sdk": "claude-agent-sdk",
     "sklearn": "scikit-learn",
     "skfem": "scikit-fem",
     "yaml": "pyyaml",

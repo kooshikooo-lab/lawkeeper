@@ -31,6 +31,21 @@ def _template_root() -> Path:
     return Path(str(importlib.resources.files("guardrail") / "template"))
 
 
+# Separate, opt-in template tree (ADR-009, docs/ARCHITECTURE_REVIEW_2026-09-04.md
+# item 3): ai_review.py/consensus_review.py/team_chat.py are general multi-model
+# LLM-orchestration and cross-agent-chat tools, not governance enforcement --
+# they check or enforce nothing. Kept out of the default `lawkeeper init` scaffold
+# so the shipped product's default scope actually matches its stated purpose
+# ("Constitution-as-code governance"); available via --with-tools for projects
+# that want them. Mirrors the same relative layout as _template_root() (e.g.
+# scripts/ai_review.py) so its files land in the SAME destination directory as
+# the base template's when both are copied -- this is required, not incidental:
+# consensus_review.py does `from blockers import report_blocker` as a sibling
+# import, and blockers.py only ever ships from the base template.
+def _extras_template_root() -> Path:
+    return Path(str(importlib.resources.files("guardrail") / "template_extras"))
+
+
 def _repo_root(start: Path = Path.cwd()) -> Path | None:
     """Return the git repo root containing `start`, or None if there isn't one.
 
@@ -59,6 +74,37 @@ def _render(src: Path, dst: Path, project_name: str) -> None:
                 .replace("__PROJECT_NAME__", project_name)
                 .replace("__PROJECT_NAME_TITLE__", project_name.replace("-", " ").title()))
     dst.write_text(rendered, encoding="utf-8", newline="\n")
+
+
+def _copy_template_tree(template_root: Path, dst_root: Path, project_name: str) -> list[Path]:
+    """Copy every file under template_root into dst_root (rendering
+    placeholders), returning what was actually written. Shared by the base
+    template and the opt-in extras tree (_extras_template_root) so both
+    copy identically -- including the git-hooks +x fixup, which only the
+    base tree currently needs but costs nothing to apply generally."""
+    written: list[Path] = []
+    for rel in template_root.rglob("*"):
+        if rel.is_dir():
+            continue
+        rel_target = rel.relative_to(template_root)
+        dst = dst_root / rel_target
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if rel.suffix == ".tmpl":
+            dst_final = dst.with_suffix("")
+        else:
+            dst_final = dst
+        _render(rel, dst_final, project_name)
+        written.append(dst_final)
+        # Git hooks must be executable or git silently no-ops them (just a
+        # soft "hint", commit still succeeds) — found by actually running
+        # `git commit` against a freshly-scaffolded project: install_hooks.py
+        # reported "hooks ACTIVE" and the commit sailed through with zero
+        # enforcement. write_text() doesn't preserve the +x bit, so every
+        # freshly scaffolded hook was silently inert until a human happened
+        # to chmod it manually.
+        if dst_final.parent.name == "git-hooks":
+            dst_final.chmod(dst_final.stat().st_mode | 0o111)
+    return written
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -102,30 +148,27 @@ def cmd_init(args: argparse.Namespace) -> int:
     project_name = args.name or root.name
     dst_root = root
 
-    # Copy template tree (rendering placeholders), tracking what we wrote so
-    # we can verify afterward instead of just trusting the loop ran.
-    written: list[Path] = []
-    for rel in template_root.rglob("*"):
-        if rel.is_dir():
-            continue
-        rel_target = rel.relative_to(template_root)
-        dst = dst_root / rel_target
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        if rel.suffix == ".tmpl":
-            dst_final = dst.with_suffix("")
-        else:
-            dst_final = dst
-        _render(rel, dst_final, project_name)
-        written.append(dst_final)
-        # Git hooks must be executable or git silently no-ops them (just a
-        # soft "hint", commit still succeeds) — found by actually running
-        # `git commit` against a freshly-scaffolded project: install_hooks.py
-        # reported "hooks ACTIVE" and the commit sailed through with zero
-        # enforcement. write_text() doesn't preserve the +x bit, so every
-        # freshly scaffolded hook was silently inert until a human happened
-        # to chmod it manually.
-        if dst_final.parent.name == "git-hooks":
-            dst_final.chmod(dst_final.stat().st_mode | 0o111)
+    # Copy the base (governance-only) template tree, tracking what we wrote
+    # so we can verify afterward instead of just trusting the loop ran.
+    written: list[Path] = _copy_template_tree(template_root, dst_root, project_name)
+
+    # Opt-in extras (ADR-009): general LLM-orchestration tools that check or
+    # enforce nothing, kept out of the default scaffold. Copied into the same
+    # dst_root as the base tree (see _extras_template_root's docstring for
+    # why that shared destination matters, not just convenience).
+    tools_included = False
+    if args.with_tools:
+        extras_root = _extras_template_root()
+        if not extras_root.exists():
+            print(
+                f"lawkeeper: internal error — extras template directory not "
+                f"found at {extras_root}. This is a packaging bug, not a "
+                f"project problem; please report it rather than proceeding.",
+                file=sys.stderr,
+            )
+            return 1
+        written.extend(_copy_template_tree(extras_root, dst_root, project_name))
+        tools_included = True
 
     # Write project config.
     import json
@@ -157,6 +200,14 @@ def cmd_init(args: argparse.Namespace) -> int:
         return 1
 
     print(f"lawkeeper: scaffolding written to {dst_root} ({len(written)} files)")
+    if tools_included:
+        print("  + --with-tools: ai_review.py, consensus_review.py, team_chat.py included "
+              "(general LLM-orchestration tools, not governance enforcement)")
+        print("    ai_review.py/consensus_review.py need `pip install lawkeeper[tools]` "
+              "(requests) to actually run")
+    else:
+        print("  (governance only — re-run with --with-tools to also install "
+              "ai_review.py/consensus_review.py/team_chat.py)")
     print("Next steps:")
     print("  1. pip install -e .   # from the project root")
     print("  2. python scripts/install_hooks.py   # installs pre-commit, commit-msg, pre-push")
@@ -199,6 +250,9 @@ def main(argv=None) -> int:
     p_init.add_argument("--name", help="project name for templates")
     p_init.add_argument("--machines", help="comma-separated machine names, e.g. desktop,laptop")
     p_init.add_argument("--force", action="store_true", help="overwrite existing governance")
+    p_init.add_argument("--with-tools", action="store_true",
+                        help="also install ai_review.py/consensus_review.py/team_chat.py "
+                             "(general LLM-orchestration tools, not governance enforcement)")
 
     p_run = sub.add_parser("run", help="run constitution laws against the repo")
     p_run.add_argument("--json", action="store_true", help="emit machine-readable JSON")
