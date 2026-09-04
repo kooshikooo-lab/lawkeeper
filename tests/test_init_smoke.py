@@ -49,10 +49,13 @@ def _run(cmd, cwd=None, check=True):
 
 
 @pytest.fixture(scope="module")
-def installed_lawkeeper(tmp_path_factory):
-    """Build a real wheel from this repo and pip-install it into a fresh venv.
+def built_wheel(tmp_path_factory):
+    """Build a real wheel from this repo. Returns its path.
 
-    Returns the path to the venv's `lawkeeper` executable.
+    Split out of installed_lawkeeper (below) so a test that needs the wheel
+    path itself -- e.g. to install an extra like `lawkeeper[tools]` the same
+    way a real user would, not by installing its dependencies directly --
+    can reuse the one build instead of triggering a second one.
     """
     if shutil.which("git") is None:
         pytest.skip("git not available")
@@ -73,8 +76,16 @@ def installed_lawkeeper(tmp_path_factory):
 
     wheels = list(dist_dir.glob("*.whl"))
     assert wheels, "build produced no wheel"
+    return wheels[0]
 
-    venv_dir = work / "venv"
+
+@pytest.fixture(scope="module")
+def installed_lawkeeper(built_wheel, tmp_path_factory):
+    """Pip-install the built wheel into a fresh venv.
+
+    Returns the path to the venv's `lawkeeper` executable.
+    """
+    venv_dir = tmp_path_factory.mktemp("lawkeeper-venv") / "venv"
     venv.create(venv_dir, with_pip=True)
     venv_python = venv_dir / "bin" / "python"
     venv_lawkeeper = venv_dir / "bin" / "lawkeeper"
@@ -82,7 +93,7 @@ def installed_lawkeeper(tmp_path_factory):
         venv_python = venv_dir / "Scripts" / "python.exe"
         venv_lawkeeper = venv_dir / "Scripts" / "lawkeeper.exe"
 
-    _run([str(venv_python), "-m", "pip", "install", "-q", str(wheels[0])])
+    _run([str(venv_python), "-m", "pip", "install", "-q", str(built_wheel)])
     assert venv_lawkeeper.exists(), "lawkeeper entry point was not installed"
     return venv_lawkeeper
 
@@ -121,7 +132,7 @@ class TestInitFromRealInstall:
                 f"it must only appear with --with-tools (ADR-009)"
             )
 
-    def test_init_with_tools_installs_the_llm_tools(self, installed_lawkeeper, tmp_path):
+    def test_init_with_tools_installs_the_llm_tools(self, installed_lawkeeper, built_wheel, tmp_path):
         repo = tmp_path / "project-with-tools"
         repo.mkdir()
         _run(["git", "init", "-q"], cwd=repo)
@@ -134,16 +145,17 @@ class TestInitFromRealInstall:
             )
         # Real regression guard: consensus_review.py sibling-imports blockers.py
         # (`from blockers import report_blocker`) — it must actually run, not
-        # just exist on disk. Same venv, same bin/Scripts layout detection the
-        # installed_lawkeeper fixture above already uses. Real bug found while
-        # writing this test: ai_review.py needs `requests` at module load, and
-        # only `pip install lawkeeper[tools]` (not the base install) declares
-        # it (see pyproject.toml's "tools" extra, added alongside this test) --
-        # installed here the same way a real --with-tools user is told to.
+        # just exist on disk. Real bug found while writing this test:
+        # ai_review.py needs `requests` at module load, and only
+        # `pip install lawkeeper[tools]` (not the base install) declares it
+        # (see pyproject.toml's "tools" extra, added alongside this test) --
+        # installed here via the actual extra syntax against the same wheel
+        # (built_wheel), not by installing `requests` directly, so this test
+        # would also catch the extra itself being misspelled/broken.
         venv_python = installed_lawkeeper.parent / "python.exe"
         if not venv_python.exists():
             venv_python = installed_lawkeeper.parent / "python"
-        _run([str(venv_python), "-m", "pip", "install", "-q", "requests>=2.28"])
+        _run([str(venv_python), "-m", "pip", "install", "-q", f"{built_wheel}[tools]"])
         check = _run(
             [str(venv_python), "scripts/consensus_review.py", "--help"],
             cwd=repo, check=False,

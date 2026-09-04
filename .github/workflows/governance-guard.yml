@@ -25,21 +25,13 @@ jobs:
         # every single governance-guard run since the very first commit
         # has failed - this was never once caught before now.
         #
-        # `,agent` added 2026-09-04: real CI failure, caught by actually
-        # running this workflow for the first time against
-        # opencode/framework-mvp/desktop (it had never run on this branch
-        # before this PR - this repo's own CI only triggers on `main`
-        # push and PRs against it). check_local_dependencies.py correctly
-        # scans src/guardrail/agent.py's real, declared, deferred import
-        # of claude_agent_sdk (pyproject.toml's "agent" extra) and fails
-        # --warn's hard exit-1 when it's imported+declared but not
-        # installed. This is lawkeeper's own dev-repo CI checking its own
-        # real optional feature end-to-end, not something a consuming
-        # project's shipped template needs - the template copy of this
-        # workflow deliberately keeps plain [dev], since a project using
-        # `lawkeeper init` has no agent.py of its own to check.
+        # `,agent` (added 2026-09-04 for src/guardrail/agent.py's real,
+        # declared claude_agent_sdk import) removed the same day: agent.py
+        # itself was removed per ADR-008 (docs/ARCHITECTURE_DECISIONS.md) --
+        # the "agent" extra no longer exists in pyproject.toml, so keeping
+        # it here would make `pip install` fail/warn on a nonexistent extra.
         run: |
-          pip install -e ".[dev,agent]"
+          pip install -e ".[dev]"
           python scripts/install_hooks.py
       - name: Block unauthorized governance edits and unmarked provisional work
         # push-only, not pull_request: on a pull_request event this repo
