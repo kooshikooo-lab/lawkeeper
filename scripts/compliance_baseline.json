@@ -24,13 +24,6 @@
       ]
     ],
     [
-      "scripts/compliance_watchdog.py",
-      "module_size",
-      [
-        541
-      ]
-    ],
-    [
       "scripts/consensus_review.py",
       "module_mutable",
       [
@@ -45,10 +38,17 @@
       ]
     ],
     [
+      "scripts/hardware_scanner/scanner.py",
+      "module_mutable",
+      [
+        "DEFAULT_ADAPTERS L21"
+      ]
+    ],
+    [
       "scripts/mine_failure_patterns.py",
       "module_mutable",
       [
-        "REPOS L55"
+        "REPOS L80"
       ]
     ],
     [
@@ -70,11 +70,11 @@
       "scripts/toolcheck.py",
       "module_mutable",
       [
-        "PACKAGE_ALIASES L29",
-        "FREECAD_MODULES L52",
-        "EXTERNAL_APP_MODULES L58",
-        "LOCAL_ROOTS L61",
-        "STDLIBISH L65"
+        "PACKAGE_ALIASES L41",
+        "FREECAD_MODULES L73",
+        "EXTERNAL_APP_MODULES L79",
+        "LOCAL_ROOTS L82",
+        "STDLIBISH L86"
       ]
     ],
     [
@@ -103,11 +103,11 @@
       "scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L21",
-        "REGENERABLE_SUFFIXES L41",
-        "REGENERABLE_PATHS L46",
-        "OVERSIZED_ALLOWLIST L49",
-        "PLACEMENT_ALLOWLIST L122"
+        "PLACEMENT_RULES L36",
+        "PLACEMENT_TREE_ALLOWLIST L66",
+        "REGENERABLE_SUFFIXES L71",
+        "REGENERABLE_PATHS L76",
+        "PLACEMENT_ALLOWLIST L133"
       ]
     ],
     [
@@ -182,11 +182,11 @@
       "src/guardrail/template/scripts/toolcheck.py",
       "module_mutable",
       [
-        "PACKAGE_ALIASES L29",
-        "FREECAD_MODULES L52",
-        "EXTERNAL_APP_MODULES L58",
-        "LOCAL_ROOTS L61",
-        "STDLIBISH L65"
+        "PACKAGE_ALIASES L41",
+        "FREECAD_MODULES L73",
+        "EXTERNAL_APP_MODULES L79",
+        "LOCAL_ROOTS L82",
+        "STDLIBISH L86"
       ]
     ],
     [
@@ -215,11 +215,11 @@
       "src/guardrail/template/scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L21",
-        "REGENERABLE_SUFFIXES L41",
-        "REGENERABLE_PATHS L46",
-        "OVERSIZED_ALLOWLIST L49",
-        "PLACEMENT_ALLOWLIST L122"
+        "PLACEMENT_RULES L36",
+        "PLACEMENT_TREE_ALLOWLIST L66",
+        "REGENERABLE_SUFFIXES L71",
+        "REGENERABLE_PATHS L76",
+        "PLACEMENT_ALLOWLIST L133"
       ]
     ],
     [
