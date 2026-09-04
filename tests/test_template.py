@@ -16,6 +16,12 @@ ROOT = REPO_ROOT
 # a source checkout but silently does not ship — that was the root cause of
 # `lawkeeper init` succeeding with zero files once installed from a wheel.
 TEMPLATE = REPO_ROOT / "src" / "guardrail" / "template"
+# Opt-in tree, installed only by `lawkeeper init --with-tools` (ADR-009):
+# general LLM-orchestration tools, not governance enforcement, kept out of
+# the default scaffold. Ships from the same package via a second
+# package-data entry (pyproject.toml) — see cli.py's _extras_template_root.
+TEMPLATE_EXTRAS = REPO_ROOT / "src" / "guardrail" / "template_extras"
+EXTRAS_TOOL_FILES = ["ai_review.py", "consensus_review.py", "team_chat.py"]
 
 ROOT_DIRS = ["scripts", "scripts/git-hooks"]
 ROOT_SCRIPT_FILES = [
@@ -112,3 +118,37 @@ class TestTemplateCompleteness:
     def test_template_has_guard_scripts(self):
         for s in ["guard_branch.py", "merge_gate.py", "system_audit.py"]:
             assert (TEMPLATE / "scripts" / s).is_file()
+
+
+class TestTemplateExtrasSplit:
+    """ADR-009: ai_review.py/consensus_review.py/team_chat.py are general
+    tools, not governance enforcement — they must ship from the opt-in
+    template_extras/ tree only, never from the default template/ tree, so
+    a plain `lawkeeper init` stays governance-only (matching the package's
+    stated purpose, per docs/ARCHITECTURE_REVIEW_2026-09-04.md item 3)."""
+
+    def test_extras_tree_has_the_tools(self):
+        for f in EXTRAS_TOOL_FILES:
+            assert (TEMPLATE_EXTRAS / "scripts" / f).is_file(), (
+                f"template_extras/scripts/{f} missing — --with-tools would "
+                f"silently install fewer files than expected"
+            )
+
+    def test_base_template_does_not_have_the_tools(self):
+        for f in EXTRAS_TOOL_FILES:
+            assert not (TEMPLATE / "scripts" / f).exists(), (
+                f"scripts/{f} found back in the default template/ tree — "
+                f"this would re-bundle a general tool into every plain "
+                f"`lawkeeper init`, undoing ADR-009's split"
+            )
+
+    def test_consensus_review_sibling_import_will_resolve(self):
+        """consensus_review.py does `from blockers import report_blocker`
+        as a sibling import (sys.path.insert of its own dir only) — this
+        only works because _extras_template_root's files land in the same
+        destination directory as the base template's blockers.py. Real
+        regression this guards: if blockers.py were ever removed from the
+        base template, --with-tools would install a script that crashes
+        on import."""
+        assert (TEMPLATE / "scripts" / "blockers.py").is_file()
+        assert (TEMPLATE_EXTRAS / "scripts" / "consensus_review.py").is_file()

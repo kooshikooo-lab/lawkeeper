@@ -38,6 +38,14 @@ This scaffolds:
 Run it once; the project is governed. Non-coders keep coding; the system keeps
 everyone compliant.
 
+`lawkeeper init` ships governance only by default. Add `--with-tools` to also
+install `ai_review.py`/`consensus_review.py`/`team_chat.py` — general
+multi-model review and cross-agent-chat utilities that check or enforce
+nothing, kept separate on purpose (ADR-009 in `docs/ARCHITECTURE_DECISIONS.md`)
+so the default scaffold's scope matches what this package actually is.
+`ai_review.py`/`consensus_review.py` additionally need
+`pip install lawkeeper[tools]` (installs `requests`) to actually run.
+
 ## The enforcement stack (Law 16 — defense in depth)
 1. **Local git hooks** (`pre-commit`, `commit-msg`, `pre-push`): block ungoverned
    commits, unauthorized edits to the constitution, provisional work without an

@@ -71,10 +71,10 @@
       "module_mutable",
       [
         "PACKAGE_ALIASES L41",
-        "FREECAD_MODULES L73",
-        "EXTERNAL_APP_MODULES L79",
-        "LOCAL_ROOTS L82",
-        "STDLIBISH L86"
+        "FREECAD_MODULES L64",
+        "EXTERNAL_APP_MODULES L70",
+        "LOCAL_ROOTS L73",
+        "STDLIBISH L77"
       ]
     ],
     [
@@ -150,13 +150,6 @@
       ]
     ],
     [
-      "src/guardrail/template/scripts/consensus_review.py",
-      "module_mutable",
-      [
-        "PANELS L126"
-      ]
-    ],
-    [
       "src/guardrail/template/scripts/guard_governance.py",
       "module_mutable",
       [
@@ -172,21 +165,14 @@
       ]
     ],
     [
-      "src/guardrail/template/scripts/team_chat.py",
-      "module_mutable",
-      [
-        "OTHER L222"
-      ]
-    ],
-    [
       "src/guardrail/template/scripts/toolcheck.py",
       "module_mutable",
       [
         "PACKAGE_ALIASES L41",
-        "FREECAD_MODULES L73",
-        "EXTERNAL_APP_MODULES L79",
-        "LOCAL_ROOTS L82",
-        "STDLIBISH L86"
+        "FREECAD_MODULES L64",
+        "EXTERNAL_APP_MODULES L70",
+        "LOCAL_ROOTS L73",
+        "STDLIBISH L77"
       ]
     ],
     [
@@ -223,6 +209,20 @@
       ]
     ],
     [
+      "src/guardrail/template_extras/scripts/consensus_review.py",
+      "module_mutable",
+      [
+        "PANELS L126"
+      ]
+    ],
+    [
+      "src/guardrail/template_extras/scripts/team_chat.py",
+      "module_mutable",
+      [
+        "OTHER L222"
+      ]
+    ],
+    [
       "tests/test_choices.py",
       "module_mutable",
       [
@@ -247,10 +247,11 @@
       "tests/test_template.py",
       "module_mutable",
       [
-        "ROOT_DIRS L20",
-        "ROOT_SCRIPT_FILES L21",
-        "ROOT_DOCS L32",
-        "HOOKS L39"
+        "EXTRAS_TOOL_FILES L24",
+        "ROOT_DIRS L26",
+        "ROOT_SCRIPT_FILES L27",
+        "ROOT_DOCS L38",
+        "HOOKS L45"
       ]
     ]
   ]

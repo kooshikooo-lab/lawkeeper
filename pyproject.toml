@@ -12,22 +12,27 @@ license = { text = "MIT" }
 dependencies = ["pyyaml>=6.0"]
 
 [project.optional-dependencies]
-# requests: not used by the shipped guardrail package itself, only by
-# maintainer scripts that call OpenRouter/team-chat (ai_review.py,
-# consensus_review.py, team_chat.py) -- dev-only, same reasoning as
-# pytest/build here.
+# requests: needed by THIS repo's own dev/maintainer copies of ai_review.py/
+# consensus_review.py/team_chat.py (scripts/, not shipped), same reasoning
+# as pytest/build here.
 # beautifulsoup4: same reasoning, used by scripts/hardware_scanner/'s
 # adapters (real HTML parsing for inet.se/refurbed.se), not the shipped
 # guardrail package.
 dev = ["pytest>=7", "build>=1.0", "requests>=2.28", "beautifulsoup4>=4.12"]
-# claude-agent-sdk: real, shipped-package dependency for
-# guardrail.agent's Stage-1 downloadable-prototype integration
-# (docs/LAWKEEPER_PROTOTYPE_PLAN.md) -- kept optional rather than a
-# hard dependency since most lawkeeper installs (the governance CLI
-# itself) don't need it; deferred-imported inside
-# build_governed_options() specifically so the rest of the package
-# stays importable/testable without it installed.
-agent = ["claude-agent-sdk>=0.2"]
+# tools: for a project that ran `lawkeeper init --with-tools` (ADR-009) and
+# wants to actually run the installed ai_review.py/consensus_review.py --
+# real bug found 2026-09-04 while adding a real end-to-end test for
+# --with-tools: ai_review.py imports `requests` at module load, but nothing
+# declared it installable for a consuming project, only for this dev repo's
+# own [dev] extra above. `pip install lawkeeper[tools]` is the real fix.
+# team_chat.py needs nothing beyond stdlib, so it's not what drove this.
+tools = ["requests>=2.28"]
+# The "agent" extra (claude-agent-sdk, for guardrail.agent's Stage-1
+# downloadable-prototype integration) was removed 2026-09-04 along with
+# guardrail/agent.py itself -- see ARCHITECTURE_DECISIONS.md ADR-008.
+# Zero real callers after weeks; Stage 2-4 of docs/LAWKEEPER_PROTOTYPE_PLAN.md
+# never got built. Resurrect from git history (`git log --all -- src/guardrail/agent.py`)
+# if that work resumes.
 
 [project.scripts]
 lawkeeper = "guardrail.cli:main"
@@ -40,7 +45,10 @@ where = ["src"]
 # for this to actually ship inside a built wheel. Verified with:
 #   python -m build --wheel && python -m zipfile -l dist/*.whl | grep template
 [tool.setuptools.package-data]
-guardrail = ["template/**/*"]
+# template_extras/ (ADR-009): opt-in tools installed only by
+# `lawkeeper init --with-tools` — same packaging requirement as template/
+# above (must live inside the package dir for setuptools/wheel to ship it).
+guardrail = ["template/**/*", "template_extras/**/*"]
 
 [tool.pytest.ini_options]
 # Was an exact-filename allowlist -- switched 2026-08-20 after it silently

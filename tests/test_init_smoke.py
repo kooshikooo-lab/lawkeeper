@@ -107,6 +107,54 @@ class TestInitFromRealInstall:
         assert (repo / ".guardrail.json").is_file()
         assert "scaffolding written" in result.stdout
 
+    def test_init_default_excludes_the_llm_tools(self, installed_lawkeeper, tmp_path):
+        """ADR-009: a plain `lawkeeper init` must stay governance-only."""
+        repo = tmp_path / "project-no-tools"
+        repo.mkdir()
+        _run(["git", "init", "-q"], cwd=repo)
+
+        _run([str(installed_lawkeeper), "init", "."], cwd=repo)
+
+        for f in ("ai_review.py", "consensus_review.py", "team_chat.py"):
+            assert not (repo / "scripts" / f).exists(), (
+                f"scripts/{f} was installed by a plain `lawkeeper init` — "
+                f"it must only appear with --with-tools (ADR-009)"
+            )
+
+    def test_init_with_tools_installs_the_llm_tools(self, installed_lawkeeper, tmp_path):
+        repo = tmp_path / "project-with-tools"
+        repo.mkdir()
+        _run(["git", "init", "-q"], cwd=repo)
+
+        result = _run([str(installed_lawkeeper), "init", ".", "--with-tools"], cwd=repo)
+
+        for f in ("ai_review.py", "consensus_review.py", "team_chat.py"):
+            assert (repo / "scripts" / f).is_file(), (
+                f"scripts/{f} missing after `lawkeeper init --with-tools`"
+            )
+        # Real regression guard: consensus_review.py sibling-imports blockers.py
+        # (`from blockers import report_blocker`) — it must actually run, not
+        # just exist on disk. Same venv, same bin/Scripts layout detection the
+        # installed_lawkeeper fixture above already uses. Real bug found while
+        # writing this test: ai_review.py needs `requests` at module load, and
+        # only `pip install lawkeeper[tools]` (not the base install) declares
+        # it (see pyproject.toml's "tools" extra, added alongside this test) --
+        # installed here the same way a real --with-tools user is told to.
+        venv_python = installed_lawkeeper.parent / "python.exe"
+        if not venv_python.exists():
+            venv_python = installed_lawkeeper.parent / "python"
+        _run([str(venv_python), "-m", "pip", "install", "-q", "requests>=2.28"])
+        check = _run(
+            [str(venv_python), "scripts/consensus_review.py", "--help"],
+            cwd=repo, check=False,
+        )
+        assert check.returncode == 0, (
+            f"scripts/consensus_review.py --help failed after --with-tools "
+            f"install + `pip install lawkeeper[tools]` (likely a broken "
+            f"sibling import, not the requests dependency):\n{check.stdout}\n{check.stderr}"
+        )
+        assert "with-tools" in result.stdout, "init should note tools were included"
+
     def test_init_refuses_outside_a_git_repo(self, installed_lawkeeper, tmp_path):
         not_a_repo = tmp_path / "no-git-here"
         not_a_repo.mkdir()
