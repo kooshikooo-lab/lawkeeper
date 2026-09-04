@@ -60,9 +60,9 @@ GUARD_SCRIPTS = [
 ]
 
 
-def run(cmd):
+def run(cmd, cwd=None):
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True,
+        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
                                 encoding="utf-8", errors="replace")
         return result.returncode, result.stdout, result.stderr
     except OSError as e:
@@ -157,7 +157,14 @@ def check_import_boundaries() -> list[str]:
             "not installed (pip install import-linter) -- architecture "
             "contracts cannot be verified"
         ]
-    code, out, err = run(["lint-imports", "--config", str(config)])
+    # cwd=REPO_ROOT explicitly (real bug, GitHub Copilot review, PR #8):
+    # lint-imports resolves `root_packages` relative to the invoking
+    # process's cwd, not this config file's location. Without this, running
+    # system_audit.py from a subdirectory (or a context without an editable
+    # install putting `guardrail` on sys.path some other way) could make
+    # import-linter fail to find guardrail at all, or silently check the
+    # wrong thing.
+    code, out, err = run(["lint-imports", "--config", str(config)], cwd=str(REPO_ROOT))
     if code != 0:
         return [f"import-linter found broken contract(s):\n{out}{err}"]
     return []
