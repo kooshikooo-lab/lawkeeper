@@ -144,13 +144,24 @@ class TestAskClaudeAuthDetection:
     by actually running this against a live subprocess, 2026-08-20."""
 
     def test_not_logged_in_raises(self):
+        """Real bug found 2026-09-04, by actually diffing BLOCKERS.md across
+        two audit test runs, not by inspection: this test never mocked
+        report_blocker, so every single run of this suite for real appended
+        a new timestamped duplicate entry to the tracked BLOCKERS.md /
+        scripts/.blockers.json -- explains the wall of near-identical
+        'claude reviewer driver' entries already in BLOCKERS.md's history.
+        report_blocker is mocked here the same way subprocess/shutil already
+        were, so this test proves the auth-detection path fires without
+        mutating real repo files on every test run."""
         class FakeProc:
             stdout = "Not logged in · Please run /login"
             stderr = ""
         with patch.object(consensus_review.shutil, "which", return_value="/fake/claude"), \
-             patch.object(consensus_review.subprocess, "run", return_value=FakeProc()):
+             patch.object(consensus_review.subprocess, "run", return_value=FakeProc()), \
+             patch.object(consensus_review, "report_blocker") as mock_report_blocker:
             with pytest.raises(RuntimeError, match="not authenticated"):
                 consensus_review.ask_claude("test brief")
+            mock_report_blocker.assert_called_once()
 
     def test_real_reply_passes_through(self):
         class FakeProc:
