@@ -1,0 +1,65 @@
+[importlinter]
+root_packages =
+    guardrail
+
+# Ported from Windwright (real user directive 2026-09-04, see shared_memory/
+# user-quality-standard-escalation-and-cross-repo-sharing-2026-09-04.md:
+# check tools found in one repo for portability to others before building
+# something new). Windwright's other two candidates flagged alongside this
+# one -- check_tool_registry.py, validate_locked_constants.py -- were
+# deliberately NOT ported: this repo has no docs/TOOL_REGISTRY.md and no
+# `# LOCKED:` spans anywhere for either to check against yet (verified by
+# grep before deciding, not assumed) -- porting either now would itself be
+# the exact anti-pattern the user's directive names ("tools built and not
+# wired in is way worse than no tools built").
+#
+# This contract set replaces docs/ARCHITECTURE_REVIEW_2026-09-04.md's
+# manually-grepped claim ("core/, laws/, and memory/ never import cli.py or
+# config.py -- verified by grep, zero hits") with a mechanically-enforced
+# one -- and in doing so found that claim was actually WRONG: core/runner.py
+# has a real, legitimate deferred import of guardrail.config (loading
+# .guardrail.json settings), which the review's grep missed. config.py is a
+# pure leaf module (stdlib-only imports, verified) with no dependency back
+# on core/laws/memory, so this is a real, harmless dependency, not a layering
+# violation -- the three contracts below reflect the actual verified
+# architecture, not the review's slightly-overstated version of it.
+
+[importlinter:contract:core-laws-memory-never-import-cli]
+name = core/laws/memory never import the outer cli.py composition layer
+type = forbidden
+source_modules =
+    guardrail.core
+    guardrail.laws
+    guardrail.memory
+forbidden_modules =
+    guardrail.cli
+
+[importlinter:contract:laws-depend-on-core-not-reverse]
+name = laws/ may import core/ primitives; core/ never imports laws/ back
+type = layers
+layers =
+    guardrail.laws
+    guardrail.core
+
+[importlinter:contract:memory-does-not-import-core-or-laws]
+name = memory/ (provider abstraction) has no dependency on core/ or laws/
+type = forbidden
+source_modules =
+    guardrail.memory
+forbidden_modules =
+    guardrail.core
+    guardrail.laws
+
+# core/ and laws/ have no dependency back on memory/ -- real today, verified
+# by grep before writing this contract. Separately noteworthy, not this
+# contract's concern: cli.py itself does not import memory/ either; its only
+# real consumer today is the standalone scripts/memory_query.py dev script,
+# not the shipped `lawkeeper` CLI.
+[importlinter:contract:core-and-laws-do-not-import-memory]
+name = core/ and laws/ do not depend on memory/
+type = forbidden
+source_modules =
+    guardrail.core
+    guardrail.laws
+forbidden_modules =
+    guardrail.memory

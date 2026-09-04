@@ -1,0 +1,44 @@
+test_id: test_system_audit
+theory: >
+  check_import_boundaries() (added 2026-09-04, porting import-linter from
+  Windwright per a real user directive -- see .importlinter's own header
+  comment) exists specifically to prevent the failure mode the user named
+  directly: "tools built and not wired in is way worse than no tools
+  built." Its whole value rests on three things holding: it correctly
+  no-ops when no .importlinter config exists (most consuming projects),
+  it surfaces a clear, actionable message when the config exists but the
+  tool isn't installed rather than silently passing, and it actually
+  catches a real broken contract rather than always reporting clean.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    The no-op and missing-tool cases are asserted against known, controlled
+    inputs (an empty tmp_path, a monkeypatched shutil.which). The two real
+    cases run the actual `lint-imports` binary -- once against THIS repo's
+    real .importlinter (a live regression check: fails for real if the
+    layering it locks in ever breaks, not simulated), and once against a
+    freshly-built two-module fake package with a real forbidden import,
+    proving the tool genuinely detects a violation rather than the check
+    function always returning [] regardless of input.
+acceptance: "no .importlinter file -> []; .importlinter present + lint-imports missing -> one problem naming `pip install import-linter`; this repo's real contracts -> [] (currently); a real forbidden import in a fresh fake package -> exactly one problem naming both the source and forbidden module."
+blind_spot: >
+  Only the `forbidden` contract type is adversarially exercised here (the
+  fake-package test); the `layers` and independence-style `forbidden`-pair
+  contracts actually used in .importlinter's real config are only covered
+  indirectly via TestCheckImportBoundariesRealRepo, which proves they
+  currently pass but not that a violation of THOSE specific contract types
+  would be caught the same way the `forbidden` one is. Also does not cover
+  what happens if `lint-imports` itself crashes (vs. exiting nonzero) --
+  check_import_boundaries()'s run() helper only distinguishes code == 0
+  from code != 0.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: check_import_boundaries() stopped detecting a real violation, or started reporting one that isn't real (both would make system_audit.py's self-audit unreliable for this check)
+  crash: import failure in system_audit.py itself, or lint-imports not present/broken in the test environment (see TestCheckImportBoundariesRealRepo, which needs a real, working `lint-imports` on PATH)
+  pass: the no-op, missing-tool, real-repo, and real-violation cases all behave as documented above
+debug:
+  - a failure in TestCheckImportBoundariesRealRepo means either .importlinter's real contracts broke for real (check `lint-imports --config .importlinter` directly first) or check_import_boundaries() itself regressed -- run the two independently to tell which
+  - a failure in TestCheckImportBoundariesCatchesRealViolation means the check function stopped actually detecting violations -- treat as high severity, this is the test proving the whole feature isn't a no-op
+  - a failure in TestCheckImportBoundariesMissingTool likely means shutil.which's mocking broke, or the not-installed message's wording changed without updating this test -- check the message string first

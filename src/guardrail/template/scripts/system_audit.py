@@ -11,8 +11,10 @@ Checks:
   2. Constitution laws load and parse (compliance_watchdog --check-laws).
   3. Compliance baseline matches current tracked baseline file.
   4. Law 15 branch topology (guard_branch --audit): no orphans, origin/HEAD -> main.
-  5. Every guard script imports cleanly (a broken guard is a dead guard).
-  6. Wire integrity: each hook file references the validator script it runs.
+  5. Architecture import boundaries (lint-imports --config .importlinter), if
+     a .importlinter config exists at the repo root.
+  6. Every guard script imports cleanly (a broken guard is a dead guard).
+  7. Wire integrity: each hook file references the validator script it runs.
 
 Usage:
   python scripts/system_audit.py           # full audit, exit 1 on any failure
@@ -24,6 +26,7 @@ Exit codes: 0 = all checks pass, 1 = one or more failures, 2 = error.
 import argparse
 import importlib.util
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -131,6 +134,35 @@ def check_branch_debt() -> list[str]:
             if line.strip().startswith("AUDIT branch")]
 
 
+def check_import_boundaries() -> list[str]:
+    """If a `.importlinter` config exists at the repo root, run it and treat
+    any broken architecture contract as a failure. Not applicable (returns
+    []) if no `.importlinter` file exists -- most `lawkeeper init` projects
+    won't have one unless they choose to add architecture contracts of their
+    own; this check is generic, not lawkeeper-specific, same reasoning as
+    check_hooks() working for any project's own hook wiring.
+
+    Ported from Windwright 2026-08/2026-09 (real user directive 2026-09-04:
+    check tools found in one repo for portability to others -- see
+    shared_memory/user-quality-standard-escalation-and-cross-repo-sharing-
+    2026-09-04.md). Real fit for lawkeeper's own src/guardrail/ package: see
+    the repo root's own .importlinter for the contracts and why they exist.
+    """
+    config = REPO_ROOT / ".importlinter"
+    if not config.exists():
+        return []
+    if shutil.which("lint-imports") is None:
+        return [
+            ".importlinter config exists but the `lint-imports` command is "
+            "not installed (pip install import-linter) -- architecture "
+            "contracts cannot be verified"
+        ]
+    code, out, err = run(["lint-imports", "--config", str(config)])
+    if code != 0:
+        return [f"import-linter found broken contract(s):\n{out}{err}"]
+    return []
+
+
 def check_guards_import() -> list[str]:
     problems = []
     for rel in GUARD_SCRIPTS:
@@ -156,6 +188,7 @@ def audit():
     failures += check_laws()
     failures += check_baseline()
     failures += check_branch_topology()
+    failures += check_import_boundaries()
     failures += check_guards_import()
     findings = check_branch_debt()
     return failures, findings

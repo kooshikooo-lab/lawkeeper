@@ -18,7 +18,12 @@ dependencies = ["pyyaml>=6.0"]
 # beautifulsoup4: same reasoning, used by scripts/hardware_scanner/'s
 # adapters (real HTML parsing for inet.se/refurbed.se), not the shipped
 # guardrail package.
-dev = ["pytest>=7", "build>=1.0", "requests>=2.28", "beautifulsoup4>=4.12"]
+# import-linter: real architecture-boundary checker for this dev repo's own
+# src/guardrail/ package (see .importlinter and scripts/system_audit.py's
+# check_import_boundaries()) -- ported from Windwright 2026-09-04, dev-only
+# since it checks THIS package's own import graph, not something a
+# `lawkeeper init` consumer needs unless they add their own .importlinter.
+dev = ["pytest>=7", "build>=1.0", "requests>=2.28", "beautifulsoup4>=4.12", "import-linter>=2.0"]
 # tools: for a project that ran `lawkeeper init --with-tools` (ADR-009) and
 # wants to actually run the installed ai_review.py/consensus_review.py --
 # real bug found 2026-09-04 while adding a real end-to-end test for
