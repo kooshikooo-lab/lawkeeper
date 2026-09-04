@@ -315,14 +315,16 @@ def main():
             if size_msg:
                 warnings.append(size_msg)
 
-    # NOTE: there used to be a "5. Schema validation for instrument configs"
-    # step here, calling scripts/validate_instrument_configs.py against any
-    # staged config/*.json file. Removed 2026-09-04, same pass as the
-    # speed-of-sound check above: lawkeeper has neither a config/ directory
-    # nor validate_instrument_configs.py -- Windwright content inherited
-    # unadapted. This one was a real, dormant landmine, not just dead: had
-    # it ever triggered (a real project adopting lawkeeper committing its
-    # own config/*.json for an unrelated reason), it would have called a
+    # 5. (Removed 2026-09-04) — was "Schema validation for instrument
+    # configs", calling scripts/validate_instrument_configs.py against any
+    # staged config/*.json file. Kept as a numbered placeholder (GitHub
+    # Copilot review, PR #9) so steps 6-9 below still map to their own real
+    # step numbers, not a silent renumbering. lawkeeper has neither a
+    # config/ directory nor validate_instrument_configs.py -- Windwright
+    # content inherited unadapted, same pass as the speed-of-sound check
+    # above. This one was a real, dormant landmine, not just dead: had it
+    # ever triggered (a project adopting lawkeeper committing its own
+    # config/*.json for an unrelated reason), it would have called a
     # nonexistent script and blocked the commit with a misleading "schema
     # validation failed" message, for a script that was never real here.
 
