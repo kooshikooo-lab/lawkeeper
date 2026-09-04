@@ -89,6 +89,27 @@ def python_changed(staged=True):
                for line in result.stdout.splitlines() if line.strip())
 
 
+def _repo_root() -> Path:
+    """Real bug found 2026-09-04 (GitHub Copilot review, verified before
+    fixing): Path(".guardrail.json") resolved relative to the hook's
+    current working directory. A `git commit` run from a subdirectory (or
+    any invocation whose cwd isn't the repo root) would silently fail to
+    find the config and disable this whole rule with no error -- exactly
+    the class of hardcoded/fragile-path bug already found and fixed
+    elsewhere in this repo today (mine_failure_patterns.py). Resolved via
+    `git rev-parse --show-toplevel` instead, same approach
+    failure_pattern_provider.py already uses; falls back to cwd only if
+    that call itself fails (this script is only ever invoked inside a
+    real git repo, so that's a last resort, not the normal path).
+    """
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    root = result.stdout.strip()
+    return Path(root) if root else Path(".")
+
+
 def load_human_facing_patterns():
     """Glob patterns for human-facing paths, from .guardrail.json.
 
@@ -101,7 +122,7 @@ def load_human_facing_patterns():
     hasn't opted in isn't affected.
     """
     try:
-        path = Path(".guardrail.json")
+        path = _repo_root() / ".guardrail.json"
         if path.exists():
             cfg = json.loads(path.read_text(encoding="utf-8"))
             return [str(p) for p in cfg.get("human_facing_paths", [])]
@@ -111,13 +132,29 @@ def load_human_facing_patterns():
 
 
 def human_facing_changed(staged=True):
-    """True if any staged file matches a configured human-facing glob."""
+    """True if a human-facing-configured path changed -- staged (pending
+    commit) or in the last commit (staged=False, for validating an
+    already-made commit in CI).
+
+    Real bug found 2026-09-04 (GitHub Copilot review, verified before
+    fixing): this always diffed `--cached` regardless of the `staged`
+    argument, and Rule 4 below always called it with a hardcoded
+    staged=True -- so in CI (governance-guard.yml invokes this script
+    with no message-file argument, nothing staged in a fresh checkout)
+    this rule silently never fired, mirroring exactly the bug already
+    found and fixed for Rules 1/3 (governance_changed/python_changed) on
+    2026-08-17 -- fixed there, missed here. Now mirrors those two
+    functions' real staged/not-staged branches exactly.
+    """
     patterns = load_human_facing_patterns()
     if not patterns:
         return False
+    if staged:
+        cmd = ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"]
+    else:
+        cmd = ["git", "diff", "--name-only", "--diff-filter=ACMR", "HEAD~1", "HEAD"]
     result = subprocess.run(
-        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-        capture_output=True, text=True, encoding="utf-8", errors="replace"
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace"
     )
     files = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     return any(fnmatch.fnmatch(f, pat) for f in files for pat in patterns)
@@ -196,7 +233,7 @@ def main():
         return 1
 
     # Rule 4: human-facing check declaration (Law 23)
-    if human_facing_changed(staged=True) and not HUMAN_CHECK_PATTERN.search(msg):
+    if human_facing_changed(staged=staged) and not HUMAN_CHECK_PATTERN.search(msg):
         print(
             f"BLOCKED: commit touches a configured human-facing path but does not "
             f"declare a direct check.\n"

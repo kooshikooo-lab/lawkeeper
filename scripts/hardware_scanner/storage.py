@@ -1,10 +1,15 @@
-"""Real SQLite persistence with dedup by (source, product_id, url) --
-so repeated scans don't re-alert on the same listing every run."""
+"""Real SQLite persistence with dedup by (source, url) -- so repeated
+scans don't re-alert on the same listing every run.
+
+Docstring corrected 2026-09-04 (GitHub Copilot review, verified against
+the real schema before fixing): previously claimed dedup by
+(source, product_id, url), but the actual UNIQUE constraint below is
+(source, url) only -- product_id isn't part of it. Also dropped the
+unused `Path` import the same review flagged."""
 from __future__ import annotations
 
 import sqlite3
 import time
-from pathlib import Path
 
 from .models import Listing
 

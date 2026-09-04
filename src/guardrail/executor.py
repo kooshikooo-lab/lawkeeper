@@ -53,7 +53,15 @@ class ExecutorResult:
 
     @property
     def combined_output(self) -> str:
-        return (self.stdout or "") + ("\n" + self.stderr if self.stderr else "")
+        """stdout and stderr joined with a separating newline -- but only
+        between them, not before an empty stdout. Real bug found 2026-09-04
+        (GitHub Copilot review, verified before fixing): the previous
+        `(self.stdout or "") + ("\\n" + self.stderr if self.stderr else "")`
+        prepended a stray leading newline for the error-only case (empty
+        stdout, non-empty stderr) -- exactly the shape a real failed
+        subprocess with no stdout produces."""
+        parts = [p for p in (self.stdout, self.stderr) if p]
+        return "\n".join(parts)
 
 
 class Executor(Protocol):

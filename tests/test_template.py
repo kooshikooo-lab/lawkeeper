@@ -68,6 +68,20 @@ class TestTemplateSync:
     def test_validate_pre_commit_sync(self):
         self._check("scripts/validate_pre_commit.py", "scripts/validate_pre_commit.py")
 
+    def test_validate_commit_msg_sync(self):
+        self._check("scripts/validate_commit_msg.py", "scripts/validate_commit_msg.py")
+
+    def test_guard_governance_sync(self):
+        self._check("scripts/guard_governance.py", "scripts/guard_governance.py")
+
+    # test_install_hooks_sync deliberately NOT added here yet: verified
+    # 2026-09-04 that scripts/install_hooks.py and its template copy have
+    # already drifted for real (install_claude_stop_hook() exists only in
+    # the dev copy) -- see docs/ARCHITECTURE_REVIEW_2026-09-04.md, item 2.
+    # Whether the template should ship that function is a real, undecided
+    # call, not something to settle silently by adding a test that forces
+    # one side to change.
+
     def test_constitution_sync(self):
         self._check("docs/AI_CONSTITUTION.md", "docs/AI_CONSTITUTION.md")
 

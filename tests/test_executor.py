@@ -34,6 +34,18 @@ class TestExecutorResultStatus:
         r = ExecutorResult(0, "out", "err", 0.01)
         assert r.combined_output == "out\nerr"
 
+    def test_combined_output_no_leading_newline_when_stdout_empty(self):
+        """Regression: real bug found 2026-09-04 (GitHub Copilot review) --
+        the previous implementation prepended a stray leading newline for
+        exactly this case (empty stdout, non-empty stderr), the shape a
+        real failed subprocess with no stdout produces."""
+        r = ExecutorResult(1, "", "boom", 0.01)
+        assert r.combined_output == "boom"
+
+    def test_combined_output_empty_when_both_empty(self):
+        r = ExecutorResult(0, "", "", 0.01)
+        assert r.combined_output == ""
+
 
 class TestSubprocessExecutor:
     @pytest.fixture
