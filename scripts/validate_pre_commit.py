@@ -186,36 +186,20 @@ def check_hardcoded_ips(path: Path) -> list[str]:
     return [ip for ip in ips if ip not in safe and not _is_tailscale_ip(ip)]
 
 
-# Hardcoded speed-of-sound literals outside the canonical source are a common
-# source of cross-branch bugs (Law 7: canonical SPEED_OF_SOUND = 346100.0 mm/s).
-SPEED_OF_SOUND_LITERAL_RE = re.compile(
-    r"(?<![\w.])"
-    r"(?:331\.3|343\.42|344\.844|345\.844|346\.1|"
-    r"343000(?:\.0*)?|346100(?:\.0*)?)"
-    r"(?![\w.])"
-)
-SPEED_OF_SOUND_CANONICAL_FILE = "backend/tmm_acoustics.py"
-
-
-def check_hardcoded_speed_of_sound(path: Path, root: Path) -> list[str]:
-    """Flag hardcoded speed-of-sound literals outside the canonical module."""
-    rel = path.relative_to(root).as_posix()
-    # Exempt the canonical physics module and any copy of this validator itself
-    # (root + template copies both carry the regex's literal substrings).
-    if rel == SPEED_OF_SOUND_CANONICAL_FILE or Path(rel).name == "validate_pre_commit.py":
-        return []
-    try:
-        with open(path, "r", encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-    except OSError:
-        return []
-    matches = []
-    for m in SPEED_OF_SOUND_LITERAL_RE.finditer(content):
-        line = content[:m.start()].count("\n") + 1
-        matches.append(f"{rel}:{line}: hardcoded speed-of-sound literal '{m.group()}'")
-    return matches
-
-
+# NOTE: there used to be check_hardcoded_speed_of_sound() here (a blocking
+# check for hardcoded speed-of-sound literals against a "canonical" file
+# `backend/tmm_acoustics.py`) -- Windwright content inherited unadapted when
+# this repo was scaffolded from Windwright's own constitution, same root
+# cause already found for compliance_watchdog.py's old hardcoded
+# backend/woodwind_designer scan paths (2026-08-19) and AI_CONSTITUTION.md's
+# old Laws 4-7 (2026-09-04). lawkeeper has no backend/ directory and no
+# speed-of-sound literals anywhere in its own code, so this check was
+# permanently a no-op here: it could never fire on this repo's own
+# commits, and it referenced a canonical file that doesn't exist. Removed
+# rather than adapted -- lawkeeper has no equivalent domain constant to
+# protect the same way; if a project using lawkeeper needs this pattern for
+# its own domain constants, that belongs in the project's own governance,
+# not lawkeeper's shipped default.
 def check_module_size(path: Path, root: Path) -> str | None:
     """Return warning message if .py file exceeds ~500 lines and is not allowlisted.
 
@@ -331,19 +315,16 @@ def main():
             if size_msg:
                 warnings.append(size_msg)
 
-            sos = check_hardcoded_speed_of_sound(path, repo_root)
-            errors.extend(sos)
-
-    # 5. Schema validation for instrument configs
-    if any(rel.startswith("config/") and rel.endswith(".json") for rel in files):
-        result = subprocess.run(
-            [sys.executable, str(repo_root / "scripts" / "validate_instrument_configs.py")],
-            capture_output=True, text=True, encoding="utf-8", errors="replace"
-        )
-        if result.returncode != 0:
-            errors.append("config/*.json schema validation failed")
-            for line in result.stdout.splitlines() + result.stderr.splitlines():
-                errors.append(f"  {line}")
+    # NOTE: there used to be a "5. Schema validation for instrument configs"
+    # step here, calling scripts/validate_instrument_configs.py against any
+    # staged config/*.json file. Removed 2026-09-04, same pass as the
+    # speed-of-sound check above: lawkeeper has neither a config/ directory
+    # nor validate_instrument_configs.py -- Windwright content inherited
+    # unadapted. This one was a real, dormant landmine, not just dead: had
+    # it ever triggered (a real project adopting lawkeeper committing its
+    # own config/*.json for an unrelated reason), it would have called a
+    # nonexistent script and blocked the commit with a misleading "schema
+    # validation failed" message, for a script that was never real here.
 
     # 6. Import consistency for staged Python files
     if any(rel.endswith(".py") for rel in files):

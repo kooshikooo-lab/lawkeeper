@@ -285,15 +285,10 @@ class TestPreCommitChecks:
             "192.168." + "1.1"
         )
 
-    def test_speed_of_sound_literal_flagged_outside_canonical(self, tmp_path):
-        f = tmp_path / "other.py"
-        # Assemble the canonical literal at runtime: this test verifies the guard
-        # catches it in arbitrary files, so it must not be a static literal here.
-        sos = "3461" + "00.0"
-        f.write_text(f"SPEED = {sos}\n", encoding="utf-8")
-        hits = validate_pre_commit.check_hardcoded_speed_of_sound(f, tmp_path)
-        assert hits, "speed-of-sound literal outside canonical module must be flagged"
-
+    # test_speed_of_sound_literal_flagged_outside_canonical removed 2026-09-04
+    # along with check_hardcoded_speed_of_sound() itself -- see
+    # scripts/validate_pre_commit.py's removal note at that function's old
+    # location. Real Windwright-only dead code, not a lawkeeper capability.
 
 # ── guard_governance: protected file marker ────────────────────────────
 
