@@ -20,7 +20,7 @@
       [
         "EXCLUDED_DIRS L55",
         "EXCLUDED_FILES L62",
-        "TRIGGER_TYPES L148"
+        "TRIGGER_TYPES L153"
       ]
     ],
     [
@@ -139,14 +139,14 @@
       [
         "EXCLUDED_DIRS L55",
         "EXCLUDED_FILES L62",
-        "TRIGGER_TYPES L148"
+        "TRIGGER_TYPES L153"
       ]
     ],
     [
       "src/guardrail/template/scripts/compliance_watchdog.py",
       "module_size",
       [
-        549
+        554
       ]
     ],
     [

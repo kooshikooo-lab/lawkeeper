@@ -71,8 +71,13 @@ CONSTITUTION_FILE = DOCS_DIR / "AI_CONSTITUTION.md"
 def load_constitution_laws() -> list[str]:
     """Load law titles from AI_CONSTITUTION.md (single source of truth).
 
-    Falls back to the known law list only if the file is missing, so a stale
-    hardcoded list can never silently diverge from the constitution (Law 7).
+    Falls back to the hardcoded list below only if the file is genuinely
+    missing -- the real file is always preferred when it exists, so THAT
+    choice never silently diverges. The fallback list's own CONTENT is a
+    different matter: it is not mechanically checked against the real file,
+    and real bug found 2026-09-04 (GitHub Copilot review, PR #9): it HAD
+    drifted, undetected, until read and compared by hand. Keep it current
+    by hand when laws change; nothing here verifies it for you.
     """
     if CONSTITUTION_FILE.exists():
         try:

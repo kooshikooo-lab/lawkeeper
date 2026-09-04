@@ -30,7 +30,7 @@ project this one is not (lawkeeper has no geometry, no physics, no
 optimizer). Found while porting `import-linter` from Windwright per a real
 user directive to check tools/content for cross-repo fit before assuming it
 applies (`docs/AI_FAILURE_PATTERNS.md`, 2026-09-04) — the same failure class
-already logged elsewhere for `template/.github/workflows/governance-guard.yml`'s
+already logged elsewhere for `src/guardrail/template/.github/workflows/governance-guard.yml`'s
 phantom `compile_requirements.py` job and hardcoded `backend/`/
 `woodwind_designer/` scan paths, just hitting the constitution text itself
 this time.
