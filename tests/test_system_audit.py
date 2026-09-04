@@ -84,9 +84,12 @@ class TestCheckImportBoundariesCatchesRealViolation:
             encoding="utf-8",
         )
 
+        # No chdir/syspath_prepend needed: check_import_boundaries() now
+        # passes cwd=str(REPO_ROOT) explicitly to the lint-imports subprocess
+        # (real bug found on PR #8's own review -- without this, the
+        # subprocess resolved root_packages against the parent process's
+        # ambient cwd instead of the config's own directory).
         monkeypatch.setattr(system_audit, "REPO_ROOT", tmp_path)
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
 
         problems = system_audit.check_import_boundaries()
 
