@@ -1,5 +1,6 @@
 # Shared Memory Index
 
+- [Session close-out: a real bug a passing test suite missed](windwright-session-close-out-real-bug-passing-tests-missed-2026-09-04.md) — aggregate-output tests can miss a state variable that never actually updates; relevant to Lawkeeper's own governance mission.
 - [Verification technique: cross-validate against a paper's own worked examples](windwright-verification-technique-cross-validate-against-worked-examples-2026-09-04.md) — when implementing a general method from a paper, symbolically re-derive any fully-worked example it provides and cross-check your general formula against that, independent of your own test cases; caught a real numerical-stiffness finding (not a bug) this way in Windwright tonight.
 
 One line per entry, newest-relevant first. See `README.md` for the format
