@@ -17,11 +17,30 @@ import subprocess
 import sys
 from pathlib import Path
 
-# These are the directory boundaries from docs/ARCHITECTURE.md and CODING_STANDARDS.md.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+try:
+    from scan_config import get_oversized_allowlist  # normal `python scripts/x.py` run
+except ImportError:
+    # Same fallback as compliance_watchdog.py/toolcheck.py: a plain sibling
+    # import only works when Python itself put scripts/ on sys.path (running
+    # the file directly). tests/test_guard_scripts.py loads this module via
+    # importlib.util.spec_from_file_location instead, which does not.
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from scan_config import get_oversized_allowlist
+
+# These are generic project boundaries; a project's own docs/ARCHITECTURE.md
+# (if it has one) may describe more. Hardcoded, not yet read from
+# .guardrail.json — config.py's Config class intentionally does not
+# duplicate this; see that file's own docstring for why.
 PLACEMENT_RULES = {
     "backend/": {
         "allowed": {".py"},
         "message": "backend/ root must contain ONLY core source modules (.py)",
+    },
+    "src/": {
+        "allowed": {".py"},
+        "message": "src/ root must contain ONLY package source modules (.py)",
     },
     "tests/": {
         "allowed": {".py"},
@@ -37,32 +56,24 @@ PLACEMENT_RULES = {
     },
 }
 
+# Whole subtrees exempted from PLACEMENT_RULES above (unlike
+# PLACEMENT_ALLOWLIST below, which exempts individual files). Needed because
+# this project's own src/guardrail/template/ is a deliberate multi-format
+# project scaffold (docs, YAML, shell hooks with no extension, ...) nested
+# under src/ - not a stray non-.py file that src/'s ".py only" rule above is
+# meant to catch. Any other project adopting lawkeeper that nests its own
+# template/scaffold directory under src/ has the same legitimate need.
+PLACEMENT_TREE_ALLOWLIST = {
+    "src/guardrail/template/",
+}
+
 # Regenerable artifacts that should never be committed.
 REGENERABLE_SUFFIXES = {
     ".stl", ".step", ".stp", ".obj", ".ply", ".3mf",
-    ".json", ".jsonl", ".dat", ".log", ".txt", 
-    ".png", ".jpg", ".jpeg", ".svg", 
+    ".json", ".jsonl", ".dat", ".log", ".txt",
+    ".png", ".jpg", ".jpeg", ".svg",
 }
 REGENERABLE_PATHS = {"test_output/", "designs/", "chat-logs/", "wiki/"}
-
-# Known oversized modules (architectural debt, tracked). These are reported but not blocked.
-OVERSIZED_ALLOWLIST = {
-    "backend/ai_advisor.py",
-    "backend/benchmark_all.py",
-    "backend/cadquery_export.py",
-    "backend/inverse_design.py",
-    "backend/modular_components.py",
-    "backend/optimizer.py",
-    "backend/pareto_optimizer.py",
-    "backend/tmm_acoustics.py",
-    "backend/trumpet_acoustics.py",
-    "backend/trumpet_openwind.py",
-    "backend/stl_verifier.py",
-    "woodwind_designer/engine/design_server.py",
-    "woodwind_designer/engine/instrument_library.py",
-    # Multi-purpose compliance tool with several independent check modes.
-    "scripts/compliance_watchdog.py",
-}
 
 
 def staged_files():
@@ -129,6 +140,8 @@ PLACEMENT_ALLOWLIST = {
 def check_placement(path: str) -> str | None:
     """Detect violation if path violates directory placement rules."""
     if path in PLACEMENT_ALLOWLIST:
+        return None
+    if any(path.startswith(tree) for tree in PLACEMENT_TREE_ALLOWLIST):
         return None
     for prefix, rule in PLACEMENT_RULES.items():
         if path.startswith(prefix):
@@ -204,7 +217,16 @@ def check_hardcoded_speed_of_sound(path: Path, root: Path) -> list[str]:
 
 
 def check_module_size(path: Path, root: Path) -> str | None:
-    """Return warning message if .py file exceeds ~500 lines and is not allowlisted."""
+    """Return warning message if .py file exceeds ~500 lines and is not allowlisted.
+
+    The allowlist comes from .guardrail.json's "oversized_allowlist"
+    (scan_config.get_oversized_allowlist) - project-specific known debt,
+    not a hardcoded list. Used to hardcode 13 backend/woodwind_designer
+    paths inherited from the project this repo was extracted from, none of
+    which exist here; the one real entry this repo needs
+    (scripts/compliance_watchdog.py) now lives in this repo's own
+    .guardrail.json, the same place any other project would configure it.
+    """
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             lines = len(f.readlines())
@@ -213,9 +235,9 @@ def check_module_size(path: Path, root: Path) -> str | None:
     if lines <= 500:
         return None
     rel = path.relative_to(root).as_posix()
-    if rel in OVERSIZED_ALLOWLIST:
+    if rel in get_oversized_allowlist(root):
         return None
-    return f"{rel}: {lines} lines (exceeds 500; split or add to OVERSIZED_ALLOWLIST)"
+    return f"{rel}: {lines} lines (exceeds 500; add to .guardrail.json's oversized_allowlist or split)"
 
 
 def find_rust_checker() -> str | None:
@@ -347,7 +369,19 @@ def main():
             for line in result.stdout.splitlines() + result.stderr.splitlines():
                 errors.append(f"  {line}")
 
-    # 8. Edit-time Rust syntax constitution (optional — see lawkeeper-checker)
+    # 8. Test governance (Law 18): a staged file under tests/ must have a theory card.
+    for rel in files:
+        if rel.startswith("tests/") and rel.endswith(".py"):
+            stem = Path(rel).stem
+            card = repo_root / "test_governance" / "cards" / f"{stem}.yaml"
+            if not card.exists():
+                errors.append(
+                    f"{rel}: no theory card (expected test_governance/cards/{stem}.yaml). "
+                    f"Add a card with theory/oracle/acceptance/blind_spot/trust_level "
+                    f"(Law 18, docs/TEST_THEORY.md) or run scripts/governed_test.py."
+                )
+
+    # 9. Edit-time Rust syntax constitution (optional — see lawkeeper-checker)
     rust_files = [rel for rel in files if rel.endswith(".rs")]
     if rust_files:
         errors.extend(check_rust_files(rust_files, repo_root))

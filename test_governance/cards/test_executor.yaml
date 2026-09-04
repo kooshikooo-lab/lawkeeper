@@ -1,0 +1,44 @@
+test_id: test_executor
+theory: >
+  The executor layer (ADR-007, originally proposed 2026-08-07 as ADR-006
+  by the laptop, renumbered on merge) exists so `lawkeeper run` can
+  dispatch a governed task to an interchangeable backend (subprocess now,
+  an OpenAI-compatible one planned) without callers depending on which
+  backend actually ran. Its whole value rests on ExecutorResult's
+  PASS/FAIL/ERROR status being computed correctly and consistently
+  (0 -> PASS, non-zero -> FAIL, a real timeout -> ERROR, not conflated
+  with an ordinary failure), and on the Executor protocol being something
+  a stand-in backend can actually satisfy without importing the real one.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    SubprocessExecutor tests run real subprocesses (echo, exit codes,
+    a genuinely sleeping child process for the timeout case, a real
+    nonexistent-binary OSError) and assert against Python's own known
+    ground truth for what those commands do -- not against the
+    executor's own reported values. The protocol-conformance test uses
+    a hand-written fake backend, independent of SubprocessExecutor's
+    implementation, to prove the interface itself is satisfiable by
+    something else.
+acceptance: "exit code 0 is always PASS, any nonzero exit is FAIL, a real timeout is ERROR and never silently reported as FAIL; env/cwd are actually passed through to the child process; a nonexistent binary raises a real OSError path (exit_code -2), not an uncaught exception; any object implementing execute() satisfies the Executor protocol."
+blind_spot: >
+  Only the SubprocessExecutor backend is tested -- the OpenAI-compatible
+  backend named in EXECUTOR_CONTRACT.md does not exist yet, so nothing
+  here proves that side of the design works, only that the interface it
+  will need to satisfy is real and satisfiable (TestExecutorProtocol).
+  The ExecutorResult -> CheckResult adapter (mapping into the framework's
+  own Status enum) also does not exist yet -- these tests only cover the
+  executor module in isolation, deliberately (see its own docstring: no
+  framework-core imports), not the wiring point that will connect it to
+  `lawkeeper run`.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in status-mapping logic, timeout handling, or env/cwd passthrough in SubprocessExecutor
+  crash: import failure, or an environment where subprocess/timeout behavior differs from what these tests assume (e.g. a shell that handles `exit 3` differently)
+  pass: SubprocessExecutor's real subprocess behavior and status semantics hold, and the Executor protocol is genuinely satisfiable by an independent implementation
+debug:
+  - a failure in TestExecutorResultStatus means the PASS/FAIL/ERROR mapping itself broke -- check the `status` property on ExecutorResult directly, this is the core contract every future backend depends on
+  - a failure in TestSubprocessExecutor means a real regression in how commands are actually run (timeout, env, cwd, OSError handling) -- treat test_timeout and test_nonexistent_binary_oserror as high severity, they cover real failure modes a caller needs to trust
+  - a failure in TestExecutorProtocol means the Executor protocol itself changed shape in a way that breaks substitutability -- check this before adding the OpenAI backend, not after

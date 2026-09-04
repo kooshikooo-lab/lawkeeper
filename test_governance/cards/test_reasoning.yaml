@@ -1,0 +1,21 @@
+test_id: test_reasoning
+theory: >
+  The hide/show internal-reasoning option (Law 12 discipline): reasoning emission
+  is controlled by config toggle + flags, and only emitted when enabled.
+oracle:
+  type: invariant
+  independence: independent
+  expression: "is_enabled() matches config; emit() is a no-op when disabled; flags override config"
+acceptance: "toggle semantics correct; emit disabled-by-default behaviour"
+blind_spot: >
+  Tests the mechanism, not the content of any reasoning. It cannot verify that
+  reasoning is actually honest or that the log is not polluted by other processes.
+  Pure config/flag logic, not a physics or correctness oracle.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: toggle/flag logic regressed
+  crash: import failure
+  pass: reasoning toggle semantics correct
+debug:
+  - check Config defaults (show_internal_reasoning) and CLI flag precedence

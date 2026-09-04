@@ -1,0 +1,59 @@
+test_id: test_hardware_scanner
+theory: >
+  hardware_scanner is a real, robots.txt-respecting used/discounted-GPU
+  price watcher, built 2026-08-21 to replace an earlier Duck.ai-drafted
+  sketch that named principles ("respect robots.txt", "use Playwright
+  for JS-heavy pages") it never actually implemented in code. Real
+  source-selection work preceded any code: Blocket excluded (robots.txt
+  states crawling is prohibited in plain language, not a technical
+  rule), Tradera's /search path excluded (robots.txt Disallow: /search?*,
+  and the page is JS-rendered anyway), netonnet.se/elgiganten.se excluded
+  (bot-challenge-protected, can't even fetch robots.txt cleanly).
+  inet.se and refurbed.se were live-inspected (real DOM structure, real
+  saved HTML fixtures) before any selector was written. Three real,
+  live-caught bugs during build, all fixed and covered here: an
+  unbounded price regex that spanned a title's digits into a price
+  (50009915.0 instead of 9915.0), Python's stdlib robotparser not
+  reliably matching wildcard Disallow rules (returned True for a path
+  explicitly disallowed), and `requests` misdetecting inet.se's response
+  encoding as ISO-8859-1 instead of UTF-8, silently zeroing every parsed
+  listing via a garbled price separator.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    Adapter tests run against fixture_data/*.html -- real HTML saved
+    from a live fetch 2026-08-21, not invented markup -- and assert
+    against the real values visible in that fixture (exact titles,
+    exact prices, exact counts) rather than just "returns something."
+    Robots-compliance tests check real, live robots.txt state for
+    Blocket/Tradera. GPU-knowledge tests assert against this session's
+    own verified facts (Pascal architectures are CUDA-13-deprecated,
+    confirmed against this machine's own GTX 1060).
+acceptance: "inet.se and refurbed.se adapters parse their real saved fixtures into the exact titles/prices/counts visible in that fixture; the price regex cannot span unrelated digits into a price match; a Pascal-architecture GPU scores lower than an equal-VRAM Ampere one despite identical VRAM; Blocket and Tradera's /search path are both correctly denied; fetch_html() forces UTF-8 regardless of what requests.Response.encoding guesses; storage dedups by (source, url) so a re-scan doesn't re-alert."
+blind_spot: >
+  The Tradera adapter (adapters/tradera.py) is explicitly a scaffold,
+  not verified -- it needs the user's own API credentials to register
+  and test against a real response; its field-name guesses are marked
+  as unverified in its own docstring. The two working adapters
+  (inet.se, refurbed.se) are retailer clearance sections, not
+  peer-to-peer marketplaces -- they structurally cannot catch the
+  "seller doesn't know what it's worth" opportunity that motivated
+  building this tool in the first place; that needs Tradera's API to be
+  finished, or manual Blocket browsing. Site DOM structure can change
+  without notice (hashed CSS-module class names were deliberately
+  avoided in favor of data-test-id/title attributes for this reason,
+  but that's a mitigation, not a guarantee) -- a real site redesign
+  would need the fixtures re-captured and selectors re-verified, not
+  just re-run against the old fixture.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in price parsing, GPU architecture matching, scoring, dedup, or robots compliance
+  crash: bs4/requests API change, or a site's real DOM structure changed since the fixture was captured
+  pass: both real adapters parse their fixtures correctly, scoring reflects the real CUDA-deprecation lesson, robots compliance holds for the two explicitly-checked disallowed sites
+debug:
+  - a failure in either adapter's real-fixture test means the live DOM structure likely changed -- re-fetch the real page and compare against the saved fixture before assuming the parser regressed
+  - a failure in test_cuda_deprecated_card_scores_lower_despite_more_vram means the single most important scoring rule broke -- this is the whole reason gpu_knowledge.py exists, treat as high severity
+  - a failure in TestFetchEncoding means the UTF-8 force in base.py's fetch_html() was removed or bypassed -- this exact regression already happened once live (inet.se going from 60 real listings to 0)
+  - a failure in TestRobotsCompliance means either the hardcoded deny-list in robots.py was weakened, or the sites' actual robots.txt changed -- check both before assuming the code regressed

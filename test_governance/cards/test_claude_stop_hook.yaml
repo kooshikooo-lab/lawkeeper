@@ -1,0 +1,56 @@
+test_id: test_claude_stop_hook
+theory: >
+  claude_stop_hook.py is the mechanical version of Law 22's 2026-08-20
+  amendment: a Claude Code Stop-hook script that inspects the just-
+  finished turn's text and blocks the stop if it matches the exact
+  hedge-phrase shape caught live, twice, in one session ("going to do X
+  next, unless you'd rather redirect me" -- a stated future intention
+  with no tool call in that turn). Its whole value depends on two
+  properties holding at once: it must catch the real historical failures
+  (or the mechanism is theater), and it must NOT block legitimate
+  finished answers that happen to share surface words like "next" or
+  "going to" -- a false positive here is a new, real failure mode
+  (wasted tokens, an annoying forced continuation), not a safe default.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    Positive cases are the two ACTUAL sentences from this session's real
+    failures (not paraphrases), plus a curly-apostrophe variant checked
+    because the session's own text was found to mix straight and
+    typographic apostrophes. Negative cases are hand-written realistic
+    final-message shapes (a completed-work report, a real question, advice
+    to the user containing "next") that must read as clean independent of
+    the implementation -- these are judged by whether a human would call
+    them a hedge, not by what the regex happens to accept. The stdin/
+    stdout contract tests exercise the actual script via a real
+    subprocess call with the documented Claude Code Stop-hook JSON shape,
+    not just the internal check() function.
+acceptance: "both real historical hedge sentences are caught; a curly-apostrophe variant is caught; four distinct legitimate-final-message shapes are not blocked; only the message's tail is checked (an early, unrelated mention of similar words does not false-positive); malformed JSON and a missing field both fail open (exit 0, no output) rather than blocking or crashing."
+blind_spot: >
+  The pattern list is deliberately narrow -- scoped to the two real
+  failures already caught, not a general hedge-phrase detector. A
+  differently-worded future instance of the same underlying bug (e.g.
+  "I will handle that afterward, let me know otherwise") would NOT be
+  caught by this version; the pattern list is meant to grow only from
+  real caught instances, same discipline as the constitution itself, not
+  from guessing every possible phrasing up front. Separately, and more
+  significantly: this test suite proves the script's own logic is
+  correct in isolation -- it does NOT prove the hook actually fires
+  inside any given Claude Code deployment. A real, live test inside this
+  session's actual managed environment found the hook did not fire
+  despite being correctly registered and the script working perfectly
+  when invoked directly -- root cause unresolved (docs/
+  FUTURE_DIRECTIONS.md), and these tests cannot detect that class of
+  failure since they invoke the script directly, not through Claude
+  Code's own Stop-hook dispatch mechanism.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in the hedge-pattern matching or the fail-open error handling
+  crash: import failure, or an environment where the subprocess contract itself breaks (e.g. a Python/encoding difference)
+  pass: both real historical failures are caught, legitimate finished answers are not blocked, and malformed input fails open
+debug:
+  - a failure in TestCheckFunction's real-instance tests means a real regression in the core pattern list -- treat as high severity, this is the whole point of the tool
+  - a failure in a "clean" test means a false positive was introduced -- equally high severity, since an over-eager hook actively wastes the user's time and tokens
+  - a failure in TestMainStdinContract means the stdin/stdout JSON contract broke -- check this before assuming Claude Code itself would still be able to talk to the script correctly

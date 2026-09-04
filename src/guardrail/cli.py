@@ -3,6 +3,7 @@
 Commands:
   lawkeeper init [DIR]   scaffold full governance into a project (constitution,
                         hooks, guards, CI, template files)
+  lawkeeper run          run constitution laws against the repo (exit non-zero on FAIL)
   lawkeeper status       show which enforcement layers are active (human-safe)
   lawkeeper version
 """
@@ -199,6 +200,31 @@ def main(argv=None) -> int:
     p_init.add_argument("--machines", help="comma-separated machine names, e.g. desktop,laptop")
     p_init.add_argument("--force", action="store_true", help="overwrite existing governance")
 
+    p_run = sub.add_parser("run", help="run constitution laws against the repo")
+    p_run.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    p_run.add_argument("--law", type=int, action="append", default=[],
+                       help="run only the given law id (repeatable)")
+    p_run.add_argument("--quiet", action="store_true", help="suppress output; exit code only")
+    p_run.add_argument("--show-reasoning", action="store_true",
+                       help="show the model's internal reasoning (overrides config)")
+    p_run.add_argument("--hide-reasoning", action="store_true",
+                       help="suppress internal reasoning (overrides config)")
+
+    p_reason = sub.add_parser("reasoning",
+                              help="record or show the model's internal reasoning")
+    p_reason.add_argument("text", nargs="*", help="reasoning text to record")
+
+    p_choose = sub.add_parser(
+        "choose",
+        help="interactive checkbox-choice protocol (lawkeeper choose --file spec.json)")
+    p_choose.add_argument("--file", required=True, help="path to the choice spec JSON")
+    p_choose.add_argument("--select", action="append", default=[],
+                          help="pre-select an option id or 1-based number (non-interactive)")
+    p_choose.add_argument("--custom", default=None,
+                          help="free-text value (non-interactive)")
+    p_choose.add_argument("--single", action="store_true",
+                          help="single-select mode (clears other picks on toggle)")
+
     sub.add_parser("status", help="show enforcement-layer status (read-only)")
 
     args = parser.parse_args(argv)
@@ -209,8 +235,92 @@ def main(argv=None) -> int:
         return cmd_init(args)
     if args.cmd == "status":
         return cmd_status(args)
+    if args.cmd == "run":
+        return cmd_run(args)
+    if args.cmd == "reasoning":
+        return cmd_reasoning(args)
+    if args.cmd == "choose":
+        return cmd_choose(args)
     parser.print_help()
     return 1
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    """Run the constitution laws against the current repo."""
+    from guardrail.core.reasoning import is_enabled as reasoning_enabled
+    from guardrail.core.runner import GuardrailRunner
+
+    root = _repo_root()
+    runner = GuardrailRunner(root)
+    report = runner.run(only=set(args.law) if args.law else None)
+
+    show_reasoning = reasoning_enabled(runner.config)
+    if args.hide_reasoning:
+        show_reasoning = False
+    elif args.show_reasoning:
+        show_reasoning = True
+
+    if not args.quiet:
+        if args.json:
+            print(report.to_json())
+        else:
+            print(report.human_text(show_reasoning=show_reasoning))
+    return report.exit_code
+
+
+def cmd_reasoning(args: argparse.Namespace) -> int:
+    """Record or report the state of internal-reasoning capture."""
+    from guardrail.config import Config
+    from guardrail.core.reasoning import emit, is_enabled
+
+    root = _repo_root()
+    config = Config.load(root)
+    if not args.text:
+        print(f"show_internal_reasoning: {is_enabled(config)}")
+        print(f"reasoning_log: {config.reasoning_log}")
+        return 0
+    text = " ".join(args.text)
+    log = emit(text, root, config)
+    if log:
+        print(f"reasoning recorded to {log}")
+    else:
+        print("reasoning hidden — set show_internal_reasoning=true in .guardrail.json to record")
+    return 0
+
+
+def cmd_choose(args: argparse.Namespace) -> int:
+    """Run the checkbox-choice protocol against a spec file.
+
+    Non-interactive (--select/--custom): validate the declared picks and emit
+    JSON of the ChoiceResult. Interactive (no --select): present the menu on
+    stdin/stdout. Exit code 1 signals a cancelled/invalid pick so callers can
+    detect it.
+    """
+    import json
+    from guardrail.choices import (Choice, ChoiceResult, ask, load_spec,
+                                   resolve_token, spec_to_choices, validate)
+
+    spec = load_spec(args.file)
+    choices = spec_to_choices(spec)
+    title = spec.get("title", "")
+    body = spec.get("body", "")
+    multi = spec.get("multi", not args.single)
+
+    if args.select or args.custom is not None:
+        selected = []
+        for token in (args.select or []):
+            cid = resolve_token(token, choices)
+            if cid is None:
+                print(f"unknown option: {token!r}", file=sys.stderr)
+                return 2
+            selected.append(cid)
+        res = validate(choices, selected, args.custom)
+    else:
+        res = ask(title, body, choices, input_lines=None, multi=multi)
+
+    print(json.dumps({"selected": res.selected, "custom": res.custom,
+                      "cancelled": res.cancelled}))
+    return 1 if res.cancelled else 0
 
 
 if __name__ == "__main__":

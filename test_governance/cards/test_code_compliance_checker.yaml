@@ -1,0 +1,33 @@
+test_id: test_code_compliance_checker
+theory: >
+  code_compliance_checker.py had the same encoding-crash class as
+  adversarial_review_checker.py, plus a real logic bug found while writing
+  these tests: report() returned early on the "all checks passed" path,
+  before reaching the write_text(output_file) call further down -- meaning
+  a clean result silently never wrote its output file even though a
+  filename was explicitly given. Tests the encoding fix, the early-return
+  fix (clean reports must still write output), and the constant-drift/
+  algorithm-naming/import-consistency checks against known-good and
+  known-bad fixtures.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    each check (constant drift, algorithm naming, import consistency)
+    verified against a hand-constructed source fixture with a known,
+    predetermined violation or a known-clean case -- not against the
+    checker's own output on itself.
+acceptance: "report generation is encoding-safe on Windows; a clean report still writes its output file; each check correctly flags its known-bad fixture and passes its known-good fixture."
+blind_spot: >
+  Fixtures are small, hand-written snippets targeting one violation each --
+  does not exercise interaction between multiple simultaneous violations in
+  one real file, or the checker's behavior on a large real codebase.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in the encoding fix, the early-return fix, or one of the three checks
+  crash: import failure or the checker itself crashing
+  pass: encoding-safe, clean-report writes its file, and all three checks match their fixtures
+debug:
+  - test_clean_report_still_writes_output_file failing means the early-return bug regressed -- check report() in scripts/code_compliance_checker.py
+  - a check-specific test failing means that check's logic changed -- isolate to check_constant_drift / check_algorithm_naming / check_imports

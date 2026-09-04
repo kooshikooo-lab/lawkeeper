@@ -24,8 +24,22 @@ jobs:
         # actually checking this repo's CI run history (gh run list):
         # every single governance-guard run since the very first commit
         # has failed - this was never once caught before now.
+        #
+        # `,agent` added 2026-09-04: real CI failure, caught by actually
+        # running this workflow for the first time against
+        # opencode/framework-mvp/desktop (it had never run on this branch
+        # before this PR - this repo's own CI only triggers on `main`
+        # push and PRs against it). check_local_dependencies.py correctly
+        # scans src/guardrail/agent.py's real, declared, deferred import
+        # of claude_agent_sdk (pyproject.toml's "agent" extra) and fails
+        # --warn's hard exit-1 when it's imported+declared but not
+        # installed. This is lawkeeper's own dev-repo CI checking its own
+        # real optional feature end-to-end, not something a consuming
+        # project's shipped template needs - the template copy of this
+        # workflow deliberately keeps plain [dev], since a project using
+        # `lawkeeper init` has no agent.py of its own to check.
         run: |
-          pip install -e ".[dev]"
+          pip install -e ".[dev,agent]"
           python scripts/install_hooks.py
       - name: Block unauthorized governance edits and unmarked provisional work
         # push-only, not pull_request: on a pull_request event this repo
@@ -55,9 +69,14 @@ jobs:
       - name: System self-audit (Law 16 — enforcement layers active and correct)
         run: |
           python scripts/system_audit.py
-      - name: Meta-tests for the guard scripts (Law 16.5)
+      - name: Framework + guard meta-tests (Law 16.5)
         run: |
-          python -m pytest tests/test_guard_scripts.py -q
+          # tests/ -q, not a single named file: pyproject.toml's pytest
+          # discovery switched to glob-based (test_*.py) 2026-08-20 after
+          # the old exact-filename allowlist silently excluded new test
+          # files three times in one night. Naming a single file here again
+          # would quietly reintroduce that exact bug for CI specifically.
+          python -m pytest tests/ -q
 
   # Found while fixing the dependency-locks job below: this was indented as
   # a child of `guard:` (4 spaces, matching guard's own `runs-on`/`steps`

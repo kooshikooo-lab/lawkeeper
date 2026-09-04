@@ -3,7 +3,9 @@
 Cross-checks three sources of truth:
   installed  = pip list (what's in the environment)
   declared   = pyproject.toml [project.dependencies] + optional extras
-  imported   = AST scan of backend/, scripts/, tests/ for top-level imports
+  imported   = AST scan of scripts/, tests/ (whitelisted files), and every
+               real src/<package>/ directory (auto-detected, see
+               scan_config.get_scan_paths) for top-level imports
 
 Flags:
   FORGOTTEN  - installed + imported nowhere in code (candidate for uninstall/archive)
@@ -25,8 +27,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+try:
+    from scan_config import get_scan_paths  # normal `python scripts/x.py` run
+except ImportError:
+    # Same fallback as compliance_watchdog.py/guard_branch.py: a plain sibling
+    # import only works when Python itself put scripts/ on sys.path (running
+    # the file directly). tests/test_guard_scripts.py loads this module via
+    # importlib.util.spec_from_file_location instead, which does not.
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from scan_config import get_scan_paths
+
 # Libraries that are imported under a different name than the pip package.
 PACKAGE_ALIASES = {
+    # Real bug found 2026-09-04: this project's own optional agent
+    # dependency (pyproject.toml's [project.optional-dependencies].agent)
+    # was flagged PHANTOM despite being genuinely declared -- import name
+    # uses an underscore, the declared/PyPI name uses a hyphen, and
+    # _declared()/_imported() never normalized between the two (same class
+    # of mismatch this alias table exists to solve for bs4/yaml/etc, just
+    # never hit before now because toolcheck.py never scanned src/guardrail/
+    # -- the only place claude_agent_sdk is imported -- until this fix).
+    "claude_agent_sdk": "claude-agent-sdk",
     "sklearn": "scikit-learn",
     "skfem": "scikit-fem",
     "yaml": "pyyaml",
@@ -63,6 +84,12 @@ LOCAL_ROOTS = {"backend", "woodwind_designer", "tests", "scripts", "conftest",
 
 # Third-party roots we knowingly exclude (stdlib / noisy).
 STDLIBISH = {
+    # pkgutil: real gap found 2026-09-04 -- flagged PHANTOM the moment
+    # toolcheck.py started scanning src/guardrail/ (this fix's whole point),
+    # which is where the repo's only real import of it lives
+    # (src/guardrail/core/registry.py, stdlib plugin-discovery). Genuinely
+    # stdlib, just missing from this list until now.
+    "pkgutil",
     "os", "sys", "io", "json", "math", "time", "re", "ast", "argparse",
     "pathlib", "dataclasses", "typing", "collections", "functools", "itertools",
     "subprocess", "tempfile", "shutil", "copy", "enum", "abc", "warnings",
@@ -118,7 +145,12 @@ def _is_local(root: str) -> bool:
     # subpackage dir OR module file under a local root as local. Modules nested
     # deeper than the top level (e.g. backend/experiments/sibling.py imported
     # bare by another experiment) are local too.
-    for base in LOCAL_ROOTS:
+    # This loop used to check LOCAL_ROOTS only, so a nested import inside this
+    # project's own src/guardrail/ (or any real src/<pkg>/, auto-detected the
+    # same way _src_package_names() does) was never caught by this fallback -
+    # only the exact top-level package name matched, one line up.
+    local_bases = LOCAL_ROOTS | {f"src/{name}" for name in _src_package_names()}
+    for base in local_bases:
         base_dir = ROOT / base
         if not base_dir.exists():
             continue
@@ -164,9 +196,19 @@ def _declared() -> dict[str, set[str]]:
 def _imported() -> set[str]:
     """AST-scan the LIVE pipeline for third-party import roots.
 
-    Live = backend/, scripts/, woodwind_designer/, plus the pytest-whitelisted
-    test files. Legacy ad-hoc test scripts in tests/ are intentionally excluded
-    (they are not run by pytest and would produce false phantom reports).
+    Live = scripts/, every real src/<package>/ directory (auto-detected via
+    scan_config.get_scan_paths, the same resolver compliance_watchdog.py and
+    check_local_dependencies.py already use), plus the pytest-whitelisted
+    test files. Legacy ad-hoc test scripts in tests/ are intentionally
+    excluded (they are not run by pytest and would produce false phantom
+    reports) - get_scan_paths()'s own tests/ entry is skipped here for
+    that reason; the whitelist below is scanned instead.
+
+    Used to hardcode ["backend", "scripts", "woodwind_designer"] - leftover
+    directory names from the project this repo was extracted from, neither
+    of which exist here. This project's own real source, src/guardrail/,
+    was never scanned as a result: its imports were invisible to the
+    phantom/orphan/forgotten dependency report.
     """
     imported: set[str] = set()
 
@@ -191,11 +233,11 @@ def _imported() -> set[str]:
                     if not _is_local(root) and root not in STDLIBISH:
                         imported.add(root)
 
-    for d in ["backend", "scripts", "woodwind_designer"]:
-        base = ROOT / d
-        if base.exists():
-            for path in base.rglob("*.py"):
-                _scan_file(path)
+    for base in get_scan_paths(ROOT):
+        if base.name == "tests":
+            continue  # scanned separately below, whitelist-only
+        for path in base.rglob("*.py"):
+            _scan_file(path)
     # whitelisted tests only
     for tf in _whitelisted_test_files():
         path = ROOT / "tests" / tf

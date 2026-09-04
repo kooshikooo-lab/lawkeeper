@@ -5,27 +5,14 @@ guards (the very code that prevents failure) is caught. They must not depend on
 the real git state or network, only on the scripts' importable functions.
 """
 
-import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(subprocess.run(
-    ["git", "rev-parse", "--show-toplevel"],
-    capture_output=True, text=True, encoding="utf-8", errors="replace"
-).stdout.strip() or Path(__file__).resolve().parents[1])
-
-
-def load_script(name: str):
-    """Import a scripts/ module by path (they are not a package)."""
-    path = REPO_ROOT / "scripts" / name
-    spec = importlib.util.spec_from_file_location(f"guardtest_{name[:-3]}", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
+from conftest import REPO_ROOT, load_script
 
 guard_branch = load_script("guard_branch.py")
 merge_gate = load_script("merge_gate.py")
@@ -60,6 +47,16 @@ class TestBranchClassify:
         ("opencode/main/laptop", "canonical"),
         ("opencode/mesh-repair/laptop", "feature"),
         ("opencode/branch-governance/desktop", "feature"),
+        # 2026-09-04: feature_prefix default changed from "opencode/..." to
+        # "agent/..." (tool-agnostic; the old prefix named OpenCode
+        # specifically, and now misattributes work by whatever tool
+        # replaced it). New branches should use "agent/", and legacy
+        # "opencode/..." feature branches must keep classifying as
+        # "feature" too -- existing branches are never retroactively
+        # orphaned by this change. See guardrail/config.py's DEFAULTS
+        # comment for the full reasoning.
+        ("agent/mesh-repair/laptop", "feature"),
+        ("agent/branch-governance/desktop", "feature"),
         ("merge/governance", "merge_staging"),
         ("experiment/unconventional-shapes", None),
         ("perf/tmm-refactor-copilot", None),
@@ -174,6 +171,19 @@ class TestCommitMsgGuard:
         msg2 = "spike: try something new\n\nAUDIT: exploratory"
         assert "AUDIT:" in msg2
 
+    def test_provisional_keyword_does_not_match_inside_other_words(self):
+        """Regression: a plain substring check flagged 'temp' inside 'template'
+        as provisional work (2026-08-19, real commit blocked on a legitimate
+        change touching template/docs/AI_CONSTITUTION.md). Word-boundary
+        matching must not fire on ordinary words that merely contain a
+        keyword as a substring."""
+        assert not validate_commit_msg.looks_provisional(
+            "sync template/docs/AI_CONSTITUTION.md with docs/AI_CONSTITUTION.md"
+        )
+        # sanity: the real keyword, as a whole word, must still be caught
+        assert validate_commit_msg.looks_provisional("temp fix, revisit later")
+        assert validate_commit_msg.looks_provisional("temporary workaround")
+
     def test_verification_pattern_required(self):
         ok = "fix bug\n\nTests: pytest tests/test_x.py -q (1 passed)"
         assert validate_commit_msg.VERIFICATION_PATTERN.search(ok) is not None
@@ -182,6 +192,73 @@ class TestCommitMsgGuard:
 
     def test_governance_marker_present(self):
         assert validate_commit_msg.GOVERNANCE_MARKER == "GOVERNANCE-UPDATE"
+
+    def test_human_check_pattern_required(self):
+        """Law 23: a human-facing commit must declare a direct check, not
+        just a metric/test result."""
+        ok = "fix UI\n\nHuman-check: opened the page, button works as described"
+        assert validate_commit_msg.HUMAN_CHECK_PATTERN.search(ok) is not None
+        bad = "fix UI\n\nTests: 5 passed"
+        assert validate_commit_msg.HUMAN_CHECK_PATTERN.search(bad) is None
+
+
+class TestHumanFacingGate:
+    """Law 23 mechanization: real end-to-end coverage, not just regex unit
+    tests -- load_human_facing_patterns() reads a real file, and
+    human_facing_changed() runs a real `git diff --cached` against a real
+    repo, so a mocked-only test wouldn't catch a real integration bug in
+    either (Law 18: a test must discriminate against real breakage)."""
+
+    def _init_repo(self, tmp_path, monkeypatch):
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
+        monkeypatch.chdir(tmp_path)
+
+    def test_no_config_means_rule_never_fires(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / "dashboard.html").write_text("<html></html>")
+        subprocess.run(["git", "add", "dashboard.html"], cwd=tmp_path, check=True)
+        assert validate_commit_msg.load_human_facing_patterns() == []
+        assert validate_commit_msg.human_facing_changed() is False
+
+    def test_configured_pattern_matches_staged_file(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"human_facing_paths": ["dashboard.html", "web/src/components/*.tsx"]})
+        )
+        (tmp_path / "dashboard.html").write_text("<html></html>")
+        subprocess.run(["git", "add", "dashboard.html", ".guardrail.json"], cwd=tmp_path, check=True)
+        assert validate_commit_msg.load_human_facing_patterns() == [
+            "dashboard.html", "web/src/components/*.tsx"
+        ]
+        assert validate_commit_msg.human_facing_changed() is True
+
+    def test_configured_pattern_does_not_match_unrelated_file(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"human_facing_paths": ["dashboard.html"]})
+        )
+        (tmp_path / "server.py").write_text("x = 1\n")
+        subprocess.run(["git", "add", "server.py", ".guardrail.json"], cwd=tmp_path, check=True)
+        # .guardrail.json itself is staged too, but it isn't a human-facing
+        # path, and server.py doesn't match "dashboard.html" -- must be False.
+        assert validate_commit_msg.human_facing_changed() is False
+
+    def test_glob_pattern_matches_nested_path(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"human_facing_paths": ["web/src/components/*.tsx"]})
+        )
+        (tmp_path / "web" / "src" / "components").mkdir(parents=True)
+        (tmp_path / "web" / "src" / "components" / "AnalyzeTab.tsx").write_text("export {}")
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+        assert validate_commit_msg.human_facing_changed() is True
+
+    def test_malformed_config_fails_safe_to_empty(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text("{not valid json")
+        assert validate_commit_msg.load_human_facing_patterns() == []
 
 
 # ── validate_pre_commit: file checks ───────────────────────────────────

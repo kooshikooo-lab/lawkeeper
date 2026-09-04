@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python ${CLAUDE_PROJECT_DIR}/scripts/claude_stop_hook.py",
+        "timeout": 10
+      }
+    ]
+  }
+}

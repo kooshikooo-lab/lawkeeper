@@ -12,7 +12,7 @@ themselves are tested by `tests/test_guard_scripts.py`.
 
 ### Environment
 - Repo: `kooshikooo-lab/lawkeeper` (remote: `origin`)
-- Branch naming: Law 15 in `docs/AI_CONSTITUTION.md`. `main` (trunk), `opencode/main/<machine>` (canonical, permanent), `opencode/<topic>/<machine>` (feature, ephemeral), `merge/<topic>` (merge staging, ephemeral).
+- Branch naming: Law 15 in `docs/AI_CONSTITUTION.md`. `main` (trunk), `opencode/main/<machine>` (canonical, permanent), `agent/<topic>/<machine>` (feature, ephemeral — changed 2026-09-04 from `opencode/<topic>/<machine>`, which named a specific tool; legacy `opencode/<topic>/<machine>` branches remain valid), `merge/<topic>` (merge staging, ephemeral).
 - `origin/HEAD` must point at `main`.
 
 ### Coordination

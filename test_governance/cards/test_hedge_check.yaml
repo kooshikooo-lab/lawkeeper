@@ -1,0 +1,35 @@
+test_id: test_hedge_check
+theory: >
+  guardrail.core.hedge_check is Law 22's real detection logic,
+  extracted 2026-08-21 from scripts/claude_stop_hook.py so it's a
+  single, shared implementation importable by both the Claude Code CLI
+  hook and src/guardrail/agent.py's Agent SDK integration -- Law 3
+  (never duplicate). These tests mirror tests/test_claude_stop_hook.py's
+  cases on purpose: the same real historical failures and the same
+  negative cases must hold for whichever consumer imports this module,
+  since a regression here silently breaks both at once.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    Positive cases are the actual sentences from this session's two
+    real caught failures, not paraphrases. Negative cases are realistic
+    finished-answer shapes a human would judge as clean. Judged against
+    what a person reading the message would call a hedge or not, not
+    against the regex's own behavior.
+acceptance: "both real historical hedge sentences and a curly-apostrophe variant are caught; a legitimate finished message mentioning 'next' is not blocked; only the message's tail is checked, not the whole text; block_reason names Law 22 and the real matched pattern."
+blind_spot: >
+  Same blind spot as the original: the pattern list is deliberately
+  narrow, scoped to caught failures, not a general hedge detector. A
+  differently-worded instance of the same bug would not be caught here
+  either -- shared with the CLI hook's own theory card
+  (test_claude_stop_hook.yaml), not a new limitation introduced by the
+  extraction.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in the shared detection logic -- affects both the CLI hook and the Agent SDK integration at once
+  crash: import failure
+  pass: both real historical failures are caught, legitimate finished answers are not blocked
+debug:
+  - a failure here means BOTH consumers (scripts/claude_stop_hook.py and src/guardrail/agent.py) are affected, not just one -- check this module first, not either wrapper

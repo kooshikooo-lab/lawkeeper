@@ -1,0 +1,38 @@
+test_id: test_adversarial_review_checker
+theory: >
+  adversarial_review_checker.py had zero tests despite a live crash bug
+  (writing a report containing the unicode markers it always generates
+  crashed under cp1252, the Windows platform-default encoding) and an
+  undocumented false-positive limitation in its claim extractor. Per
+  docs/RESEARCH_SELF_REVIEW_METHODOLOGY.md, a tool with a known crash and
+  no self-tests is exactly the failure mode that methodology exists to
+  catch. Tests the crash fix (real regression test proven to fail against
+  the original unfixed file, not just pass against the fixed one), the
+  claim extractor's real behavior including its known limitation, and the
+  adversarial-challenge/citation-review logic end to end via CLI subprocess.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    encoding correctness verified by reading the written report back and
+    decoding it as UTF-8; claim-extraction/citation-review behavior verified
+    against hand-constructed fixture text with known expected claims/
+    citations, not against the checker's own internal state.
+acceptance: "report generation does not crash on Windows; claim extraction and citation review behave as specified on known fixtures; the documented false-positive limitation stays pinned, not silently regressed away or forgotten."
+blind_spot: >
+  The claim extractor's substring-matching false-positive limitation
+  (flags ordinary numbers like "$1.4 million" as constant-drift concerns)
+  is documented and pinned by a test, not fixed — this test suite proves
+  the limitation is known and unchanged, not that the extractor is precise.
+  CLI subprocess tests exercise real process invocation but only against
+  small synthetic fixtures, not real project-scale review documents.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in the encoding fix, the claim extractor, or the adversarial-review/citation logic
+  crash: import failure or the checker itself crashing (the original bug class)
+  pass: report generation is encoding-safe and extraction/review logic matches the fixtures
+debug:
+  - a failure in the encoding test means the cp1252 crash regressed
+  - a failure in extraction/review tests means real logic changed -- check scripts/adversarial_review_checker.py
+  - the false-positive test failing (i.e. suddenly passing/no-longer-matching) means the limitation was fixed -- update the test's framing, don't just delete it

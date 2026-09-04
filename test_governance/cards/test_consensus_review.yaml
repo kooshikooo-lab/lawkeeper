@@ -1,0 +1,47 @@
+test_id: test_consensus_review
+theory: >
+  consensus_review.py replaces Windwright's OCR-dependent
+  consensus_orchestrator.py with real API calls, and its whole value
+  depends on one property never silently breaking: a reviewer that fails
+  to respond must never be counted as agreement or quietly dropped from
+  the tally (Law 23, AI_CONSTITUTION.md -- a metric is not the request).
+  Two real bugs were found by actually running the tool against live
+  APIs (WinError 2 on Windows subprocess resolution; a nested `claude -p`
+  call returning "Not logged in" as stdout, indistinguishable from a real
+  reply unless checked). Tests the gated-dispatch properties (draft never
+  calls reviewers; run without --approved never calls reviewers), the
+  degraded-consensus ledger recording (partial failure is recorded as
+  N/total, not silently rounded up), and the claude-auth-detection
+  regression specifically.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    gated-dispatch behavior verified by asserting the reviewer-calling
+    function was never invoked (mock call count), not by reading the
+    tool's own printed claims; degraded-consensus recording verified
+    against the actual ledger JSON written to disk, with reviewer
+    responses supplied by hand-written fakes with known pass/fail
+    outcomes, not the tool's own internal state; claude-auth detection
+    verified against a fixture reproducing the exact real stdout text
+    seen in the live bug ("Not logged in - Please run /login"), not a
+    paraphrase of it.
+acceptance: "draft/run never dispatch without explicit approval; a ledger entry always records exactly how many of the expected reviewers responded, never silently treating a failure as success; a nested-CLI 'not logged in' reply is detected and raised as an error, never returned as a real reviewer verdict."
+blind_spot: >
+  All network/subprocess calls are mocked -- these tests prove the tool's
+  own control-flow and bookkeeping logic is correct, not that live
+  OpenRouter calls or the real claude CLI actually work end to end right
+  now (real API behavior, rate limits, and the claude-CLI auth limitation
+  itself were confirmed by manual runs during development, documented in
+  the 2026-08-20 commit, not re-verified by this automated suite on every
+  run since that would cost real money and depend on live conditions).
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in the gated-dispatch guard, the degraded-consensus ledger logic, or the claude-auth detection
+  crash: import failure or a real exception outside the tested error paths
+  pass: dispatch stays gated, partial failures are recorded honestly, and the known auth-detection case is caught
+debug:
+  - a failure in TestDraftGate/TestRunGate means the gate that prevents unapproved dispatch broke -- check draft()/run() in scripts/consensus_review.py
+  - a failure in TestDegradedConsensus means a reviewer failure could now be silently miscounted -- this is the core Law 23 property, treat as high severity
+  - a failure in TestAskClaudeAuthDetection means the "not logged in" pattern match in ask_claude() no longer catches the real failure text -- verify against a fresh live run before assuming the underlying CLI behavior changed

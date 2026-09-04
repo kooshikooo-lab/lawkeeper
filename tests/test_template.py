@@ -27,12 +27,14 @@ ROOT_SCRIPT_FILES = [
     "scripts/guard_governance.py",
     "scripts/compliance_watchdog.py",
     "scripts/install_hooks.py",
+    "scripts/governed_test.py",
 ]
 ROOT_DOCS = [
     "docs/AI_CONSTITUTION.md",
     "docs/COMPLIANCE_CHECK.md",
     "docs/ARCHITECTURE_DECISIONS.md",
     "docs/AI_FAILURE_PATTERNS.md",
+    "docs/TEST_THEORY.md",
 ]
 HOOKS = ["pre-commit", "commit-msg", "pre-push"]
 
@@ -66,8 +68,28 @@ class TestTemplateSync:
     def test_validate_pre_commit_sync(self):
         self._check("scripts/validate_pre_commit.py", "scripts/validate_pre_commit.py")
 
+    def test_validate_commit_msg_sync(self):
+        self._check("scripts/validate_commit_msg.py", "scripts/validate_commit_msg.py")
+
+    def test_guard_governance_sync(self):
+        self._check("scripts/guard_governance.py", "scripts/guard_governance.py")
+
+    # test_install_hooks_sync deliberately NOT added here yet: verified
+    # 2026-09-04 that scripts/install_hooks.py and its template copy have
+    # already drifted for real (install_claude_stop_hook() exists only in
+    # the dev copy) -- see docs/ARCHITECTURE_REVIEW_2026-09-04.md, item 2.
+    # Whether the template should ship that function is a real, undecided
+    # call, not something to settle silently by adding a test that forces
+    # one side to change.
+
     def test_constitution_sync(self):
         self._check("docs/AI_CONSTITUTION.md", "docs/AI_CONSTITUTION.md")
+
+    def test_test_theory_sync(self):
+        self._check("docs/TEST_THEORY.md", "docs/TEST_THEORY.md")
+
+    def test_governed_test_sync(self):
+        self._check("scripts/governed_test.py", "scripts/governed_test.py")
 
     def test_hooks_sync(self):
         for h in HOOKS:

@@ -1,0 +1,25 @@
+test_id: test_guard_scripts
+theory: >
+  The guard scripts themselves (branch guard, governance guard, watchdog,
+  merge_gate) must be tested — a guard without a test exercising it is a
+  Law 16 violation. Tests the branch-namespace classifier, governance-file
+  protection, and the watchdog law loader.
+oracle:
+  type: invariant
+  independence: independent
+  expression: "guard scripts classify branches/governance edits correctly on simulated inputs"
+acceptance: "guard-script rules hold (namespace detection, governance protection, law loading)"
+blind_spot: >
+  Tests guards against simulated inputs, not a real attacker or a real hook
+  installation. A guard that passes unit tests can still fail in production if
+  the hook is not actually wired — that is checked by system_audit.py, a
+  different layer.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a guard rule is broken (namespace, protection, law loader)
+  crash: import failure
+  pass: guards behave correctly on simulated inputs
+debug:
+  - a failure means an enforcement rule regressed (Law 16)
+  - check the guard script under test, not the test itself

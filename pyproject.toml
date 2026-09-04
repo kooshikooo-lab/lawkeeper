@@ -9,10 +9,25 @@ description = "Constitution-as-code governance for agentic + vibe-coded projects
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-dependencies = []
+dependencies = ["pyyaml>=6.0"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "build>=1.0"]
+# requests: not used by the shipped guardrail package itself, only by
+# maintainer scripts that call OpenRouter/team-chat (ai_review.py,
+# consensus_review.py, team_chat.py) -- dev-only, same reasoning as
+# pytest/build here.
+# beautifulsoup4: same reasoning, used by scripts/hardware_scanner/'s
+# adapters (real HTML parsing for inet.se/refurbed.se), not the shipped
+# guardrail package.
+dev = ["pytest>=7", "build>=1.0", "requests>=2.28", "beautifulsoup4>=4.12"]
+# claude-agent-sdk: real, shipped-package dependency for
+# guardrail.agent's Stage-1 downloadable-prototype integration
+# (docs/LAWKEEPER_PROTOTYPE_PLAN.md) -- kept optional rather than a
+# hard dependency since most lawkeeper installs (the governance CLI
+# itself) don't need it; deferred-imported inside
+# build_governed_options() specifically so the rest of the package
+# stays importable/testable without it installed.
+agent = ["claude-agent-sdk>=0.2"]
 
 [project.scripts]
 lawkeeper = "guardrail.cli:main"
@@ -28,11 +43,18 @@ where = ["src"]
 guardrail = ["template/**/*"]
 
 [tool.pytest.ini_options]
-python_files = [
-    "test_guard_scripts.py",
-    "test_template.py",
-    "test_init_smoke.py",
-]
+# Was an exact-filename allowlist -- switched 2026-08-20 after it silently
+# excluded new test files from the suite for the third time in one night
+# (test_memory_provider.py and test_user_preference_provider.py both
+# passed when run directly but were never collected by `pytest -q`,
+# each requiring someone to notice the total-count mismatch by hand).
+# Verified before switching, not assumed: the Law 18 theory-card gate
+# (scripts/validate_pre_commit.py) checks git-staged files under tests/
+# directly and does not read this setting -- glob discovery here cannot
+# weaken that gate. Standard pytest discovery, matches this repo's own
+# test file naming convention exactly (every file already starts with
+# test_).
+python_files = ["test_*.py"]
 markers = [
     "slow: end-to-end tests that build a wheel and create a venv (test_init_smoke.py)",
 ]

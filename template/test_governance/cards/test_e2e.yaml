@@ -1,0 +1,25 @@
+test_id: test_e2e
+theory: >
+  End-to-end tests on real git repos: scaffold a governed repo and verify
+  `lawkeeper run` passes, missing README/orphan branch FAIL, commit-msg gate
+  blocks a .py change without Tests:/Verification:, pre-commit gate blocks
+  bare-except/wrong-placement, and merge_gate predicts conflict (rc1) vs clean (rc0).
+oracle:
+  type: fixture
+  independence: independent
+  expression: "a real `git init` repo under tmp_path; lawkeeper run + hooks + merge_gate behave as specified"
+acceptance: "all 5 e2e scenarios pass (own commits, bugs, commit-msg, pre-commit, conflicts)"
+blind_spot: >
+  Uses a synthetic single-machine repo (no cross-machine, no network). It cannot
+  catch a race between two machines, a CI-specific failure, or a hook that works
+  locally but is bypassed by a real agent. Depends on the e2e_PLAN.md staying in
+  sync with the tests.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: an end-to-end governance scenario broke (hook/gate/merge_gate)
+  crash: git/subprocess failure in the harness
+  pass: all e2e scenarios pass
+debug:
+  - a failure means a git-layer gate (commit-msg/pre-commit/merge_gate) regressed
+  - run the specific failing scenario manually against a scratch repo

@@ -1,0 +1,39 @@
+test_id: test_ai_review
+theory: >
+  call_model()'s retry-with-backoff must trigger on both real shapes of
+  the same underlying condition (a shared-pool free-tier model is
+  temporarily out of capacity): OpenRouter's own HTTP 429, and a 200
+  response whose body carries the same meaning in plain text (found
+  live, 2026-08-20, hitting Kimi/Moonshot -- "high demand, please try
+  again" arrives as a normal 200, not a 429, so a status-code-only
+  check silently treats a non-answer as a real one). Also covers the
+  pre-existing regression test for a 200 response missing the
+  'choices' key surfacing a real, readable RuntimeError instead of a
+  bare KeyError.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    requests.post is mocked with a fixed, hand-written sequence of
+    responses (a congested reply followed by a real one), so the test
+    knows the true expected call count and return value independently
+    of call_model()'s own internal state -- it is not asserting against
+    whatever call_model() happens to compute.
+acceptance: "a soft rate-limit phrase in a 200 body triggers the same retry-with-backoff path as a real 429; a genuine 429 still retries exactly as before (regression); retries exhausted on a persistently-congested response raises a RuntimeError naming the real missing key, never a bare KeyError."
+blind_spot: >
+  The network call itself is mocked -- this proves call_model()'s own
+  retry/error-surfacing logic is correct, not that OpenRouter's or
+  Kimi's actual current wording still matches the phrases this test
+  checks for (provider wording can change; the phrase list in
+  ai_review.py may need updating if a future live run shows a new
+  variant slipping through unretried).
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in the retry-with-backoff logic or the missing-choices-key error handling
+  crash: import failure or a real exception outside the tested error paths
+  pass: both 429 and soft-rate-limit-in-200 responses are retried correctly, and a persistently bad response surfaces a real, readable error
+debug:
+  - a failure in test_soft_rate_limit_text_in_200_triggers_retry means the phrase-matching in call_model() no longer catches a real congestion response -- check _SOFT_RATE_LIMIT_PHRASES against the live wording that triggered this fix
+  - a failure in test_real_429_still_retries_as_before means the original OpenRouter 429 handling regressed -- treat as high severity, this was working code before this change
+  - a failure in test_exhausted_retries_on_soft_limit_raises_with_real_body means the KeyError-to-RuntimeError wrapping broke

@@ -45,11 +45,20 @@ def staged_files():
 
 
 def resolve_module(name):
-    """Try to resolve a module/import name. Returns True if resolvable."""
-    # Add repo root to sys.path so local packages can be discovered.
-    repo_root = str(REPO_ROOT)
-    if repo_root not in sys.path:
-        sys.path.insert(0, repo_root)
+    """Try to resolve a module/import name. Returns True if resolvable.
+
+    Adds both the repo root and tests/ to the search path. tests/ is
+    needed specifically for `conftest.py` and any sibling test-helper
+    module imported the standard pytest way (`from conftest import ...`)
+    -- pytest resolves these fine at real test-run time by inserting the
+    test file's own directory onto sys.path, but this static check didn't
+    replicate that, so it flagged a completely standard, working pytest
+    idiom as unresolvable (found 2026-08-19 wiring in real test files).
+    """
+    for candidate in (REPO_ROOT, REPO_ROOT / "tests"):
+        candidate_str = str(candidate)
+        if candidate_str not in sys.path:
+            sys.path.insert(0, candidate_str)
     try:
         spec = importlib.util.find_spec(name)
         return spec is not None

@@ -1,20 +1,33 @@
 {
   "violations": [
     [
+      "scripts/adversarial_review_checker.py",
+      "module_size",
+      [
+        563
+      ]
+    ],
+    [
+      "scripts/check_declared_dependencies.py",
+      "module_mutable",
+      [
+        "IMPORT_NAME_OVERRIDES L31"
+      ]
+    ],
+    [
       "scripts/compliance_watchdog.py",
       "module_mutable",
       [
         "EXCLUDED_DIRS L55",
         "EXCLUDED_FILES L62",
-        "SUBSYSTEM_TABLE L120",
-        "TRIGGER_TYPES L132"
+        "TRIGGER_TYPES L140"
       ]
     ],
     [
-      "scripts/compliance_watchdog.py",
-      "module_size",
+      "scripts/consensus_review.py",
+      "module_mutable",
       [
-        530
+        "PANELS L126"
       ]
     ],
     [
@@ -22,6 +35,20 @@
       "module_mutable",
       [
         "GOVERNANCE_FILES L19"
+      ]
+    ],
+    [
+      "scripts/hardware_scanner/scanner.py",
+      "module_mutable",
+      [
+        "DEFAULT_ADAPTERS L21"
+      ]
+    ],
+    [
+      "scripts/mine_failure_patterns.py",
+      "module_mutable",
+      [
+        "REPOS L80"
       ]
     ],
     [
@@ -33,22 +60,29 @@
       ]
     ],
     [
+      "scripts/team_chat.py",
+      "module_mutable",
+      [
+        "OTHER L222"
+      ]
+    ],
+    [
       "scripts/toolcheck.py",
       "module_mutable",
       [
-        "PACKAGE_ALIASES L29",
-        "FREECAD_MODULES L52",
-        "EXTERNAL_APP_MODULES L58",
-        "LOCAL_ROOTS L61",
-        "STDLIBISH L65"
+        "PACKAGE_ALIASES L41",
+        "FREECAD_MODULES L73",
+        "EXTERNAL_APP_MODULES L79",
+        "LOCAL_ROOTS L82",
+        "STDLIBISH L86"
       ]
     ],
     [
       "scripts/validate_commit_msg.py",
       "module_mutable",
       [
-        "GOVERNANCE_FILES L16",
-        "PROVISIONAL_KEYWORDS L27"
+        "GOVERNANCE_FILES L24",
+        "PROVISIONAL_KEYWORDS L35"
       ]
     ],
     [
@@ -69,11 +103,34 @@
       "scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L21",
-        "REGENERABLE_SUFFIXES L41",
-        "REGENERABLE_PATHS L46",
-        "OVERSIZED_ALLOWLIST L49",
-        "PLACEMENT_ALLOWLIST L122"
+        "PLACEMENT_RULES L36",
+        "PLACEMENT_TREE_ALLOWLIST L66",
+        "REGENERABLE_SUFFIXES L71",
+        "REGENERABLE_PATHS L76",
+        "PLACEMENT_ALLOWLIST L133"
+      ]
+    ],
+    [
+      "src/guardrail/laws/law_14_audit_before_commit.py",
+      "module_mutable",
+      [
+        "REQUIRED_FILES L13"
+      ]
+    ],
+    [
+      "src/guardrail/laws/law_16_enforcement.py",
+      "module_mutable",
+      [
+        "GUARD_SCRIPTS L13",
+        "REQUIRED_TESTS L22"
+      ]
+    ],
+    [
+      "src/guardrail/laws/law_18_test_governance.py",
+      "module_mutable",
+      [
+        "REQUIRED_FILES L18",
+        "REQUIRED_DIRS L22"
       ]
     ],
     [
@@ -82,15 +139,21 @@
       [
         "EXCLUDED_DIRS L55",
         "EXCLUDED_FILES L62",
-        "SUBSYSTEM_TABLE L120",
-        "TRIGGER_TYPES L132"
+        "TRIGGER_TYPES L140"
       ]
     ],
     [
       "src/guardrail/template/scripts/compliance_watchdog.py",
       "module_size",
       [
-        530
+        541
+      ]
+    ],
+    [
+      "src/guardrail/template/scripts/consensus_review.py",
+      "module_mutable",
+      [
+        "PANELS L126"
       ]
     ],
     [
@@ -109,22 +172,29 @@
       ]
     ],
     [
+      "src/guardrail/template/scripts/team_chat.py",
+      "module_mutable",
+      [
+        "OTHER L222"
+      ]
+    ],
+    [
       "src/guardrail/template/scripts/toolcheck.py",
       "module_mutable",
       [
-        "PACKAGE_ALIASES L29",
-        "FREECAD_MODULES L52",
-        "EXTERNAL_APP_MODULES L58",
-        "LOCAL_ROOTS L61",
-        "STDLIBISH L65"
+        "PACKAGE_ALIASES L41",
+        "FREECAD_MODULES L73",
+        "EXTERNAL_APP_MODULES L79",
+        "LOCAL_ROOTS L82",
+        "STDLIBISH L86"
       ]
     ],
     [
       "src/guardrail/template/scripts/validate_commit_msg.py",
       "module_mutable",
       [
-        "GOVERNANCE_FILES L16",
-        "PROVISIONAL_KEYWORDS L27"
+        "GOVERNANCE_FILES L24",
+        "PROVISIONAL_KEYWORDS L35"
       ]
     ],
     [
@@ -145,11 +215,25 @@
       "src/guardrail/template/scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L21",
-        "REGENERABLE_SUFFIXES L41",
-        "REGENERABLE_PATHS L46",
-        "OVERSIZED_ALLOWLIST L49",
-        "PLACEMENT_ALLOWLIST L122"
+        "PLACEMENT_RULES L36",
+        "PLACEMENT_TREE_ALLOWLIST L66",
+        "REGENERABLE_SUFFIXES L71",
+        "REGENERABLE_PATHS L76",
+        "PLACEMENT_ALLOWLIST L133"
+      ]
+    ],
+    [
+      "tests/test_choices.py",
+      "module_mutable",
+      [
+        "SAMPLE L16"
+      ]
+    ],
+    [
+      "tests/test_e2e.py",
+      "module_mutable",
+      [
+        "STUB_GUARD_SCRIPTS L48"
       ]
     ],
     [
@@ -165,8 +249,8 @@
       [
         "ROOT_DIRS L20",
         "ROOT_SCRIPT_FILES L21",
-        "ROOT_DOCS L31",
-        "HOOKS L37"
+        "ROOT_DOCS L32",
+        "HOOKS L39"
       ]
     ]
   ]
