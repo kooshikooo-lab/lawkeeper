@@ -40,19 +40,55 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
 
+# Real bug found 2026-09-04 (during an audit prompted by real user distrust
+# of recent commits, not by inspection alone): this used to hardcode
+# `Path(r"C:\Users\Admin\Desktop")` -- one specific Windows machine. On any
+# other machine (CI, a Linux checkout, a different contributor) every
+# sibling-repo path resolved to nothing, so collect_corpus() silently
+# returned an empty list instead of erroring -- confirmed live via
+# tests/test_memory_provider.py failing on a Linux worktree with
+# `len(provider._corpus) == 0`.
+#
+# REPO_ROOT follows this repo's own established convention (same as
+# compliance_watchdog.py, scan_config.py): derived from this file's real
+# location, not assumed. Sibling repos (Windwright, orbital-study, falcun)
+# are still a hardcoded, fixed set -- that part is a deliberate, documented
+# choice, not a bug -- but their location is now REPO_ROOT's own parent
+# directory (where sibling repos actually live relative to lawkeeper on
+# every known machine), overridable via LAWKEEPER_SIBLING_REPOS_ROOT for a
+# checkout where that isn't true. lawkeeper's own corpus uses REPO_ROOT
+# directly rather than SIBLING_REPOS_ROOT / "lawkeeper", since this script
+# lives inside the lawkeeper checkout already -- guessing the directory is
+# literally named "lawkeeper" would repeat the same class of bug on a
+# clone or worktree with a different folder name (confirmed: this file's
+# own audit worktree is not named "lawkeeper").
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SIBLING_REPOS_ROOT = Path(os.environ.get("LAWKEEPER_SIBLING_REPOS_ROOT") or REPO_ROOT.parent)
+
 # Sibling repos to scan. Hardcoded rather than auto-discovered -- this
 # matches the fixed, known set of repos used throughout this project
 # (Windwright, lawkeeper, orbital-study, falcun). orbital-study and falcun
 # do not have an AI_FAILURE_PATTERNS.md yet (confirmed by inspection,
 # 2026-08-19) -- the scan reports zero found there rather than erroring.
-DESKTOP = Path(r"C:\Users\Admin\Desktop")
 REPOS = ["Windwright", "lawkeeper", "orbital-study", "falcun"]
+
+
+def _repo_docs_path(repo: str) -> Path:
+    """AI_FAILURE_PATTERNS.md path for a named repo in REPOS.
+
+    lawkeeper resolves to this checkout's own REPO_ROOT (correct regardless
+    of what the checkout's directory is actually named); every other repo
+    resolves relative to SIBLING_REPOS_ROOT.
+    """
+    base = REPO_ROOT if repo == "lawkeeper" else SIBLING_REPOS_ROOT / repo
+    return base / "docs" / "AI_FAILURE_PATTERNS.md"
 
 
 @dataclass
@@ -284,7 +320,7 @@ def apply_themes(records: list[FailureRecord]) -> None:
 def collect_corpus() -> list[FailureRecord]:
     corpus: list[FailureRecord] = []
     for repo in REPOS:
-        path = DESKTOP / repo / "docs" / "AI_FAILURE_PATTERNS.md"
+        path = _repo_docs_path(repo)
         if not path.exists():
             continue
         corpus.extend(parse_failure_file(path, repo))
@@ -365,7 +401,7 @@ def main() -> int:
     print("\nBy repo:")
     for repo in REPOS:
         found = repo in by_repo
-        print(f"  {repo}: {by_repo.get(repo, 0)}{'' if found or (DESKTOP / repo / 'docs' / 'AI_FAILURE_PATTERNS.md').exists() else ' (no AI_FAILURE_PATTERNS.md)'}")
+        print(f"  {repo}: {by_repo.get(repo, 0)}{'' if found or _repo_docs_path(repo).exists() else ' (no AI_FAILURE_PATTERNS.md)'}")
     print("\nBy law/tag:")
     for law, count in sorted(by_law.items(), key=lambda kv: -kv[1]):
         print(f"  {law}: {count}")
