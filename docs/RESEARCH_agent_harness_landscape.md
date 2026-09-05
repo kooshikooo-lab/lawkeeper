@@ -219,22 +219,65 @@ from the first pass are now resolved:
 Not yet cloned or read — listed here so the queue survives across sessions
 instead of living only in chat:
 
-- **Open Policy Agent (OPA) / Rego** — the general policy-as-code prior art
-  everything above (including likely omnigent's own thinking) draws from.
-  Worth reading before designing any lawkeeper policy DSL, since it's the
-  thing to deliberately converge with or deliberately diverge from, not
-  reinvent uninformed.
+- ~~**Open Policy Agent (OPA) / Rego**~~ — **covered**, 2026-09-05, in
+  `docs/RESEARCH_harness_governance_survey.md` §1. Finding: OPA/Rego has no
+  built-in allow/deny/ask precedence algebra at all (`default`/incremental
+  rules only govern single-document composition); the community's
+  aggregate-`deny`-set pattern is convention, not a language guarantee.
+  Apache 2.0; verdict was worth-a-dependency only if/when lawkeeper needs
+  non-maintainer-authored rules, not-yet-applicable today.
 - **pre-commit** (the framework, not just the hook lawkeeper already
   depends on) — lawkeeper already uses it as a mechanism; worth reading its
   own extension model for ideas on how lawkeeper's guard scripts are
   packaged/versioned/shared across repos (Windwright/orbital-study/falcun
   currently get copies, per `RESEARCH_governance_mechanism_audit.md` —
   that's exactly the "how do policies get distributed and stay in sync
-  across repos" problem OPA/pre-commit both had to solve).
-- **Anthropic's own Claude Agent SDK permission/hook system** — closest
-  first-party analogue to omnigent's policy engine, and the one lawkeeper
-  is most likely to actually integrate with rather than merely imitate,
-  since lawkeeper already targets Claude Code sessions directly.
+  across repos" problem OPA/pre-commit both had to solve). Explicitly kept
+  out of scope for the 2026-09-05 survey pass; still queued.
+- ~~**Anthropic's own Claude Agent SDK permission/hook system**~~ —
+  **covered**, 2026-09-05, in `docs/RESEARCH_harness_governance_survey.md`
+  §2, and this is the survey's headline finding: Claude Code's own
+  permission rules already evaluate **deny, then ask, then allow, in that
+  fixed order** (confirmed by direct reading of `code.claude.com/docs/en/
+  permissions`) — the identical three-tier precedence Omnigent's runtime
+  independently converged on — and `PreToolUse` hooks are already a live,
+  arbitrary-code ALLOW/DENY/ASK gate on every tool call, confirmed by direct
+  reading of `code.claude.com/docs/en/hooks`. Lawkeeper does not need to
+  build or port a policy engine to get in-loop enforcement; it needs to
+  write one `PreToolUse` hook re-using guard logic it already has. This is
+  the survey's "if lawkeeper does ONE thing next" recommendation.
+
+New follow-ups this survey surfaced, not yet read, queued here:
+
+- **MITRE ATLAS's actual technique matrix** — the survey's weakest-sourced
+  entry: every fetch attempt against atlas.mitre.org this pass returned an
+  empty shell or 404 (likely a JS-rendered SPA the fetch tool couldn't
+  render), so whether it covers agentic tool-use techniques (vs. only
+  classical ML evasion/poisoning attacks) is still unconfirmed. Needs a
+  different fetch strategy (a headless-browser read, or MITRE's own STIX
+  data export) before it can be cited for anything.
+- **AWS Cedar's own policy reference + Cedar Analysis toolkit** — this
+  survey read only AWS's blog post about Cedar's use in Bedrock AgentCore
+  (a real first-party source, but secondary to the language spec itself);
+  `docs.cedarpolicy.com` and the `cedar-policy/cedar` GitHub repo returned
+  TLS errors every attempt. Worth a dedicated read if lawkeeper ever
+  seriously considers an unconditional-forbid (no-ASK-escape-hatch) tier for
+  a subset of Laws (Law 15's canonical-branch-deletion guard was the
+  candidate named in the survey).
+- **SLSA + in-toto's structured-attestation shape, applied concretely to
+  Law 14/18** — the survey read both specs directly and recommends
+  redesigning lawkeeper's `AUDIT:` text marker and Law 18's theory-card
+  files as subject-bound, typed attestations (an in-toto `Statement` +
+  `Predicate` keyed to the commit tree digest) instead of free text and a
+  separate file convention. Not read yet: whether `in-toto`'s own Python
+  reference implementation (layout signing, key management) is worth
+  depending on directly versus just borrowing the JSON shape.
+- **OWASP's Top 10 for Agentic Applications, full ASI01–ASI10 text** — this
+  survey only got the category names and one-line descriptions secondhand
+  (search-result aggregation); the actual document (a PDF download this
+  pass's tools couldn't retrieve) likely has concrete per-category
+  mitigations worth checking against lawkeeper's Law 11/19 team-channel
+  protocol, which the survey found has no adversarial framing at all today.
 
 ## Re-check when
 
