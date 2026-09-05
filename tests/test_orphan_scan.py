@@ -103,3 +103,32 @@ class TestScanRepoRealGit:
         repo = _init_real_repo(tmp_path)
         _commit_file(repo, "src/thing.py", "pass\n")
         assert orphan_scan.scan_repo(repo) == []
+
+    def test_untracked_dotdir_content_does_not_count_as_a_reference(self, tmp_path):
+        """Real bug found 2026-09-05, re-running this scan against
+        Windwright: a stale git worktree checkout sitting on disk under
+        the repo root (.claude/worktrees/<name>/, untracked, confirmed via
+        `git ls-files`) contained its own copy of an orphaned script.
+        Every basename match inside that stale copy inflated the real
+        script's "external reference" count -- a real orphan was hidden
+        (external_refs > 0) purely because of local disk clutter, not any
+        real consumer. Fixed by skipping any dot-prefixed directory
+        component under repo_root when building the haystack, matching
+        the existing .git exclusion generalized rather than special-cased
+        per clutter directory."""
+        repo = _init_real_repo(tmp_path)
+        _commit_file(repo, "scripts/abandoned_tool.py", "def unused(): pass\n")
+        # Untracked, not committed -- a real worktree/cache directory is
+        # never part of the tracked tree either; still sits on disk.
+        stale = repo / ".claude" / "worktrees" / "some-worktree" / "scripts" / "abandoned_tool.py"
+        stale.parent.mkdir(parents=True)
+        stale.write_text("# a stale duplicate of abandoned_tool mentioning itself\n"
+                          "# abandoned_tool abandoned_tool abandoned_tool\n", encoding="utf-8")
+
+        results = orphan_scan.scan_repo(repo)
+
+        r = next(r for r in results if r["basename"] == "abandoned_tool")
+        assert r["external_refs"] == 0, (
+            "a stale, untracked worktree copy's self-mentions must not count "
+            "as external references to the real script"
+        )

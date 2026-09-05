@@ -102,11 +102,30 @@ def scan_repo(repo_root: Path) -> list[dict]:
     text_exts = {".py", ".md", ".yml", ".yaml"}
     haystack_parts = []
     for f in repo_root.rglob("*"):
-        if f.is_file() and f.suffix in text_exts and "__pycache__" not in f.parts and ".git" not in f.parts:
-            try:
-                haystack_parts.append(f.read_text(encoding="utf-8", errors="ignore"))
-            except OSError:
-                pass
+        if not (f.is_file() and f.suffix in text_exts and "__pycache__" not in f.parts):
+            continue
+        # Real bug found 2026-09-05, re-running this scan against Windwright:
+        # only ".git" was excluded by name, but a stale git worktree checkout
+        # sitting on disk under the repo root (.claude/worktrees/<name>/,
+        # 1129 files, untracked -- confirmed via `git ls-files`) got scanned
+        # like real project content. It contained its own copies of
+        # scripts/quality_gate.py and scripts/quality_gate_local.py, so
+        # every basename match inside that stale copy inflated the
+        # "external reference" count for the real script of the same name --
+        # exactly the false-negative-protection failure mode already
+        # documented in this file's own module docstring (limitation 1),
+        # just from local disk clutter rather than a same-named different
+        # script. Fixed generally (skip any dot-prefixed directory
+        # component under repo_root: .git, .claude, .venv, .pytest_cache,
+        # etc.), not just .claude specifically -- the next stale worktree
+        # or cache directory shouldn't need its own special case.
+        rel_parts = f.relative_to(repo_root).parts
+        if any(part.startswith(".") for part in rel_parts[:-1]):
+            continue
+        try:
+            haystack_parts.append(f.read_text(encoding="utf-8", errors="ignore"))
+        except OSError:
+            pass
     haystack = "\n".join(haystack_parts)
 
     results = []
