@@ -124,20 +124,93 @@ engine would mean adopting a large surface lawkeeper doesn't need. The
 verdict on this entry is **adopt-the-design of the policy algebra and
 tiering, do not depend on the package.**
 
+### Deeper pass, 2026-09-05 — the actual engine, the ASK flow, CEL
+
+Read in full this pass: `omnigent/runtime/policies/engine.py`'s
+`_evaluate_composed` (the real gate-dispatch-compose loop), `approval.py`
+(the ASK round-trip), and `policies/builtins/cel.py`. All three follow-ups
+from the first pass are now resolved:
+
+1. **Precedence is DENY > ASK > ALLOW, and the loop does not stop on ASK.**
+   The non-obvious detail: an ASK does **not** short-circuit the way a DENY
+   does — the loop keeps evaluating every remaining policy after one ASKs.
+   If a later policy in the list then DENYs, that DENY wins and the earlier
+   ASK is discarded entirely (`engine.py:363-370` returns DENY immediately;
+   `ask_reasons` only gets checked after the full loop, `engine.py:382`).
+   So the actual precedence per evaluation is **DENY beats ASK beats
+   ALLOW**, not "first verdict wins." Worth deliberately deciding on, not
+   copying by accident — lawkeeper's own guards are currently independent
+   scripts with no shared precedence rule at all.
+2. **Policies can rewrite content, not just gate it.** A policy's `data`
+   return value gets fed forward as the next policy's input
+   (`ctx = replace(ctx, content=composed_data)`, `engine.py:371-375`) — so
+   the pipeline supports sequential *transformation* (e.g. redact a secret
+   out of a tool-call argument) in the same pass as allow/deny, not just a
+   veto. Lawkeeper's guards today only ever block; auto-fixing-then-allowing
+   (e.g. stripping a stray credential from a commit rather than just
+   rejecting it) is a real capability gap this pattern would close.
+3. **A `read_only` dry-run mode exists as a first-class parameter**, used by
+   a "preview what would happen" API route for read-only collaborators
+   (`engine.py:317-326`) — same evaluation, no persisted side effects.
+   Directly transferable idea: a `lawkeeper check --dry-run` that runs the
+   same guards as `pre-commit` without blocking anything, for a contributor
+   or reviewer to sanity-check *before* staging.
+4. **The ASK round-trip is modeled verbatim on MCP's `elicitation/create`
+   primitive** (`approval.py:13-30`) — same wire shape for the request and
+   the reply. That's not an incidental choice: it means any existing MCP
+   client already knows how to render and answer the approval prompt, for
+   free. Directly relevant if lawkeeper's `AUDIT:`-marker-missing "pause and
+   ask a human" case is ever handled by something other than a blocking
+   CLI prompt (e.g. a bot posting to the PR).
+5. **Verdict parsing is fail-closed and distinguishes three outcomes, not
+   two.** `_parse_verdict` returns `True` *only* for an exact
+   `{"action": "accept"}` — malformed JSON, a missing field, a timeout, and
+   an explicit `"cancel"` all collapse to `False`/DENY
+   (`approval.py:322-347`). But an explicit `{"action": "decline"}` is
+   handled separately: it raises `ElicitationDeclinedError` instead
+   (`approval.py:148-152`), so the caller can abort the agent's turn
+   outright rather than feed the agent a DENY it might just retry or route
+   around. That three-way split — approve / explicit human refusal /
+   everything-else-fails-closed — is a sharper model than lawkeeper's
+   current binary, and the "explicit refusal aborts the turn, doesn't just
+   deny the one action" behavior is worth deliberately deciding on.
+6. **No side effects survive a non-approval, by construction.** Label
+   writes and state updates from an ASKing policy are computed but withheld
+   until `_await_elicitation` sees an actual accept
+   (`approval.py:154-163`); every other path drops them. Same invariant
+   lawkeeper wants for provisional/audit-pending work, stated here as a
+   concrete mechanism (accumulate-but-don't-apply) rather than a principle.
+7. **I/O is injected as three plain callback seams** (`register`, `emit`,
+   `park` in `approval.py`), not a live task-store/SSE stack — so the whole
+   approval flow is unit-testable with canned awaitables instead of
+   requiring integration infrastructure. A directly reusable testing
+   pattern for lawkeeper's own guard scripts wherever they need to simulate
+   "wait for a human decision."
+8. **CEL, not Python `eval`, is the dynamic/untrusted-condition DSL.**
+   `builtins/cel.py` compiles a user-submitted expression string into a
+   policy at runtime (e.g. via a session API call) — chosen specifically
+   because CEL is "non-Turing-complete, side-effect-free, and guaranteed to
+   terminate — no sandbox escapes, no infinite loops, no file I/O"
+   (module docstring). That's the answer to "how do you let someone other
+   than the codebase's own developer submit a rule without giving them
+   arbitrary code execution" — relevant the moment lawkeeper considers any
+   rule surface a non-maintainer (a contributor, an end user) could
+   configure rather than a maintainer hand-writing a new guard script.
+
 ### Open follow-ups (not done yet)
 
-- Haven't read `omnigent/runtime/policies/engine.py` — the actual
-  gate-dispatch-compose loop `base.py`'s docstring defers to. That's where
-  the real implementation detail of "stricter session rules checked first"
-  would be verified, not just asserted from docs.
-- Haven't checked how `ASK` is actually surfaced to a human synchronously
-  (this matters most for lawkeeper — an `AUDIT:`-marker-missing case is the
-  same "pause for the human" shape).
-- Haven't looked at `omnigent/policies/builtins/cel.py` — CEL
-  (Common Expression Language) as a policy-condition DSL is a second
-  candidate pattern (declarative conditions without a full Python callable)
-  worth a dedicated look before deciding what a lawkeeper policy DSL, if
-  one gets built, should look like.
+- Haven't read `schema.py`'s `condition` / label-gate matching or
+  `_should_fire`'s `PhaseSelector` logic — the mechanism that decides
+  *whether* a policy runs at all before `evaluate` is even dispatched.
+  That's the piece that would need the closest reading before designing
+  an analogous "which laws apply to this diff" gate for lawkeeper.
+- Haven't looked at the full `PolicyEvent` schema CEL expressions actually
+  see, or the `risk_score.py` / `routing.py` builtins (unclear from the
+  listing alone what problem those solve).
+- Still haven't read the harness adapters, sandbox provisioning, or
+  `orchestration.py` — out of scope for the governance-mechanism angle
+  this doc is tracking, revisit only if lawkeeper's own harness-agnosticism
+  work in `EXECUTOR_CONTRACT.md` actually resumes.
 
 ---
 
