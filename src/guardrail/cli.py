@@ -46,7 +46,7 @@ def _extras_template_root() -> Path:
     return Path(str(importlib.resources.files("guardrail") / "template_extras"))
 
 
-def _repo_root(start: Path = Path.cwd()) -> Path | None:
+def _repo_root(start: Path | None = None) -> Path | None:
     """Return the git repo root containing `start`, or None if there isn't one.
 
     (The previous version returned `Path(out.stdout.strip()) or start` —
@@ -54,7 +54,23 @@ def _repo_root(start: Path = Path.cwd()) -> Path | None:
     silently returned `start` disguised as a valid repo root instead of
     signaling failure. Callers must be able to tell "no repo" from "found
     a repo", so this returns None explicitly.)
+
+    Real bug found 2026-09-06 (guardrail fit investigation, writing a test
+    for cmd_status): `start: Path = Path.cwd()` is a classic Python
+    eager-default-argument bug -- Path.cwd() is evaluated exactly ONCE, at
+    module-IMPORT time, not per-call. Confirmed live: import guardrail.cli,
+    os.chdir() to a completely different repo, then call `_repo_root()`
+    with no argument -- it returned the ORIGINAL repo, not the one the
+    process is now actually in. Harmless for a real `lawkeeper` CLI
+    invocation (a fresh process's import-time cwd IS the real cwd, since
+    nothing has chdir'd yet), but a real bug for anything that imports this
+    module once and calls its functions from more than one directory --
+    exactly what a test suite does, and exactly what made this bug visible
+    while adding real test coverage for cmd_status() (which had none
+    before this pass). Fixed via the standard lazy-default idiom.
     """
+    if start is None:
+        start = Path.cwd()
     try:
         out = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
@@ -224,7 +240,20 @@ def cmd_status(_: argparse.Namespace) -> int:
         print("lawkeeper: not inside a git repository.")
         return 1
     print(f"repo: {root}")
-    print(f"project: {(root / '.guardrail.json').exists() and 'governed' or 'NOT governed by lawkeeper'}")
+    governed = (root / ".guardrail.json").exists()
+    if governed:
+        # Real bug found 2026-09-06 (guardrail fit investigation, task 4):
+        # project_name was a declared, typed, .guardrail.json-configurable
+        # Config field -- written once by `lawkeeper init`, then never
+        # read back anywhere, including here, the one place a project's
+        # own name would obviously belong. This line used to print the
+        # literal word "project:" followed only by governed/ungoverned
+        # status, never the actual project name.
+        from .config import Config
+        name = Config.load(root).project_name
+        print(f"project: {name} (governed)")
+    else:
+        print("project: NOT governed by lawkeeper")
     hooks = root / ".git" / "hooks"
     cfg = subprocess.run(["git", "config", "--get", "core.hooksPath"],
                          cwd=root, capture_output=True, text=True,

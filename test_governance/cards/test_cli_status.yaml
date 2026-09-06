@@ -1,0 +1,60 @@
+test_id: test_cli_status
+theory: >
+  guardrail.cli.cmd_status() must report the real project name (from
+  Config.load()'s "project_name", corrected 2026-09-06 -- the last of 6
+  decorative Config fields found by the guardrail fit investigation) for
+  a governed repo, the correct ungoverned/not-a-repo states otherwise,
+  and guardrail.cli._repo_root() must resolve the real, current working
+  directory on every call -- not a directory frozen at whatever moment
+  guardrail.cli happened to be imported (a real, separate bug found while
+  writing this file's own tests: Python evaluates a `def f(x=EXPR):`
+  default exactly once, at import time, not per-call).
+oracle:
+  type: invariant
+  independence: independent
+  expression: >
+    _repo_root() called with no argument, from a real git repo at path P,
+    returns P -- even when guardrail.cli was imported (and its module-level
+    code executed) while the process's cwd was somewhere else entirely,
+    proven by actually chdir-ing after import, not just calling it once
+    from the "natural" directory. cmd_status() against a real repo with a
+    real .guardrail.json prints that file's actual "project_name" value
+    and "(governed)"; against a real repo with no .guardrail.json prints
+    "NOT governed by lawkeeper"; against a non-repo directory returns exit
+    code 1 without ever reaching the config-reading code path; a
+    .guardrail.json missing "project_name" falls back to Config.DEFAULTS'
+    "my-project", not a crash or a blank field.
+acceptance: >
+  all 5 cases pass: fresh-per-call resolution after a real chdir; a
+  configured project_name appears verbatim in cmd_status()'s output
+  alongside "(governed)"; an ungoverned repo's output contains "NOT
+  governed by lawkeeper"; a non-repo directory returns exit code 1; a
+  .guardrail.json without project_name falls back to "my-project".
+blind_spot: >
+  Calls cmd_status() as a plain Python function with a real (but
+  synthetic, single-commit-less) git repo and a hand-written
+  .guardrail.json -- does not exercise the actual installed `lawkeeper`
+  console-script entry point end-to-end the way test_init_smoke.py's slow
+  suite does for `lawkeeper init` (no equivalent real-wheel-install test
+  exists yet for `lawkeeper status` specifically). Does not cover
+  cmd_status()'s core.hooksPath or system_audit.py presence lines, which
+  were unaffected by this pass's fix and already existed.
+trust_level: T2
+adversarial_review: self
+failure_meaning:
+  failed: either project_name stopped being read/displayed correctly, or
+    _repo_root() regressed back to resolving a stale/wrong directory
+  crash: import failure in guardrail.cli, or a real git binary unavailable
+    in the test environment
+  pass: cmd_status() genuinely reports the configured project name per
+    repo, and _repo_root() is resolved fresh on every call regardless of
+    when guardrail.cli was first imported
+debug:
+  - a failure in TestRepoRootIsResolvedFreshPerCall means the eager-
+    default-argument regression came back -- check _repo_root()'s
+    signature directly for `start: Path = Path.cwd()` vs the lazy
+    `start: Path | None = None` form
+  - a failure in TestCmdStatusProjectName means either Config.load()'s
+    project_name resolution broke, or cmd_status()'s own print
+    formatting changed in a way that dropped the name or the
+    "(governed)"/"NOT governed" wording these tests match on literally
