@@ -104,6 +104,83 @@ class TestScanRepoRealGit:
         _commit_file(repo, "src/thing.py", "pass\n")
         assert orphan_scan.scan_repo(repo) == []
 
+    def test_package_dir_under_src_is_auto_discovered_and_scanned(self, tmp_path):
+        """Real gap found 2026-09-05, cross-repo (Falcun ported this
+        scanner and hit it against agent/, src/falcun/): the original
+        scripts/tools-only scope meant a module built, tested, and never
+        wired into any real code path in a src/ package would never even
+        become a candidate. Package dirs are now auto-discovered via
+        src/*/__init__.py rather than hardcoded to any one repo's package
+        name."""
+        repo = _init_real_repo(tmp_path)
+        _commit_file(repo, "src/mypackage/__init__.py", "")
+        _commit_file(repo, "src/mypackage/abandoned.py", "def unused(): pass\n")
+        _commit_file(repo, "src/mypackage/used.py", "def real(): pass\n")
+        _commit_file(repo, "src/mypackage/caller.py", "from mypackage.used import real\n")
+        results = orphan_scan.scan_repo(repo)
+        by_basename = {r["basename"]: r for r in results}
+        assert "abandoned" in by_basename, "src/*/ packages must now be scanned as candidates"
+        assert by_basename["abandoned"]["production_refs"] == 0
+        assert by_basename["used"]["production_refs"] > 0
+
+    def test_scaffolding_template_dir_is_excluded_from_candidates(self, tmp_path):
+        """template/ and template_extras/ trees are copied wholesale by
+        path (cli.py's _copy_template_tree), never referenced by
+        individual basename -- every file in them would otherwise
+        false-positive as an orphan. Excluded from candidate collection
+        entirely rather than left to flag on every single scaffolded
+        file."""
+        repo = _init_real_repo(tmp_path)
+        _commit_file(repo, "src/mypackage/__init__.py", "")
+        _commit_file(repo, "src/mypackage/template/scaffold_only.py", "# copied wholesale\n")
+        results = orphan_scan.scan_repo(repo)
+        assert not any(r["basename"] == "scaffold_only" for r in results), (
+            "scaffolding under a template/ dir must not become a candidate at all"
+        )
+
+    def test_dynamically_loaded_module_is_a_documented_false_positive(self, tmp_path):
+        """Confirmed live against this repo's own src/guardrail/laws/:
+        a module discovered via pkgutil.iter_modules rather than
+        imported by literal name will show 0 production_refs despite
+        being real, wired-in code. Not a bug -- documented in the
+        module docstring as a real, known blind spot; this test proves
+        the scanner behaves exactly as documented, not silently
+        different."""
+        repo = _init_real_repo(tmp_path)
+        _commit_file(repo, "src/mypackage/__init__.py", "")
+        _commit_file(
+            repo, "src/mypackage/loader.py",
+            "import pkgutil, importlib\n"
+            "for info in pkgutil.iter_modules(__path__):\n"
+            "    importlib.import_module(f'mypackage.{info.name}')\n",
+        )
+        _commit_file(repo, "src/mypackage/plugin_one.py", "def run(): pass\n")
+        results = orphan_scan.scan_repo(repo)
+        plugin = next(r for r in results if r["basename"] == "plugin_one")
+        assert plugin["production_refs"] == 0, (
+            "a dynamically-discovered module is a documented false positive, "
+            "not something this heuristic scanner can resolve by itself"
+        )
+
+    def test_production_refs_excludes_test_only_and_doc_only_mentions(self, tmp_path):
+        """Real gap found 2026-09-05, cross-repo: Falcun's port of this
+        scanner proved a module referenced only by its own test file
+        plus one doc mention (agent/zotero_bridge.py: 8 external_refs,
+        0 real production callers) read as "referenced" under the old
+        single-count version, hiding a genuine orphan. Reproduced here
+        with the same shape: a script mentioned only in its own test
+        file and in a doc must show external_refs > 0 but
+        production_refs == 0, and must now be flagged."""
+        repo = _init_real_repo(tmp_path)
+        _commit_file(repo, "scripts/only_tested.py", "def do_thing(): pass\n")
+        _commit_file(repo, "tests/test_only_tested.py",
+                      "# tests only_tested.do_thing\nfrom only_tested import do_thing\n")
+        _commit_file(repo, "docs/NOTES.md", "See scripts/only_tested.py for details.\n")
+        results = orphan_scan.scan_repo(repo)
+        r = next(r for r in results if r["basename"] == "only_tested")
+        assert r["external_refs"] > 0, "the test file + doc mention should still count as external_refs"
+        assert r["production_refs"] == 0, "test-file-only and doc-only mentions must not count as production"
+
     def test_untracked_dotdir_content_does_not_count_as_a_reference(self, tmp_path):
         """Real bug found 2026-09-05, re-running this scan against
         Windwright: a stale git worktree checkout sitting on disk under
