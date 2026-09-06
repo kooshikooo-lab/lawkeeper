@@ -79,6 +79,7 @@ _FORCE_FLAGS = {"-f", "--force", "--force-with-lease", "--force-if-includes"}
 _DELETE_FLAGS_PUSH = {"-d", "--delete"}
 _DELETE_FLAGS_BRANCH = {"-D", "--delete", "-d"}
 _SHELL_OPERATORS = {"&&", "||", ";", "|"}
+_MULTI_REF_PUSH_FLAGS = {"--all", "--mirror"}
 
 
 class Risk:
@@ -191,6 +192,19 @@ def _inspect_git_push(args: list[str]) -> Risk | None:
     cmd_force = any(a in _FORCE_FLAGS for a in args)
     cmd_delete = any(a in _DELETE_FLAGS_PUSH for a in args)
     positionals = [a for a in args if not a.startswith("-")]
+
+    # `--all`/`--mirror` implicitly push every ref under refs/heads (or the
+    # whole repo, for --mirror) -- there is no single static refspec to
+    # inspect, so a canonical branch could be among them without appearing
+    # anywhere in the command text at all. Can't confirm hardline (we don't
+    # know which refs will actually move), and can't safely allow either --
+    # routed to ask, not resolved via the single-current-branch fallback
+    # below, which would under-check a multi-ref push. (Copilot review,
+    # PR #19 round 2.)
+    if (cmd_force or cmd_delete) and any(a in _MULTI_REF_PUSH_FLAGS for a in args):
+        return Risk("ask", None,
+                     "a force/delete push with --all/--mirror, which can update multiple refs "
+                     "(including a canonical branch) without naming any of them explicitly")
 
     # A positional is "refspec-shaped" (leading + or contains :) and is
     # therefore an explicit branch target regardless of position. A

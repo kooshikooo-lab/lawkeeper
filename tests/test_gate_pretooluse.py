@@ -92,6 +92,32 @@ class TestHardlineForcePush:
         assert gate.inspect_command("git push --force origin") is None
 
 
+# ── --all/--mirror: implicit multi-ref pushes (Copilot review, PR #19 round 2) ──
+
+class TestMultiRefPushIsAsk:
+    """--all/--mirror update every ref under refs/heads (or the whole
+    repo, for --mirror) without naming any of them in the command text --
+    a canonical branch could be among them with nothing for a static
+    scanner to match against. Neither a confident hardline nor a safe
+    allow; routed to ask."""
+
+    def test_force_push_all_is_ask(self):
+        risk = gate.inspect_command("git push --force --all origin")
+        assert risk is not None
+        assert risk.level == "ask"
+
+    def test_force_push_mirror_is_ask(self):
+        risk = gate.inspect_command("git push --force --mirror origin")
+        assert risk is not None
+        assert risk.level == "ask"
+
+    def test_ordinary_push_all_without_force_is_not_flagged(self):
+        assert gate.inspect_command("git push --all origin") is None
+
+    def test_dry_run_push_all_force_is_never_flagged(self):
+        assert gate.inspect_command("git push --dry-run --force --all origin") is None
+
+
 class TestHardlineBranchDelete:
     def test_delete_main_is_hardline(self):
         risk = gate.inspect_command("git branch -D main")
