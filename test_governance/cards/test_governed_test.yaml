@@ -1,0 +1,66 @@
+test_id: test_governed_test
+theory: >
+  governed_test.py's run_mutation() (the T4 discrimination check) must
+  verify a test genuinely passes on real, unmutated code BEFORE trusting
+  any result computed by then mutating the code and re-running it. Real
+  bug found 2026-09-06, relayed cross-repo (a Windwright mutation-testing
+  pass independently hit the identical shape: a "98.4% kill rate" that
+  was actually a broken baseline test failing on unmutated code too, so
+  every "kill" was that same pre-existing failure, not real
+  discrimination) -- run_mutation() had no baseline check at all before
+  this fix, so a simply-broken test (or a mutation target that was
+  already nonfunctional) would be scored as "discriminates: True",
+  indistinguishable from genuine mutation sensitivity.
+oracle:
+  type: fixture
+  independence: independent
+  expression: >
+    for a real target module and a real test file, both written fresh
+    per test case (not fixtures shared with the code under test): a test
+    that fails on unmutated code must cause run_mutation() to refuse the
+    mutation check entirely (exit 1, explicit "does not pass on the REAL
+    (unmutated) code" message, target file left byte-identical to what
+    was written -- never even reaches the mutate/restore step); a test
+    with a genuine oracle that passes the baseline and fails under
+    mutation must earn T4 (exit 0); a test with a weak oracle that passes
+    both the baseline and the mutation must be reported as not
+    discriminating (exit 1, "does not discriminate").
+acceptance: >
+  all 4 cases hold, verified via a real pytest subprocess governed_test.py
+  itself launches (not a mocked subprocess) against real, disposable
+  target.py/test_target.py files in an isolated tmp_path
+  (governed_test.ROOT monkeypatched there): broken-baseline refusal,
+  broken-baseline leaves the source file untouched, real-oracle-earns-T4,
+  weak-oracle-does-not-discriminate.
+blind_spot: >
+  Exercises run_mutation() directly as a Python function call, not
+  governed_test.py's CLI/argparse layer or its card-loading/validation
+  path (REQUIRED_FIELDS, trust-level gating) -- those are untested by
+  this file too, a real, separate, still-open gap (this file existed with
+  ZERO test coverage before this pass; this card covers only the specific
+  baseline-check fix and basic mutation-check regression, not the whole
+  script). Also does not cover what happens if the pytest subprocess
+  itself crashes (vs. exiting nonzero) during either the baseline or
+  mutation run, or a target file with multiple `attr = value` lines
+  (the regex takes the first match only, per run_mutation's own
+  `count=1`).
+trust_level: T2
+adversarial_review: self
+failure_meaning:
+  failed: the baseline check stopped running, stopped refusing on a
+    failing baseline, or the existing mutate/restore/discriminate logic
+    regressed
+  crash: import failure in governed_test.py, or a real git/pytest
+    environment issue in the test sandbox
+  pass: run_mutation() never scores a broken-baseline test as
+    discriminating, and its pre-existing mutate/restore behavior for a
+    genuinely passing baseline still works as designed
+debug:
+  - a failure in test_broken_baseline_refuses_the_mutation_check or
+    test_baseline_refusal_leaves_the_target_file_untouched means the new
+    baseline-check itself regressed -- this is the real bug fix, treat
+    as highest severity
+  - a failure in test_real_oracle_discriminates_after_a_passing_baseline
+    or test_weak_oracle_passes_baseline_but_does_not_discriminate means
+    the pre-existing mutate/restore/report logic broke, unrelated to the
+    baseline-check fix itself

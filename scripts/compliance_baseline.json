@@ -237,6 +237,13 @@
       ]
     ],
     [
+      "tests/test_governed_test.py",
+      "module_mutable",
+      [
+        "CARD L59"
+      ]
+    ],
+    [
       "tests/test_guard_scripts.py",
       "hardcoded_ip",
       [
