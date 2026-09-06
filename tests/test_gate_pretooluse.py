@@ -71,6 +71,26 @@ class TestHardlineForcePush:
                              lambda args: ("opencode/mesh-repair/laptop", 0))
         assert gate.inspect_command("git push --force") is None
 
+    def test_force_push_remote_only_no_branch_resolves_current_branch(self, monkeypatch):
+        """The real regression a second Copilot review round caught:
+        `git push --force origin` has exactly one bare positional (the
+        remote), no refspec-shaped one at all. An earlier version of
+        this scanner treated "origin" itself as the branch target
+        (checking is_canonical("origin"), always False) instead of
+        falling through to resolve the current branch -- a real
+        false-negative that would have silently allowed a force-push
+        to the current branch through undetected."""
+        monkeypatch.setattr(gate.guard_branch, "run_git", lambda args: ("main", 0))
+        risk = gate.inspect_command("git push --force origin")
+        assert risk is not None
+        assert risk.level == "hardline"
+        assert risk.branch == "main"
+
+    def test_force_push_remote_only_on_feature_branch_not_flagged(self, monkeypatch):
+        monkeypatch.setattr(gate.guard_branch, "run_git",
+                             lambda args: ("opencode/mesh-repair/laptop", 0))
+        assert gate.inspect_command("git push --force origin") is None
+
 
 class TestHardlineBranchDelete:
     def test_delete_main_is_hardline(self):
@@ -81,10 +101,12 @@ class TestHardlineBranchDelete:
     def test_delete_feature_branch_is_not_flagged(self):
         assert gate.inspect_command("git branch -D opencode/mesh-repair/laptop") is None
 
-    def test_soft_delete_flag_is_still_treated_as_delete_shape(self):
+    def test_soft_delete_flag_on_canonical_branch_is_still_hardline(self):
         # -d (lowercase) on git branch is the safe, merged-only delete;
         # still routed through the same delete-flag set intentionally
-        # (git refuses an unmerged -d anyway) but must not crash.
+        # (git refuses an unmerged -d anyway), and still hardline-denied
+        # against a canonical branch -- renamed from a name that claimed
+        # "not flagged" while asserting hardline (Copilot review, PR #19).
         risk = gate.inspect_command("git branch -d main")
         assert risk.level == "hardline"
 
