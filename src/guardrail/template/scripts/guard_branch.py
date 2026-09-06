@@ -55,6 +55,12 @@ def load_config():
                     re.compile(r"^opencode/[a-z0-9-]+/(?:desktop|laptop)$"),
                 ]
                 canonical_branch_names = lambda self: {"main", "opencode/main/desktop", "opencode/main/laptop"}
+                # 2026-09-06: same reasoning as feature_regexes above --
+                # kept in sync with guardrail/config.py's real
+                # merge_regex() default ("merge/{topic}") so this fallback
+                # path doesn't silently regress to a pattern the real
+                # Config wouldn't produce.
+                merge_regex = lambda self: re.compile(r"^merge/[a-z0-9-]+$")
             return _Fallback()
     return Config.load(REPO_ROOT)
 
@@ -73,7 +79,7 @@ def classify(name: str) -> str | None:
         return "canonical" if name.startswith("opencode/main/") else "trunk"
     if any(re.match(r, name) for r in CONFIG.feature_regexes()):
         return "feature"
-    if re.match(r"^merge/[a-z0-9-]+$", name):
+    if CONFIG.merge_regex().match(name):
         return "merge_staging"
     return None
 

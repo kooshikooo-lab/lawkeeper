@@ -140,3 +140,22 @@ class Config:
         if legacy.pattern not in {r.pattern for r in regexes}:
             regexes.append(legacy)
         return regexes
+
+    def merge_regex(self):
+        """Regex matching a merge-staging branch name, derived from
+        `self.merge_prefix` (default "merge/{topic}").
+
+        Same real bug class as feature_regexes() above (found 2026-09-04):
+        `merge_prefix` was declared, typed, and .guardrail.json-configurable,
+        but scripts/guard_branch.py's classify() hardcoded
+        `r"^merge/[a-z0-9-]+$"` directly instead of ever reading it --
+        editing merge_prefix in a project's .guardrail.json silently did
+        nothing. Found 2026-09-06 (guardrail fit investigation, task 4) by
+        checking every Config field systematically rather than stopping at
+        the one already known.
+        """
+        import re
+
+        pattern = re.escape(self.merge_prefix)
+        pattern = pattern.replace(re.escape("{topic}"), "[a-z0-9-]+")
+        return re.compile(f"^{pattern}$")
