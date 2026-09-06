@@ -15,6 +15,8 @@ Checks:
      a .importlinter config exists at the repo root.
   6. Every guard script imports cleanly (a broken guard is a dead guard).
   7. Wire integrity: each hook file references the validator script it runs.
+  8. The live PreToolUse gate (gate_pretooluse.py) is actually registered in
+     .claude/settings.json as a Bash hook, not just present on disk.
 
 Usage:
   python scripts/system_audit.py           # full audit, exit 1 on any failure
@@ -25,6 +27,7 @@ Exit codes: 0 = all checks pass, 1 = one or more failures, 2 = error.
 
 import argparse
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -57,7 +60,10 @@ GUARD_SCRIPTS = [
     "scripts/toolcheck.py",
     "scripts/validate_imports.py",
     "scripts/check_local_dependencies.py",
+    "scripts/gate_pretooluse.py",
 ]
+
+CLAUDE_SETTINGS_FILE = REPO_ROOT / ".claude" / "settings.json"
 
 
 def run(cmd, cwd=None):
@@ -88,6 +94,48 @@ def check_hooks() -> list[str]:
         content = hook_file.read_text(encoding="utf-8", errors="replace")
         if validator not in content:
             problems.append(f"hook {hook} is not wired to {validator}")
+    return problems
+
+
+def check_pretooluse_gate() -> list[str]:
+    """Verify the live PreToolUse gate is actually registered, not just
+    present on disk. A guard script that exists but was never wired into
+    .claude/settings.json is a dead guard by the same logic check_hooks()
+    already applies to git hooks -- claiming a layer exists without
+    verifying the wiring is the exact self-audit failure this script
+    exists to prevent (docs/RESEARCH_harness_governance_survey.md's
+    "if lawkeeper does ONE thing next" build; see also the CI backstop's
+    own history of claiming Law 16 compliance while never actually
+    running -- this check is here so that mistake isn't repeated for the
+    live gate too)."""
+    problems = []
+    gate_script = REPO_ROOT / "scripts" / "gate_pretooluse.py"
+    if not gate_script.is_file():
+        problems.append(f"PreToolUse gate script missing: {gate_script}")
+        return problems  # nothing left to check wiring against
+
+    if not CLAUDE_SETTINGS_FILE.is_file():
+        problems.append(f".claude/settings.json missing: {CLAUDE_SETTINGS_FILE}")
+        return problems
+
+    try:
+        settings = json.loads(CLAUDE_SETTINGS_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        problems.append(f".claude/settings.json is not valid JSON: {e}")
+        return problems
+
+    pre_tool_use = settings.get("hooks", {}).get("PreToolUse", [])
+    wired = any(
+        entry.get("matcher") == "Bash"
+        and any("gate_pretooluse.py" in h.get("command", "") for h in entry.get("hooks", []))
+        for entry in pre_tool_use
+    )
+    if not wired:
+        problems.append(
+            ".claude/settings.json does not register gate_pretooluse.py as a Bash "
+            "PreToolUse hook -- the live gate exists on disk but Claude Code will "
+            "never actually invoke it."
+        )
     return problems
 
 
@@ -197,6 +245,7 @@ def audit():
     failures += check_branch_topology()
     failures += check_import_boundaries()
     failures += check_guards_import()
+    failures += check_pretooluse_gate()
     findings = check_branch_debt()
     return failures, findings
 

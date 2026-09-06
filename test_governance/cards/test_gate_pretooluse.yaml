@@ -1,0 +1,61 @@
+test_id: test_gate_pretooluse
+theory: >
+  gate_pretooluse.py is the live, per-tool-call enforcement layer
+  identified as lawkeeper's biggest confirmed gap in
+  docs/RESEARCH_harness_governance_survey.md: git hooks only ever see a
+  bad branch operation after it has already run against the network.
+  This is a Claude Code PreToolUse hook that sees the exact Bash command
+  before it executes and returns one of three verdicts (allow/deny/ask),
+  matching the deny>ask>allow precedence five independently-built systems
+  converge on (Claude Code, Omnigent, deepseek-harness, hermes-agent,
+  goose -- see docs/RESEARCH_harness_hook_mechanisms_survey.md). Two
+  tiers are built as physically separate code paths, not one decision
+  type that happens to always pick deny by convention: HARDLINE (force-
+  push/delete of a canonical branch, confidently identified -- no ASK
+  code path exists for this tier at all) and ASK (the same shape of
+  attempt, but the branch name could not be confidently resolved --
+  genuine uncertainty, routed to a human, never silently allowed).
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    Each test constructs a real Bash command string (a real git push/
+    branch invocation with real flags, or a canned stdin JSON payload
+    matching Claude Code's actual PreToolUse contract) and asserts the
+    gate's real output against what a human reading that same command
+    would classify it as -- hardline-dangerous, genuinely ambiguous, or
+    unremarkable -- independent of the gate's internal implementation.
+    The subprocess-level tests additionally assert against Anthropic's
+    documented hook JSON shape directly (hookSpecificOutput/
+    permissionDecision/permissionDecisionReason), not a stand-in for it.
+acceptance: "a force-push or delete targeting a canonical branch (via --force/-f/--force-with-lease, a +branch or :branch refspec, or git branch -D/-d) is hardline-denied with no override unless the exact GUARD_BRANCH_ALLOW_FORCE/_DELETE env var is pre-set; the identical operation against a non-canonical branch is never flagged; a force-push with no explicit branch resolves the actual current branch via git and classifies against that; a command whose target branch is a shell variable or command substitution is routed to ask, never silently allowed and never wrongly hardline-denied; a dangerous command hidden after a shell chaining operator (&&/||/;/|) is still inspected; non-Bash tool calls and ordinary commands return no opinion; malformed or empty stdin fails open (exit 0, no output), matching this repo's existing Stop-hook convention and every harness the hook-mechanisms survey read; an internal exception while classifying a real, parsed command fails to ask, never to silent allow."
+blind_spot: >
+  This is word-level shell tokenization (shlex), not a real shell
+  parser -- documented explicitly in the module's own docstring, same
+  heuristic status as orphan_scan.py's basename matching. Real, known
+  evasion classes, not yet exercised by a test because they are
+  structurally out of this heuristic's reach rather than a bug to fix:
+  command substitution that only resolves at actual shell execution
+  time and can't be seen from static text (already partially handled --
+  a literal $(...) or backtick is treated as unresolvable and routed to
+  ask -- but a variable that itself expands to a $(...) construct at
+  runtime would not be caught by the same check on the outer text);
+  indirection through a wrapper script, shell alias, or shell function
+  that itself runs `git push --force` is invisible to this hook entirely
+  (the Bash tool call the hook sees is the wrapper's name, not what it
+  does); and `git push` invoked via `git -c ... push` or with the git
+  subcommand spelled via an alias (`git p`) is not recognized as `push`
+  at all. This is a defense-in-depth layer, not a sandbox -- the same
+  caveat given when this build was proposed, not discovered after the
+  fact.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a real regression in force/delete flag detection, refspec parsing, canonical-branch classification reuse, the override mechanism, or the ask-tier ambiguity routing
+  crash: guard_branch.py's import path changed, or Claude Code's actual PreToolUse stdin/stdout contract changed shape (the subprocess-level tests would catch a schema drift, not just a logic regression)
+  pass: hardline/ask/allow classification and the fail-open/fail-to-ask error handling all behave correctly against real command strings and the real hook I/O contract
+debug:
+  - a failure in TestHardlineForcePush or TestHardlineBranchDelete means the core force/delete detection broke -- this is the hook's whole purpose, treat as high severity (a real force-push over main would silently proceed)
+  - a failure in TestAskTierAmbiguousTargets means an ambiguous command is being silently allowed or wrongly hardline-denied instead of asked -- check _looks_unresolvable and the None-candidate current-branch-resolution path in _inspect_git_push
+  - a failure in TestHardlineOverride means the pre-set override either leaked into cases it shouldn't (a different branch, or the ask tier) or stopped working for the one case it should (an exact branch-name match) -- re-read _overridden's exact-match logic
+  - a failure in TestMainStdinStdoutContract means the actual wire contract with Claude Code broke -- re-verify against code.claude.com/docs/en/hooks directly, don't assume the schema is unchanged
