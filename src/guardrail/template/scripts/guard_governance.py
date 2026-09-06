@@ -1,12 +1,31 @@
-"""Governance file guard — blocks unauthorized edits to docs/CONSTRAINTS_AND_PREFERENCES.md.
+"""Governance file guard — blocks unauthorized edits to a project's
+protected governance files (scan_config.get_governance_files(); by
+default docs/AI_CONSTITUTION.md, docs/CONSTRAINTS_AND_PREFERENCES.md,
+docs/COMPLIANCE_CHECK.md, docs/ARCHITECTURE_DECISIONS.md,
+docs/AI_FAILURE_PATTERNS.md, docs/TEST_THEORY.md, AGENTS.md).
 
-The boot sequence and communications protocol live in this one file. It has been
-rewritten before based on agent assumptions rather than instructions. This guard
-enforces that any change to it is explicitly authorized.
+Real bug found (GitHub Copilot review, PR #15): this docstring used to
+say "docs/CONSTRAINTS_AND_PREFERENCES.md" specifically -- true when this
+guard hardcoded a 1-file list, false since GOVERNANCE_FILES started
+reading the shared, corrected multi-file list.
 
-Used by:
-- commit-msg hook (scripts/git-hooks/commit-msg) on every commit
-- CI workflow (.github/workflows/governance-guard.yml) on every push
+The boot sequence and communications protocol live in
+docs/CONSTRAINTS_AND_PREFERENCES.md specifically. It has been rewritten
+before based on agent assumptions rather than instructions -- this guard
+enforces that any change to a protected file is explicitly authorized.
+
+Real, separate finding (not this docstring's original claim, and not
+fixed here): despite the "Used by" claim below, neither
+scripts/git-hooks/commit-msg nor .github/workflows/governance-guard.yml
+actually invoke this script -- validate_commit_msg.py's own Rule 1
+already covers the same check and is what's actually wired in. This
+script IS checked for importability (system_audit.py's GUARD_SCRIPTS)
+and named in src/guardrail/laws/law_16_enforcement.py, so it isn't
+literally dead, but "Used by" below currently overstates its real role.
+
+Used by (as currently checked, not necessarily invoked per-commit):
+- system_audit.py's guard-script importability check
+- law_16_enforcement.py's guard-script inventory
 
 An edit is authorized if the commit message contains the marker "GOVERNANCE-UPDATE".
 

@@ -342,6 +342,26 @@ class TestGovernanceFilesConfig:
         (tmp_path / ".guardrail.json").write_text("{not valid json")
         assert validate_commit_msg.load_governance_files() == validate_commit_msg.DEFAULT_GOVERNANCE_FILES
 
+    def test_a_string_value_fails_safe_instead_of_splitting_into_characters(self, tmp_path, monkeypatch):
+        """Real bug found (GitHub Copilot review, PR #15): the original fix
+        did `if configured: return list(configured)` -- a JSON string is
+        truthy and iterable, so `"docs/x.md"` would silently become
+        ['d', 'o', 'c', 's', '/', 'x', '.', 'm', 'd'] instead of being
+        rejected as a config error. Same real shape for a list containing
+        a non-string entry."""
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"governance_files": "docs/AI_CONSTITUTION.md"})
+        )
+        assert validate_commit_msg.load_governance_files() == validate_commit_msg.DEFAULT_GOVERNANCE_FILES
+
+    def test_a_list_with_a_non_string_entry_fails_safe(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"governance_files": ["docs/AI_CONSTITUTION.md", 42]})
+        )
+        assert validate_commit_msg.load_governance_files() == validate_commit_msg.DEFAULT_GOVERNANCE_FILES
+
     def test_test_theory_is_now_genuinely_protected(self, tmp_path, monkeypatch):
         """Adversarial, not just a unit check on the list: stages a real
         edit to docs/TEST_THEORY.md and confirms governance_changed()
