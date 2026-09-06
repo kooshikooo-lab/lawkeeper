@@ -160,8 +160,8 @@
       "src/guardrail/template/scripts/system_audit.py",
       "module_mutable",
       [
-        "HOOK_WIRING L43",
-        "GUARD_SCRIPTS L50"
+        "HOOK_WIRING L46",
+        "GUARD_SCRIPTS L53"
       ]
     ],
     [
