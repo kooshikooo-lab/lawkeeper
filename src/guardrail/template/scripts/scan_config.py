@@ -95,7 +95,13 @@ def get_governance_files(repo_root: Path) -> list[str]:
         try:
             cfg = json.loads(guardrail_json.read_text(encoding="utf-8"))
             configured = cfg.get("governance_files")
-            if configured:
+            # Real bug found (GitHub Copilot review, PR #15): `if configured:
+            # return list(configured)` trusted ANY truthy JSON value -- a
+            # string is truthy and iterable, so `"docs/x.md"` would silently
+            # become `["d", "o", "c", "s", ...]` instead of a config error.
+            # Fail safe to the default instead of trusting the shape.
+            if (isinstance(configured, list) and configured
+                    and all(isinstance(f, str) for f in configured)):
                 return list(configured)
         except (OSError, ValueError):
             pass

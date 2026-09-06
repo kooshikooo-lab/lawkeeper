@@ -126,13 +126,19 @@ def _repo_root() -> Path:
 def load_governance_files():
     """Protected file paths, from .guardrail.json's "governance_files" --
     falls back to DEFAULT_GOVERNANCE_FILES (see its own comment for why
-    those specific files) if absent/empty/unreadable."""
+    those specific files) if absent/empty/unreadable/malshaped."""
     try:
         path = _repo_root() / ".guardrail.json"
         if path.exists():
             cfg = json.loads(path.read_text(encoding="utf-8"))
             configured = cfg.get("governance_files")
-            if configured:
+            # Real bug found (GitHub Copilot review, PR #15): `if configured:
+            # return list(configured)` trusted ANY truthy JSON value -- a
+            # string is truthy and iterable, so `"docs/x.md"` would silently
+            # become `["d", "o", "c", "s", ...]` instead of a config error.
+            # Fail safe to the default instead of trusting the shape.
+            if (isinstance(configured, list) and configured
+                    and all(isinstance(f, str) for f in configured)):
                 return list(configured)
     except (OSError, ValueError):
         pass
