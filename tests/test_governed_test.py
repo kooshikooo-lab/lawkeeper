@@ -31,23 +31,25 @@ def _write_target(root, value: int = 10):
 
 def _write_test(root, *, real_oracle: bool, always_fails: bool = False):
     """A real test file, importable by the real pytest subprocess
-    run_mutation() launches (sys.path needs target.py's directory on it,
-    hence the sys.path.insert -- root IS the pytest rootdir here)."""
+    run_mutation() launches. `import target` resolves because that
+    subprocess runs with cwd=root (run_mutation's own subprocess.run
+    call) -- pytest's default rootdir-relative import adds root itself to
+    sys.path, no explicit sys.path insertion needed or present here."""
     if always_fails:
         body = (
-            "import sys, target\n"
+            "import target\n"
             "def test_threshold():\n"
             "    assert target.THRESHOLD == 999  # wrong on purpose: fails always\n"
         )
     elif real_oracle:
         body = (
-            "import sys, target\n"
+            "import target\n"
             "def test_threshold():\n"
             "    assert target.THRESHOLD == 10  # real oracle: discriminates\n"
         )
     else:
         body = (
-            "import sys, target\n"
+            "import target\n"
             "def test_threshold():\n"
             "    assert target.THRESHOLD > 0  # weak oracle: survives most mutations\n"
         )
@@ -56,7 +58,7 @@ def _write_test(root, *, real_oracle: bool, always_fails: bool = False):
     return test_file
 
 
-CARD = {
+_CARD = {
     "test_id": "test_target",
     "mutation": {"file": "target.py", "attr": "THRESHOLD", "new_value": 20},
 }
@@ -72,7 +74,7 @@ class TestRunMutationVerifiesBaselineFirst:
         _write_target(tmp_path)
         _write_test(tmp_path, real_oracle=False, always_fails=True)
 
-        code = governed_test.run_mutation("test_target.py", CARD, as_json=False)
+        code = governed_test.run_mutation("test_target.py", _CARD, as_json=False)
 
         assert code == 1
         err = capsys.readouterr().err
@@ -88,7 +90,7 @@ class TestRunMutationVerifiesBaselineFirst:
         _write_test(tmp_path, real_oracle=False, always_fails=True)
         original = target.read_text(encoding="utf-8")
 
-        governed_test.run_mutation("test_target.py", CARD, as_json=False)
+        governed_test.run_mutation("test_target.py", _CARD, as_json=False)
 
         assert target.read_text(encoding="utf-8") == original
 
@@ -102,7 +104,7 @@ class TestRunMutationVerifiesBaselineFirst:
         _write_target(tmp_path)
         _write_test(tmp_path, real_oracle=True)
 
-        code = governed_test.run_mutation("test_target.py", CARD, as_json=False)
+        code = governed_test.run_mutation("test_target.py", _CARD, as_json=False)
 
         assert code == 0
 
@@ -116,7 +118,7 @@ class TestRunMutationVerifiesBaselineFirst:
         _write_target(tmp_path)
         _write_test(tmp_path, real_oracle=False)
 
-        code = governed_test.run_mutation("test_target.py", CARD, as_json=False)
+        code = governed_test.run_mutation("test_target.py", _CARD, as_json=False)
 
         assert code == 1
         err = capsys.readouterr().err
