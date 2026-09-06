@@ -1,0 +1,57 @@
+test_id: test_merge_prefix
+theory: >
+  Config.merge_regex() derives the accepted merge-staging-branch pattern
+  from Config.merge_prefix (fixing a bug where the field was configurable
+  but scripts/guard_branch.py's classify() hardcoded the pattern directly
+  instead of ever reading it -- same shape as test_feature_prefix.py's
+  feature_prefix fix, found in the same systematic pass over Config's
+  fields). Unlike feature_prefix, merge_prefix carries no legacy-
+  acceptance carve-out: there was no prior rename for this field, so a
+  configured prefix genuinely replaces the default rather than
+  supplementing it.
+oracle:
+  type: invariant
+  independence: independent
+  expression: >
+    for any configured merge_prefix P: a branch matching P's template
+    (with {topic} substituted by [a-z0-9-]+) is accepted; a branch not
+    matching P's template is rejected, INCLUDING the pre-configuration
+    default pattern once P has been overridden (no legacy fallback,
+    unlike feature_prefix); a regex-hostile P cannot expand its own match
+    semantics beyond its literal characters.
+acceptance: >
+  default is "merge/{topic}"; the default pattern accepts "merge/<topic>"
+  and rejects an unrelated prefix or a missing separator; a
+  .guardrail.json-configured custom prefix is honored; once configured,
+  the OLD default no longer matches (no legacy carve-out, verified
+  directly, not assumed from feature_prefix's different behavior); a
+  deliberately hostile prefix (containing raw regex metacharacters) is
+  escaped correctly, verified by checking it does NOT match an unrelated
+  branch name that would only match if the escaping had failed.
+blind_spot: >
+  Tests Config.merge_regex()'s pure string/regex logic in isolation -- it
+  does not exercise guard_branch.py's classify() call site directly (that
+  path is covered by test_guard_scripts.py::TestBranchClassify's existing
+  "merge/governance" -> "merge_staging" case, which continues to pass
+  against the new derivation), does not touch a real git repository or
+  real branch, and cannot verify a config authored by an adversarial
+  (not just malformed) actor couldn't defeat classification through some
+  channel other than merge_prefix's regex template. Pure config-
+  derivation logic, not a git-integration or security-boundary oracle.
+trust_level: T2
+adversarial_review: self
+failure_meaning:
+  failed: merge-staging-branch naming convention logic regressed -- either
+    the configured prefix stopped being accepted, or a real merge/<topic>
+    branch would start being misclassified as an orphan
+  crash: import failure in guardrail.config
+  pass: merge_prefix is genuinely load-bearing and drives merge-staging
+    branch classification as designed
+debug:
+  - check Config.merge_prefix's default and Config.merge_regex()'s
+    template-to-regex conversion directly
+  - re-run with a real .guardrail.json merge_prefix override to confirm
+    the configured value (not just the default) drives acceptance
+  - cross-check test_guard_scripts.py::TestBranchClassify's
+    "merge/governance" case still passes -- that's the real call-site
+    integration this unit-level card doesn't itself exercise
