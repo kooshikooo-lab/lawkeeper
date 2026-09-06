@@ -62,6 +62,16 @@ blind_spot: >
   forms Copilot named. Recorded here as a concrete instance of "found
   after review, not caught by the original test suite" -- proof the
   category above is real, not just a hedge.
+
+  A follow-up round of the same review also flagged `--all`/`--mirror`:
+  both implicitly push every ref under refs/heads (or the whole repo,
+  for --mirror) without naming a single refspec in the command text at
+  all, so a canonical branch could be among the refs actually moved
+  with nothing for this static scanner to match against. Fixed by
+  routing any --force/--delete combined with --all/--mirror straight to
+  ask before refspec parsing runs, rather than resolving only the
+  current branch (which would under-check a push that can touch many
+  refs at once); TestMultiRefPushIsAsk exercises both flags.
 trust_level: T2
 adversarial_review: none
 failure_meaning:
@@ -76,3 +86,4 @@ debug:
   - a failure in TestDryRunNeverFlagged means either a real dry-run push is being wrongly blocked again (the exact false positive found live during this hook's own first real end-to-end test) or, more seriously, the exemption has widened into an actual bypass -- re-check that a real push chained after a dry-run one (test_dry_run_does_not_exempt_a_chained_real_push) and git branch -D (test_dry_run_does_not_exempt_branch_delete) still get caught
   - a failure in TestRefspecFormsCopilotFound means the <src>:<dst> split or refs/heads/ normalization broke -- this is the exact class of gap a real reviewer (not this repo's own test suite) found in the first version, so treat a regression here as high severity, not a minor parsing nit
   - a failure in test_force_push_remote_only_no_branch_resolves_current_branch means the refspec-shaped/bare positional distinction in _inspect_git_push regressed -- this is the exact false-negative a SECOND round of Copilot review caught in the FIX for the first round's finding (a fix for one real gap silently reopened a different one): a bare remote name got treated as the branch target instead of falling through to current-branch resolution, meaning `git push --force origin` would have silently proceeded against a real canonical current branch. Treat any regression here as high severity and re-verify against a real Copilot review, not just this repo's own suite -- that's exactly how this class of bug was found both times
+  - a failure in TestMultiRefPushIsAsk means a --all/--mirror force/delete push is no longer being routed to ask before refspec parsing runs, so it could fall through to allow (no refspec matched) or an incorrect verdict based on a single unrelated target
