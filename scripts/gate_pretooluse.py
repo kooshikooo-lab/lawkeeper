@@ -192,21 +192,43 @@ def _inspect_git_push(args: list[str]) -> Risk | None:
     cmd_delete = any(a in _DELETE_FLAGS_PUSH for a in args)
     positionals = [a for a in args if not a.startswith("-")]
 
-    # Every positional is parsed as a potential refspec uniformly --
-    # not just ones with a leading +/: marker (Copilot review, PR #19:
-    # a bare "HEAD:main" or "origin" is still parsed correctly this
-    # way; checking a harmless extra candidate like the remote name
-    # itself costs nothing, since it will essentially never coincide
-    # with a canonical branch name).
-    parsed = [_parse_push_refspec(p) for p in positionals]
-    any_risky_shape = cmd_force or cmd_delete or any(marked for _, marked in parsed)
+    # A positional is "refspec-shaped" (leading + or contains :) and is
+    # therefore an explicit branch target regardless of position. A
+    # "bare" positional (neither) is ambiguous between "the remote
+    # name" and "a branch name" -- git's own convention is that the
+    # FIRST bare positional is the remote (`git push origin`), so only
+    # bare positionals AFTER the first are explicit branch targets.
+    #
+    # Getting this distinction wrong is exactly the regression a second
+    # Copilot review round caught: treating every positional uniformly
+    # as a target meant `git push --force origin` (one bare positional,
+    # the remote, no refspec) never fell through to resolving the
+    # current branch -- it checked is_canonical("origin") instead,
+    # which is never true, silently allowing a real force-push to the
+    # current branch through undetected. (Copilot review, PR #19 round 2.)
+    refspec_shaped = [p for p in positionals if p.startswith("+") or ":" in p]
+    bare = [p for p in positionals if p not in refspec_shaped]
+
+    explicit_targets: list[str] = []
+    any_marked = False
+    for p in refspec_shaped:
+        target, marked = _parse_push_refspec(p)
+        if target:
+            explicit_targets.append(target)
+        any_marked = any_marked or marked
+    # Bare tokens after the first (conventionally the remote) are
+    # explicit branch names too -- normalized the same way a refspec's
+    # destination is, so `git push origin refs/heads/main` (valid,
+    # equivalent to `git push origin main`) still matches.
+    explicit_targets.extend(_normalize_ref(b) for b in bare[1:])
+
+    any_risky_shape = cmd_force or cmd_delete or any_marked
     if not any_risky_shape:
         return None  # an ordinary push -- not a dangerous shape at all
 
-    targets = [t for t, _ in parsed if t]
-    if not targets:
-        # No resolvable refspec at all (`git push --force`, or
-        # `git push --force origin` with no explicit branch) -- pushes/
+    if not explicit_targets:
+        # No explicit branch given at all (`git push --force`, or
+        # `git push --force origin` with only the remote) -- pushes/
         # deletes whatever the current branch is under the remote's
         # config. Can't be fully certain from static text, but ignoring
         # it would silently miss the plainest form of `git push -f`.
@@ -229,10 +251,10 @@ def _inspect_git_push(args: list[str]) -> Risk | None:
     # the whole command, before falling back to ask for an unresolvable
     # one -- a command with both an unresolvable target and a
     # separately-confirmed canonical target must still deny, not ask.
-    for target in targets:
+    for target in explicit_targets:
         if not _looks_unresolvable(target) and guard_branch.is_canonical(target):
             return Risk("hardline", target, f"a force/delete push targeting canonical branch '{target}'")
-    for target in targets:
+    for target in explicit_targets:
         if _looks_unresolvable(target):
             return Risk("ask", None,
                          f"a force/delete push whose target '{target}' could not be resolved "
