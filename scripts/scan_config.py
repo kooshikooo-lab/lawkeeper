@@ -108,6 +108,126 @@ def get_governance_files(repo_root: Path) -> list[str]:
     return list(DEFAULT_GOVERNANCE_FILES)
 
 
+DEFAULT_REGENERABLE_SUFFIXES = [
+    ".stl", ".step", ".stp", ".obj", ".ply", ".3mf",
+    ".json", ".jsonl", ".dat", ".log", ".txt",
+    ".png", ".jpg", ".jpeg", ".svg",
+]
+DEFAULT_REGENERABLE_PATHS = ["test_output/", "designs/", "chat-logs/", "wiki/"]
+
+
+def get_regenerable_suffixes(repo_root: Path) -> set[str]:
+    """File suffixes treated as regenerable artifacts that should never
+    be committed. Unlike governance_files, this one was already
+    consistent between validate_pre_commit.py's hardcoded copy and
+    Config.DEFAULTS (verified 2026-09-06, guardrail fit investigation) --
+    no drift to fix, just genuinely wiring up the configurability both
+    already claimed to offer via `.guardrail.json`. Falls back to
+    DEFAULT_REGENERABLE_SUFFIXES if absent/malformed."""
+    guardrail_json = repo_root / ".guardrail.json"
+    if guardrail_json.exists():
+        try:
+            cfg = json.loads(guardrail_json.read_text(encoding="utf-8"))
+            configured = cfg.get("regenerable_suffixes")
+            if (isinstance(configured, list) and configured
+                    and all(isinstance(s, str) for s in configured)):
+                return set(configured)
+        except (OSError, ValueError):
+            pass
+    return set(DEFAULT_REGENERABLE_SUFFIXES)
+
+
+def get_regenerable_paths(repo_root: Path) -> set[str]:
+    """Path prefixes whose contents are always treated as regenerable
+    (see get_regenerable_suffixes' docstring for the same "already
+    consistent, just not wired up" note). Falls back to
+    DEFAULT_REGENERABLE_PATHS if absent/malformed."""
+    guardrail_json = repo_root / ".guardrail.json"
+    if guardrail_json.exists():
+        try:
+            cfg = json.loads(guardrail_json.read_text(encoding="utf-8"))
+            configured = cfg.get("regenerable_paths")
+            if (isinstance(configured, list) and configured
+                    and all(isinstance(p, str) for p in configured)):
+                return set(configured)
+        except (OSError, ValueError):
+            pass
+    return set(DEFAULT_REGENERABLE_PATHS)
+
+
+# Real bug found 2026-09-06 (guardrail fit investigation): unlike
+# regenerable_suffixes/paths above, this one WAS drifted --
+# Config.DEFAULTS["placement_rules"] used a simpler shape (prefix ->
+# set of allowed extensions, no message) than validate_pre_commit.py's
+# own PLACEMENT_RULES (prefix -> {"allowed": ..., "message": ...}), AND
+# was missing the "src/" entry entirely -- so lawkeeper's own src/
+# layout had no placement rule in Config's version, only in
+# validate_pre_commit.py's separate hardcoded copy. This is the real,
+# richer shape (with messages); Config.DEFAULTS was corrected to add
+# "src/" and use the same simple extension-list shape a project would
+# actually write in `.guardrail.json` (get_placement_rules below expands
+# a configured extension list into this richer shape automatically).
+DEFAULT_PLACEMENT_RULES = {
+    "backend/": {
+        "allowed": {".py"},
+        "message": "backend/ root must contain ONLY core source modules (.py)",
+    },
+    "src/": {
+        "allowed": {".py"},
+        "message": "src/ root must contain ONLY package source modules (.py)",
+    },
+    "tests/": {
+        "allowed": {".py"},
+        "message": "tests/ must contain ONLY test files (.py)",
+    },
+    "scripts/": {
+        "allowed": {".py", ".ps1", ".sh", ".bat"},
+        "message": "scripts/ must contain ONLY utility/debug/benchmark scripts",
+    },
+    "docs/": {
+        "allowed": {".md", ".txt", ".docx", ".pdf"},
+        "message": "docs/ must contain ONLY documentation",
+    },
+}
+
+
+def get_placement_rules(repo_root: Path) -> dict:
+    """Path-prefix -> {"allowed": set of extensions, "message": str}
+    placement rules, enforced by validate_pre_commit.py's check_placement().
+
+    `.guardrail.json`'s "placement_rules" uses a simpler shape than this
+    function's return value -- a plain {prefix: [".ext", ...]} mapping,
+    matching what a project would actually want to write (no message
+    authoring required). A configured prefix gets an auto-generated
+    message; falls back to DEFAULT_PLACEMENT_RULES (with its existing,
+    specific messages) entirely if unconfigured or malformed -- a partial
+    override isn't supported, same all-or-nothing fallback philosophy as
+    get_governance_files() etc.
+    """
+    guardrail_json = repo_root / ".guardrail.json"
+    if guardrail_json.exists():
+        try:
+            cfg = json.loads(guardrail_json.read_text(encoding="utf-8"))
+            configured = cfg.get("placement_rules")
+            if isinstance(configured, dict) and configured:
+                rules = {}
+                for prefix, exts in configured.items():
+                    if not (isinstance(prefix, str) and isinstance(exts, list)
+                            and exts and all(isinstance(e, str) for e in exts)):
+                        rules = None
+                        break
+                    rules[prefix] = {
+                        "allowed": set(exts),
+                        "message": f"{prefix} must contain ONLY {', '.join(sorted(exts))} files",
+                    }
+                if rules:
+                    return rules
+        except (OSError, ValueError):
+            pass
+    return {k: {"allowed": set(v["allowed"]), "message": v["message"]}
+            for k, v in DEFAULT_PLACEMENT_RULES.items()}
+
+
 def get_oversized_allowlist(repo_root: Path) -> set[str]:
     """Files allowed to exceed the module-size check without failing.
 
