@@ -2,14 +2,20 @@ test_id: test_orphan_scan
 theory: >
   orphan_scan.py is a real, mechanical Law 21 detector ("a capability
   with no consumer is a bug, not neutral"): a single-pass repo scanner
-  that flags scripts under scripts/tools with zero real cross-
-  references and no one-off-task-naming match, as a real, checkable
-  candidate for "built then forgotten." Built after an earlier shell-
-  loop version timed out against a 132-script directory -- the whole
-  point is correctness at real scale, so the tests use a real temporary
-  git repo (real `git init`/`commit`) rather than mocking git, since a
-  mocked git layer wouldn't prove the tool works against real git
-  output shapes.
+  that flags scripts under scripts/tools/auto-discovered src/*/
+  packages with zero real *production* cross-references (production_refs)
+  and no one-off-task-naming match, as a real, checkable candidate for
+  "built then forgotten." Built after an earlier shell-loop version
+  timed out against a 132-script directory -- the whole point is
+  correctness at real scale, so the tests use a real temporary git repo
+  (real `git init`/`commit`) rather than mocking git, since a mocked
+  git layer wouldn't prove the tool works against real git output
+  shapes. Extended 2026-09-05 from a cross-repo report (Falcun ported
+  this scanner and found two real gaps against its own codebase): package
+  directories are now in scope (were invisible before), and a module
+  referenced only by its own test file or docs now correctly reads as
+  unreferenced (production_refs) instead of "referenced" (the older,
+  still-tracked external_refs).
 oracle:
   type: reference
   independence: independent
@@ -17,28 +23,44 @@ oracle:
     Each test builds a real, minimal git repo with known, hand-placed
     content (a script that IS referenced elsewhere, one that genuinely
     isn't, one with a one-off-pattern name, one whose own docstring
-    repeats its own filename) and asserts the scanner's real output
+    repeats its own filename, a src/*/ package module referenced only
+    by its own test file, a dynamically-loaded plugin module, a
+    template/ scaffolding file) and asserts the scanner's real output
     against what a human reading that same repo would conclude --
     independent of the scanner's internal implementation.
-acceptance: "a script genuinely referenced elsewhere is not flagged; a genuinely unreferenced, non-one-off-named script is flagged with an accurate commit count; a one-off-task-named script is never flagged regardless of reference count; a script's own docstring repeating its own filename does not count as an external reference to itself; a repo with no scripts/tools directory returns an empty result rather than erroring."
+acceptance: "a script genuinely referenced elsewhere is not flagged; a genuinely unreferenced, non-one-off-named script is flagged with an accurate commit count; a one-off-task-named script is never flagged regardless of reference count; a script's own docstring repeating its own filename does not count as an external reference to itself; a repo with no scripts/tools/src-package directory returns an empty result rather than erroring; a module under an auto-discovered src/*/ package is scanned as a candidate; a module under a template/ or template_extras/ directory is excluded from candidates entirely; a module referenced only by its own test file and/or docs shows external_refs > 0 but production_refs == 0 and is flagged; a dynamically-loaded module (pkgutil-discovered, never imported by literal name) shows production_refs == 0, matching the documented blind spot rather than being silently resolved."
 blind_spot: >
   Basename substring matching is a real heuristic, not a guarantee --
-  documented explicitly in the module's own docstring. Two real false-
-  positive classes are known and were hit live during the actual round-
-  up this tool was built for: a recently-built CLI entry point invoked
-  directly by hand (not imported) will correctly show zero cross-
-  references and get flagged despite being actively used, and an
-  MCP-registered tool (referenced via config, not a Python import) can
-  false-positive the same way. Every flagged result is a candidate to
-  check, not a proven conclusion -- the round-up document this tool
-  produced data for treats its output that way explicitly.
+  documented explicitly in the module's own docstring. Known false-
+  positive classes, each confirmed live rather than hypothesized: a
+  recently-built CLI entry point invoked directly by hand (not
+  imported) will correctly show zero production references and get
+  flagged despite being actively used (confirmed live in this repo:
+  scripts/memory_query.py, real production_refs == 0, all 6 real
+  mentions are doc-only); an MCP-registered tool (referenced via
+  config, not a Python import) can false-positive the same way; and a
+  module discovered dynamically at runtime via pkgutil.iter_modules
+  rather than imported by literal name will also false-positive --
+  confirmed live in this repo, all 7 of src/guardrail/laws/law_*.py
+  show production_refs == 0 despite being real, wired-in code
+  (src/guardrail/core/registry.py's load_law_classes() discovers them
+  by package iteration, never by literal import). None of these three
+  classes are special-cased away -- doing so would hide a real category
+  a human should see and confirm. Every flagged result is a candidate
+  to check, not a proven conclusion -- the round-up document this tool
+  produced data for treats its output that way explicitly, and the
+  live law_*.py / memory_query.py results above are exactly that kind
+  of candidate, already checked and explained, not bugs.
 trust_level: T2
 adversarial_review: none
 failure_meaning:
-  failed: a real regression in reference counting, one-off pattern matching, or self-reference subtraction
+  failed: a real regression in reference counting, one-off pattern matching, self-reference subtraction, package-dir discovery, scaffolding-dir exclusion, or test-shaped-path exclusion from the production haystack
   crash: git itself unavailable, or a real change to git's output format this parser doesn't handle
-  pass: reference counting and one-off exclusion behave correctly against real git repo data
+  pass: reference counting, one-off exclusion, package discovery, and production-vs-external reference distinction all behave correctly against real git repo data
 debug:
   - a failure in test_referenced_script_is_not_flagged or test_genuinely_unreferenced_non_one_off_script_is_flagged means the core reference-counting logic broke -- this is the tool's whole purpose, treat as high severity
   - a failure in test_self_reference_in_own_docstring_does_not_count_as_external means the self-reference subtraction broke -- would cause every real script to false-negative (nothing would ever get flagged) since haystack.count() always includes the file's own text
   - a failure in test_one_off_named_script_not_flagged_even_with_zero_refs means the naming-pattern exclusion list regressed -- would cause a flood of false positives against Windwright's dozens of legitimate one-off experiment scripts
+  - a failure in test_package_dir_under_src_is_auto_discovered_and_scanned means src/*/ packages silently dropped out of scope again -- the exact cross-repo gap this update fixed
+  - a failure in test_scaffolding_template_dir_is_excluded_from_candidates means every file under a template/ or template_extras/ tree would flood the orphan list with false positives
+  - a failure in test_production_refs_excludes_test_only_and_doc_only_mentions means the production/external distinction broke -- the exact cross-repo gap (Falcun's zotero_bridge.py case) this update fixed, and flagging would silently fall back to hiding test-only-referenced orphans again
