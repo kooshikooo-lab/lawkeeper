@@ -154,6 +154,11 @@ def run_mutation(test_file: str, card: dict, as_json: bool) -> int:
     mid-run, the only residue is a tracked file left modified — visible via
     ``git diff`` and reversible via ``git checkout``. No state is mutated in the
     running process.
+
+    Verifies the test passes on the REAL, unmutated code FIRST (found missing
+    2026-09-06, relayed cross-repo from a Windwright mutation-testing pass that
+    hit the identical gap): without this, a test that is simply broken already
+    fails under the "mutation" too, and gets scored as if it discriminated.
     """
     mutation = card.get("mutation")
     if not mutation:
@@ -183,6 +188,34 @@ def run_mutation(test_file: str, card: dict, as_json: bool) -> int:
         print(f"MUTATION CHECK: could not find `{attr} = ...` in {target}", file=sys.stderr)
         return 1
 
+    # Real bug found 2026-09-06 (relayed cross-repo: a Windwright session's
+    # mutation-testing pass found the same failure shape independently --
+    # a "98.4% kill rate" that turned out to be a broken baseline test
+    # failing on unmutated code too, so every "kill" was that same
+    # pre-existing failure, not real discrimination). This function had
+    # the identical gap: it ran pytest against the MUTATED code and
+    # reported "discriminates: True" whenever that run failed, without
+    # ever checking the test passes on the REAL, unmutated code first --
+    # a test that is simply broken (or the mutation target already
+    # nonfunctional) would report a false T4 pass, indistinguishable from
+    # genuine discrimination. Verify the baseline first; refuse to claim
+    # T4 either way if it doesn't hold.
+    baseline_cmd = [sys.executable, "-m", "pytest", "-q", "--tb=line", test_file]
+    baseline = subprocess.run(baseline_cmd, cwd=ROOT, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace")
+    if baseline.returncode != 0:
+        print(
+            f"MUTATION CHECK: {test_file} does not pass on the REAL (unmutated) "
+            f"code -- refusing to run the mutation. A kill rate computed from a "
+            f"test that already fails is not evidence of discrimination, it's "
+            f"the same pre-existing failure. Fix the test/target first.",
+            file=sys.stderr,
+        )
+        if as_json:
+            print(json.dumps({"test_id": card["test_id"], "discriminates": None,
+                              "baseline_passed": False, "mutation": mutation}, indent=2))
+        return 1
+
     try:
         path.write_text(mutated, encoding="utf-8")
         cmd = [sys.executable, "-m", "pytest", "-q", "--tb=line", test_file]
@@ -197,13 +230,13 @@ def run_mutation(test_file: str, card: dict, as_json: bool) -> int:
               file=sys.stderr)
         if as_json:
             print(json.dumps({"test_id": card["test_id"], "discriminates": False,
-                              "mutation": mutation}, indent=2))
+                              "baseline_passed": True, "mutation": mutation}, indent=2))
         return 1
     print(f"MUTATION CHECK PASSED: {test_file} FAILS when {target}:{attr} is mutated "
           f"to {new_value}. The test discriminates.")
     if as_json:
         print(json.dumps({"test_id": card["test_id"], "discriminates": True,
-                          "mutation": mutation}, indent=2))
+                          "baseline_passed": True, "mutation": mutation}, indent=2))
     return 0
 
 
