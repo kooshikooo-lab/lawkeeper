@@ -89,6 +89,72 @@ class TestHardlineBranchDelete:
         assert risk.level == "hardline"
 
 
+# ── refspec forms Copilot's review found this scanner missing (PR #19) ──
+
+class TestRefspecFormsCopilotFound:
+    """A prior version stripped only the leading +/: character and
+    compared the ENTIRE remainder against is_canonical(), which only
+    recognizes bare branch names -- so "+main:main" became the literal
+    string "main:main" (never matches "main"), and ":refs/heads/main"
+    became "refs/heads/main" (also never matches). Both silently let a
+    canonical-branch force-update/delete through. Found by GitHub
+    Copilot's review of this PR, not caught by the original test suite."""
+
+    def test_src_colon_dst_refspec_with_leading_force_marker(self):
+        risk = gate.inspect_command("git push origin +main:main")
+        assert risk is not None
+        assert risk.level == "hardline"
+        assert risk.branch == "main"
+
+    def test_fully_qualified_delete_refspec(self):
+        risk = gate.inspect_command("git push origin :refs/heads/main")
+        assert risk is not None
+        assert risk.level == "hardline"
+        assert risk.branch == "main"
+
+    def test_src_colon_dst_refspec_with_explicit_force_flag(self):
+        risk = gate.inspect_command("git push --force origin HEAD:main")
+        assert risk is not None
+        assert risk.level == "hardline"
+        assert risk.branch == "main"
+
+    def test_src_colon_dst_to_a_non_canonical_dst_is_not_flagged(self):
+        # The destination, not the source, is what lands on the remote --
+        # pushing local main to a remote feature branch is not the same
+        # danger as the reverse.
+        assert gate.inspect_command("git push --force origin main:opencode/mesh-repair/laptop") is None
+
+    def test_fully_qualified_branch_delete(self):
+        risk = gate.inspect_command("git branch -D refs/heads/main")
+        assert risk is not None
+        assert risk.level == "hardline"
+        assert risk.branch == "main"
+
+    def test_variable_embedded_mid_token_after_refspec_normalization(self):
+        # "refs/heads/$BRANCH" only exposes the variable once the
+        # refs/heads/ prefix is stripped -- the raw token doesn't start
+        # with "$" at all.
+        risk = gate.inspect_command("git push --force origin refs/heads/$BRANCH")
+        assert risk is not None
+        assert risk.level == "ask"
+
+    def test_variable_embedded_after_a_literal_prefix_is_still_caught(self):
+        # A variable that never reaches the start of the token even
+        # after normalization (e.g. interpolated into a longer name).
+        risk = gate.inspect_command("git push --force origin +HEAD:pre-$SUFFIX")
+        assert risk is not None
+        assert risk.level == "ask"
+
+    def test_hardline_outranks_ask_across_multiple_targets_in_one_command(self):
+        # A command with two refspecs -- one unresolvable, one a
+        # confirmed canonical match -- must still deny, not ask, even
+        # though the unresolvable one could be scanned first.
+        risk = gate.inspect_command("git push --force origin $UNKNOWN main")
+        assert risk is not None
+        assert risk.level == "hardline"
+        assert risk.branch == "main"
+
+
 # ── --dry-run: git's own no-mutation guarantee, never flagged ───────────
 
 class TestDryRunNeverFlagged:

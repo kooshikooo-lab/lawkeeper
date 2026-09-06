@@ -48,6 +48,20 @@ blind_spot: >
   at all. This is a defense-in-depth layer, not a sandbox -- the same
   caveat given when this build was proposed, not discovered after the
   fact.
+
+  One real gap in this category was actually found and fixed, not just
+  anticipated: GitHub Copilot's review of PR #19 caught that the
+  original refspec handling stripped only a leading +/: character and
+  compared the ENTIRE remainder against is_canonical() -- so
+  "+main:main" became the literal string "main:main" (never matches
+  "main") and ":refs/heads/main" became "refs/heads/main" (also never
+  matches a bare name), silently letting a canonical-branch force-
+  update/delete through undetected. Fixed via proper <src>:<dst>
+  splitting and refs/heads/ normalization (_parse_push_refspec,
+  _normalize_ref); TestRefspecFormsCopilotFound exercises the exact
+  forms Copilot named. Recorded here as a concrete instance of "found
+  after review, not caught by the original test suite" -- proof the
+  category above is real, not just a hedge.
 trust_level: T2
 adversarial_review: none
 failure_meaning:
@@ -60,3 +74,4 @@ debug:
   - a failure in TestHardlineOverride means the pre-set override either leaked into cases it shouldn't (a different branch, or the ask tier) or stopped working for the one case it should (an exact branch-name match) -- re-read _overridden's exact-match logic
   - a failure in TestMainStdinStdoutContract means the actual wire contract with Claude Code broke -- re-verify against code.claude.com/docs/en/hooks directly, don't assume the schema is unchanged
   - a failure in TestDryRunNeverFlagged means either a real dry-run push is being wrongly blocked again (the exact false positive found live during this hook's own first real end-to-end test) or, more seriously, the exemption has widened into an actual bypass -- re-check that a real push chained after a dry-run one (test_dry_run_does_not_exempt_a_chained_real_push) and git branch -D (test_dry_run_does_not_exempt_branch_delete) still get caught
+  - a failure in TestRefspecFormsCopilotFound means the <src>:<dst> split or refs/heads/ normalization broke -- this is the exact class of gap a real reviewer (not this repo's own test suite) found in the first version, so treat a regression here as high severity, not a minor parsing nit
