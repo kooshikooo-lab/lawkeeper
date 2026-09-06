@@ -119,7 +119,50 @@ def _basename(tok: str) -> str:
 
 
 def _looks_unresolvable(tok: str) -> bool:
-    return tok.startswith("$") or "`" in tok or "$(" in tok
+    # `in`, not `startswith`: a variable can end up embedded mid-token
+    # after refspec normalization (e.g. "refs/heads/$BRANCH" strips down
+    # to "$BRANCH", but "+HEAD:pre-$BRANCH" strips down to "pre-$BRANCH",
+    # which never starts with "$"). Copilot review, PR #19.
+    return "$" in tok or "`" in tok
+
+
+def _normalize_ref(name: str) -> str:
+    """Strip a `refs/heads/` prefix so a fully-qualified ref compares
+    correctly against guard_branch.is_canonical()'s bare-name check.
+    Copilot review, PR #19: `git push origin :refs/heads/main` (delete)
+    and `git branch -D refs/heads/main` are both real, valid git
+    invocations this scanner previously never normalized, silently
+    missing a canonical-branch match spelled out fully-qualified."""
+    prefix = "refs/heads/"
+    return name[len(prefix):] if name.startswith(prefix) else name
+
+
+def _parse_push_refspec(token: str) -> tuple[str | None, bool]:
+    """Parse one `git push` positional as a refspec.
+
+    Returns (destination_branch_or_None, is_force_or_delete_marked).
+    Handles the general push refspec grammar this scanner previously
+    missed (Copilot review, PR #19): an optional leading `+` (force),
+    an optional `<src>:<dst>` split where the DESTINATION -- not the
+    whole token -- is what actually gets updated/deleted on the
+    remote (`+main:main` naively became the literal string
+    `"main:main"`, which never matches a bare branch name), and a
+    `refs/heads/<name>` destination normalized so it compares
+    correctly. A bare token with neither marker is returned as its own
+    target with no marker of its own -- force/delete then comes from
+    the command's own --force/--delete flags, checked by the caller.
+    """
+    forced = token.startswith("+")
+    rest = token[1:] if forced else token
+    if ":" in rest:
+        src, _, dst = rest.partition(":")
+        target = dst
+        is_delete = src == ""
+    else:
+        target = rest
+        is_delete = False
+    target = _normalize_ref(target)
+    return (target or None), (forced or is_delete)
 
 
 def _current_branch() -> str | None:
@@ -145,63 +188,74 @@ def _inspect_git_push(args: list[str]) -> Risk | None:
     if any(a in _DRY_RUN_FLAGS for a in args):
         return None
 
-    force = any(a in _FORCE_FLAGS for a in args)
-    delete = any(a in _DELETE_FLAGS_PUSH for a in args)
+    cmd_force = any(a in _FORCE_FLAGS for a in args)
+    cmd_delete = any(a in _DELETE_FLAGS_PUSH for a in args)
     positionals = [a for a in args if not a.startswith("-")]
-    refspec_marked = [p for p in positionals if p.startswith(":") or p.startswith("+")]
 
-    if not (force or delete or refspec_marked):
+    # Every positional is parsed as a potential refspec uniformly --
+    # not just ones with a leading +/: marker (Copilot review, PR #19:
+    # a bare "HEAD:main" or "origin" is still parsed correctly this
+    # way; checking a harmless extra candidate like the remote name
+    # itself costs nothing, since it will essentially never coincide
+    # with a canonical branch name).
+    parsed = [_parse_push_refspec(p) for p in positionals]
+    any_risky_shape = cmd_force or cmd_delete or any(marked for _, marked in parsed)
+    if not any_risky_shape:
         return None  # an ordinary push -- not a dangerous shape at all
 
-    # Candidate branch names this push could be targeting.
-    candidates: list[str | None] = [p[1:] for p in refspec_marked]
-    plain = [p for p in positionals if p not in refspec_marked]
-    if len(plain) >= 2:
-        # `git push <remote> <refspec> [<refspec> ...]` -- first plain
-        # positional is conventionally the remote, the rest are refspecs.
-        candidates.extend(plain[1:])
-    elif not candidates:
+    targets = [t for t, _ in parsed if t]
+    if not targets:
         # No resolvable refspec at all (`git push --force`, or
         # `git push --force origin` with no explicit branch) -- pushes/
         # deletes whatever the current branch is under the remote's
         # config. Can't be fully certain from static text, but ignoring
         # it would silently miss the plainest form of `git push -f`.
-        candidates.append(None)
-
-    for c in candidates:
-        if c is None:
-            if any(_looks_unresolvable(p) for p in positionals):
-                return Risk("ask", None,
-                            "a force/delete push with an unresolvable (shell variable/substitution) target")
-            branch = _current_branch()
-            if branch is None:
-                return Risk("ask", None,
-                             "a force/delete push with no explicit branch, and the current branch "
-                             "could not be resolved")
-            if guard_branch.is_canonical(branch):
-                return Risk("hardline", branch,
-                             f"a force/delete push with no explicit refspec, on canonical branch '{branch}'")
-            continue
-        if _looks_unresolvable(c):
+        if any(_looks_unresolvable(p) for p in positionals):
             return Risk("ask", None,
-                         f"a force/delete push whose target '{c}' could not be resolved "
+                        "a force/delete push with no explicit branch and an unresolvable "
+                        "(shell variable/substitution) component")
+        branch = _current_branch()
+        if branch is None:
+            return Risk("ask", None,
+                         "a force/delete push with no explicit branch, and the current branch "
+                         "could not be resolved")
+        if guard_branch.is_canonical(branch):
+            return Risk("hardline", branch,
+                         f"a force/delete push with no explicit refspec, on canonical branch '{branch}'")
+        return None
+
+    # Hardline outranks ask (deny > ask, per the hook-mechanisms survey):
+    # scan every target for a confirmed canonical match FIRST, across
+    # the whole command, before falling back to ask for an unresolvable
+    # one -- a command with both an unresolvable target and a
+    # separately-confirmed canonical target must still deny, not ask.
+    for target in targets:
+        if not _looks_unresolvable(target) and guard_branch.is_canonical(target):
+            return Risk("hardline", target, f"a force/delete push targeting canonical branch '{target}'")
+    for target in targets:
+        if _looks_unresolvable(target):
+            return Risk("ask", None,
+                         f"a force/delete push whose target '{target}' could not be resolved "
                          "(shell variable/substitution)")
-        if guard_branch.is_canonical(c):
-            return Risk("hardline", c, f"a force/delete push targeting canonical branch '{c}'")
     return None
 
 
 def _inspect_git_branch(args: list[str]) -> Risk | None:
     if not any(a in _DELETE_FLAGS_BRANCH for a in args):
         return None
-    positionals = [a for a in args if not a.startswith("-")]
-    for p in positionals:
-        if _looks_unresolvable(p):
+    # Same refs/heads/ normalization as the push path (Copilot review,
+    # PR #19): `git branch -D refs/heads/main` is a real, valid git
+    # invocation, and without this it never matched a bare canonical name.
+    targets = [_normalize_ref(p) for p in (a for a in args if not a.startswith("-"))]
+    # Hardline outranks ask, same reasoning as _inspect_git_push.
+    for target in targets:
+        if not _looks_unresolvable(target) and guard_branch.is_canonical(target):
+            return Risk("hardline", target, f"a branch delete targeting canonical branch '{target}'")
+    for target in targets:
+        if _looks_unresolvable(target):
             return Risk("ask", None,
-                         f"a branch delete whose target '{p}' could not be resolved "
+                         f"a branch delete whose target '{target}' could not be resolved "
                          "(shell variable/substitution)")
-        if guard_branch.is_canonical(p):
-            return Risk("hardline", p, f"a branch delete targeting canonical branch '{p}'")
     return None
 
 
