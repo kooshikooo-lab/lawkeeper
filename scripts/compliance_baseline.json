@@ -31,13 +31,6 @@
       ]
     ],
     [
-      "scripts/guard_governance.py",
-      "module_mutable",
-      [
-        "GOVERNANCE_FILES L19"
-      ]
-    ],
-    [
       "scripts/hardware_scanner/scanner.py",
       "module_mutable",
       [
@@ -49,6 +42,13 @@
       "module_mutable",
       [
         "REPOS L80"
+      ]
+    ],
+    [
+      "scripts/scan_config.py",
+      "module_mutable",
+      [
+        "DEFAULT_GOVERNANCE_FILES L64"
       ]
     ],
     [
@@ -81,8 +81,8 @@
       "scripts/validate_commit_msg.py",
       "module_mutable",
       [
-        "GOVERNANCE_FILES L24",
-        "PROVISIONAL_KEYWORDS L35"
+        "DEFAULT_GOVERNANCE_FILES L38",
+        "PROVISIONAL_KEYWORDS L48"
       ]
     ],
     [
@@ -150,10 +150,10 @@
       ]
     ],
     [
-      "src/guardrail/template/scripts/guard_governance.py",
+      "src/guardrail/template/scripts/scan_config.py",
       "module_mutable",
       [
-        "GOVERNANCE_FILES L19"
+        "DEFAULT_GOVERNANCE_FILES L64"
       ]
     ],
     [
@@ -179,8 +179,8 @@
       "src/guardrail/template/scripts/validate_commit_msg.py",
       "module_mutable",
       [
-        "GOVERNANCE_FILES L24",
-        "PROVISIONAL_KEYWORDS L35"
+        "DEFAULT_GOVERNANCE_FILES L38",
+        "PROVISIONAL_KEYWORDS L48"
       ]
     ],
     [

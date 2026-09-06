@@ -44,13 +44,18 @@ DEFAULTS: dict = {
         ".png", ".jpg", ".jpeg", ".svg",
     ],
     "regenerable_paths": ["test_output/", "designs/", "chat-logs/", "wiki/"],
+    # Corrected 2026-09-06 (guardrail fit investigation): dropped
+    # "docs/REMINDERS.md" -- doesn't exist in this repo, was protecting
+    # nothing. This list, scripts/scan_config.py's DEFAULT_GOVERNANCE_FILES,
+    # and scripts/validate_commit_msg.py's DEFAULT_GOVERNANCE_FILES must
+    # all agree -- verified against what actually exists on disk, not
+    # copied from any of the three previously-disagreeing versions.
     "governance_files": [
         "docs/AI_CONSTITUTION.md",
         "docs/CONSTRAINTS_AND_PREFERENCES.md",
         "docs/COMPLIANCE_CHECK.md",
         "docs/ARCHITECTURE_DECISIONS.md",
         "docs/AI_FAILURE_PATTERNS.md",
-        "docs/REMINDERS.md",
         "docs/TEST_THEORY.md",
         "AGENTS.md",
     ],

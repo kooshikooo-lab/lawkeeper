@@ -21,14 +21,27 @@ import subprocess
 import sys
 from pathlib import Path
 
-GOVERNANCE_FILES = [
-    "docs/CONSTRAINTS_AND_PREFERENCES.md",
+# Corrected 2026-09-06 (guardrail fit investigation) -- this list used to
+# hardcode docs/ARCHITECTURE_CHECKLIST.md and docs/REMINDERS.md, neither of
+# which exists in this repo (protecting nothing), while leaving
+# docs/TEST_THEORY.md -- a real, existing, Law-18-critical file -- entirely
+# unprotected. Also disagreed with guard_governance.py's own separate list
+# (1 file) and guardrail.config.Config.DEFAULTS's (a third, slightly
+# different 8) -- three independently-drifting copies of "what's
+# protected." Verified against what actually exists on disk before fixing,
+# not copied from any of the three stale versions. Duplicated (not
+# imported from scripts/scan_config.py) on purpose, same judgment as
+# load_human_facing_patterns() below: this file is invoked directly by a
+# git hook and must not depend on cross-script imports working from an
+# arbitrary cwd. Configurable via .guardrail.json's "governance_files" for
+# a project that needs a different set -- see load_governance_files().
+DEFAULT_GOVERNANCE_FILES = [
     "docs/AI_CONSTITUTION.md",
-    "docs/REMINDERS.md",
-    "docs/ARCHITECTURE_DECISIONS.md",
-    "docs/ARCHITECTURE_CHECKLIST.md",
+    "docs/CONSTRAINTS_AND_PREFERENCES.md",
     "docs/COMPLIANCE_CHECK.md",
+    "docs/ARCHITECTURE_DECISIONS.md",
     "docs/AI_FAILURE_PATTERNS.md",
+    "docs/TEST_THEORY.md",
     "AGENTS.md",
 ]
 
@@ -59,7 +72,7 @@ def read_message(message_file):
 
 
 def governance_changed(staged=False):
-    for f in GOVERNANCE_FILES:
+    for f in load_governance_files():
         if staged:
             result = subprocess.run(
                 ["git", "diff", "--cached", "HEAD", "--", f],
@@ -108,6 +121,22 @@ def _repo_root() -> Path:
     )
     root = result.stdout.strip()
     return Path(root) if root else Path(".")
+
+
+def load_governance_files():
+    """Protected file paths, from .guardrail.json's "governance_files" --
+    falls back to DEFAULT_GOVERNANCE_FILES (see its own comment for why
+    those specific files) if absent/empty/unreadable."""
+    try:
+        path = _repo_root() / ".guardrail.json"
+        if path.exists():
+            cfg = json.loads(path.read_text(encoding="utf-8"))
+            configured = cfg.get("governance_files")
+            if configured:
+                return list(configured)
+    except (OSError, ValueError):
+        pass
+    return list(DEFAULT_GOVERNANCE_FILES)
 
 
 def load_human_facing_patterns():
@@ -203,7 +232,7 @@ def main():
             print(
                 f"BLOCKED: a protected governance file was modified without "
                 f"'{GOVERNANCE_MARKER}' in the commit message.\n"
-                f"Protected files: {', '.join(GOVERNANCE_FILES)}\n"
+                f"Protected files: {', '.join(load_governance_files())}\n"
                 f"If the edit is authorized, include '{GOVERNANCE_MARKER}' in the message.",
                 file=sys.stderr,
             )
