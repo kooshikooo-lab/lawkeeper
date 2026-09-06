@@ -20,6 +20,7 @@ validate_commit_msg = load_script("validate_commit_msg.py")
 validate_pre_commit = load_script("validate_pre_commit.py")
 guard_governance = load_script("guard_governance.py")
 compliance_watchdog = load_script("compliance_watchdog.py")
+scan_config = load_script("scan_config.py")
 
 
 # ── compliance_watchdog: the law loader must read the constitution ─────
@@ -296,3 +297,65 @@ class TestGovernanceGuard:
     def test_marker_constant(self):
         assert guard_governance.MARKER == "GOVERNANCE-UPDATE"
         assert "docs/CONSTRAINTS_AND_PREFERENCES.md" in guard_governance.GOVERNANCE_FILES
+
+    def test_uses_the_shared_corrected_list_not_the_old_single_file_list(self):
+        """Real bug found 2026-09-06: this used to hardcode a 1-file list
+        (docs/CONSTRAINTS_AND_PREFERENCES.md only), completely independent
+        of validate_commit_msg.py's own (different, also-stale) 8-file
+        list. Now both read scan_config.get_governance_files() -- this
+        repo's own real .guardrail.json has no override, so both must
+        resolve to the same corrected default."""
+        assert set(guard_governance.GOVERNANCE_FILES) == set(scan_config.DEFAULT_GOVERNANCE_FILES)
+
+
+class TestGovernanceFilesConfig:
+    """Real end-to-end coverage for load_governance_files() and
+    governance_changed(), same discipline as TestHumanFacingGate above:
+    a real git repo, a real .guardrail.json, a real `git diff --cached`."""
+
+    def _init_repo(self, tmp_path, monkeypatch):
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
+        monkeypatch.chdir(tmp_path)
+
+    def test_no_config_means_the_corrected_default_list(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        files = validate_commit_msg.load_governance_files()
+        assert files == validate_commit_msg.DEFAULT_GOVERNANCE_FILES
+        # The two real bugs this fix closes, asserted directly rather than
+        # just diffing lists: the nonexistent file is gone, the real one
+        # that was silently unprotected is now in.
+        assert "docs/ARCHITECTURE_CHECKLIST.md" not in files
+        assert "docs/REMINDERS.md" not in files
+        assert "docs/TEST_THEORY.md" in files
+
+    def test_configured_override_replaces_the_default_list(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"governance_files": ["OWN_RULES.md"]})
+        )
+        assert validate_commit_msg.load_governance_files() == ["OWN_RULES.md"]
+
+    def test_malformed_config_fails_safe_to_the_default_list(self, tmp_path, monkeypatch):
+        self._init_repo(tmp_path, monkeypatch)
+        (tmp_path / ".guardrail.json").write_text("{not valid json")
+        assert validate_commit_msg.load_governance_files() == validate_commit_msg.DEFAULT_GOVERNANCE_FILES
+
+    def test_test_theory_is_now_genuinely_protected(self, tmp_path, monkeypatch):
+        """Adversarial, not just a unit check on the list: stages a real
+        edit to docs/TEST_THEORY.md and confirms governance_changed()
+        actually fires -- the file this whole fix exists to protect must
+        be caught by the real git-diff path, not just present in a list
+        nothing reads."""
+        self._init_repo(tmp_path, monkeypatch)
+        docs = tmp_path / "docs"
+        docs.mkdir()
+        (docs / "TEST_THEORY.md").write_text("original\n")
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=tmp_path, check=True)
+
+        (docs / "TEST_THEORY.md").write_text("edited without authorization\n")
+        subprocess.run(["git", "add", "docs/TEST_THEORY.md"], cwd=tmp_path, check=True)
+
+        assert validate_commit_msg.governance_changed(staged=True) is True

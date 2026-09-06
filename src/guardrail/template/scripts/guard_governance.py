@@ -15,11 +15,30 @@ Exit codes: 0 = OK (no change, or authorized change), 1 = blocked.
 
 import subprocess
 import sys
+from pathlib import Path
 
-GOVERNANCE_FILES = [
-    # The boot sequence + communications protocol live here. Instruction-only.
-    "docs/CONSTRAINTS_AND_PREFERENCES.md",
-]
+REPO_ROOT = Path(subprocess.run(
+    ["git", "rev-parse", "--show-toplevel"],
+    capture_output=True, text=True, encoding="utf-8", errors="replace"
+).stdout.strip() or Path.cwd())
+
+try:
+    from scan_config import get_governance_files  # normal `python scripts/x.py` run
+except ImportError:
+    # Same fallback as compliance_watchdog.py/toolcheck.py: a plain sibling
+    # import only works when Python itself put scripts/ on sys.path.
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from scan_config import get_governance_files
+
+# Real bug found 2026-09-06 (guardrail fit investigation): this guard only
+# ever protected docs/CONSTRAINTS_AND_PREFERENCES.md, while
+# validate_commit_msg.py's own separate hardcoded list protected 8 files
+# (and Config.DEFAULTS a third, slightly different 8) -- three
+# independently-drifting copies of "what's protected." Now reads the same
+# shared, corrected list get_governance_files() resolves (real files on
+# disk, not stale copies) -- see that function's own docstring for the
+# specific drift found.
+GOVERNANCE_FILES = get_governance_files(REPO_ROOT)
 MARKER = "GOVERNANCE-UPDATE"
 
 

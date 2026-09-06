@@ -61,6 +61,47 @@ def get_scan_paths(repo_root: Path) -> list[Path]:
     return paths
 
 
+DEFAULT_GOVERNANCE_FILES = [
+    "docs/AI_CONSTITUTION.md",
+    "docs/CONSTRAINTS_AND_PREFERENCES.md",
+    "docs/COMPLIANCE_CHECK.md",
+    "docs/ARCHITECTURE_DECISIONS.md",
+    "docs/AI_FAILURE_PATTERNS.md",
+    "docs/TEST_THEORY.md",
+    "AGENTS.md",
+]
+
+
+def get_governance_files(repo_root: Path) -> list[str]:
+    """Repo-root-relative paths of protected governance files -- editing
+    one without 'GOVERNANCE-UPDATE' in the commit message is blocked.
+
+    Real bug found 2026-09-06 (guardrail fit investigation): three
+    separate hardcoded copies of this list existed --
+    guard_governance.py (1 file), validate_commit_msg.py (8 files), and
+    guardrail.config.Config.DEFAULTS (8 files) -- and none of them
+    agreed. validate_commit_msg.py's own copy protected
+    docs/ARCHITECTURE_CHECKLIST.md and docs/REMINDERS.md, neither of
+    which exists in this repo (protecting nothing), while leaving
+    docs/TEST_THEORY.md -- a real, existing, Law-18-critical file --
+    completely unprotected. DEFAULT_GOVERNANCE_FILES above is the
+    corrected list, verified against what actually exists on disk, not
+    copied from either stale version. Configurable via
+    `.guardrail.json`'s "governance_files" for a project that needs a
+    different set; falls back to the corrected default otherwise.
+    """
+    guardrail_json = repo_root / ".guardrail.json"
+    if guardrail_json.exists():
+        try:
+            cfg = json.loads(guardrail_json.read_text(encoding="utf-8"))
+            configured = cfg.get("governance_files")
+            if configured:
+                return list(configured)
+        except (OSError, ValueError):
+            pass
+    return list(DEFAULT_GOVERNANCE_FILES)
+
+
 def get_oversized_allowlist(repo_root: Path) -> set[str]:
     """Files allowed to exceed the module-size check without failing.
 
