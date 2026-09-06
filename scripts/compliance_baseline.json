@@ -48,7 +48,10 @@
       "scripts/scan_config.py",
       "module_mutable",
       [
-        "DEFAULT_GOVERNANCE_FILES L64"
+        "DEFAULT_GOVERNANCE_FILES L64",
+        "DEFAULT_REGENERABLE_SUFFIXES L111",
+        "DEFAULT_REGENERABLE_PATHS L116",
+        "DEFAULT_PLACEMENT_RULES L170"
       ]
     ],
     [
@@ -103,11 +106,8 @@
       "scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L36",
-        "PLACEMENT_TREE_ALLOWLIST L66",
-        "REGENERABLE_SUFFIXES L71",
-        "REGENERABLE_PATHS L76",
-        "PLACEMENT_ALLOWLIST L133"
+        "PLACEMENT_TREE_ALLOWLIST L60",
+        "PLACEMENT_ALLOWLIST L128"
       ]
     ],
     [
@@ -153,7 +153,10 @@
       "src/guardrail/template/scripts/scan_config.py",
       "module_mutable",
       [
-        "DEFAULT_GOVERNANCE_FILES L64"
+        "DEFAULT_GOVERNANCE_FILES L64",
+        "DEFAULT_REGENERABLE_SUFFIXES L111",
+        "DEFAULT_REGENERABLE_PATHS L116",
+        "DEFAULT_PLACEMENT_RULES L170"
       ]
     ],
     [
@@ -201,11 +204,8 @@
       "src/guardrail/template/scripts/validate_pre_commit.py",
       "module_mutable",
       [
-        "PLACEMENT_RULES L36",
-        "PLACEMENT_TREE_ALLOWLIST L66",
-        "REGENERABLE_SUFFIXES L71",
-        "REGENERABLE_PATHS L76",
-        "PLACEMENT_ALLOWLIST L133"
+        "PLACEMENT_TREE_ALLOWLIST L60",
+        "PLACEMENT_ALLOWLIST L128"
       ]
     ],
     [

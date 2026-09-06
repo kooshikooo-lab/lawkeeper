@@ -32,11 +32,21 @@ DEFAULTS: dict = {
     # as permanent and requiring explicit human approval to ever rename.
     "feature_prefix": "agent/{topic}/{machine}",
     "merge_prefix": "merge/{topic}",
+    # Corrected 2026-09-06 (guardrail fit investigation): was missing
+    # "src/" entirely (lawkeeper's own src-layout had no rule here, only
+    # in validate_pre_commit.py's separate hardcoded copy) and "docs/"
+    # was missing ".docx"/".pdf", also present in that same copy. This
+    # is the simple {prefix: allowed-extensions} shape a project writes
+    # in .guardrail.json; scripts/scan_config.py's
+    # get_placement_rules() expands it into the richer
+    # {"allowed": ..., "message": ...} shape validate_pre_commit.py
+    # actually enforces.
     "placement_rules": {
         "backend/": {".py"},
+        "src/": {".py"},
         "tests/": {".py"},
         "scripts/": {".py", ".ps1", ".sh", ".bat"},
-        "docs/": {".md", ".txt"},
+        "docs/": {".md", ".txt", ".docx", ".pdf"},
     },
     "regenerable_suffixes": [
         ".stl", ".step", ".stp", ".obj", ".ply", ".3mf",

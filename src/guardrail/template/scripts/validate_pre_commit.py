@@ -20,41 +20,35 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 try:
-    from scan_config import get_oversized_allowlist  # normal `python scripts/x.py` run
+    # normal `python scripts/x.py` run
+    from scan_config import (
+        get_oversized_allowlist, get_placement_rules,
+        get_regenerable_suffixes, get_regenerable_paths,
+    )
 except ImportError:
     # Same fallback as compliance_watchdog.py/toolcheck.py: a plain sibling
     # import only works when Python itself put scripts/ on sys.path (running
     # the file directly). tests/test_guard_scripts.py loads this module via
     # importlib.util.spec_from_file_location instead, which does not.
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
-    from scan_config import get_oversized_allowlist
+    from scan_config import (
+        get_oversized_allowlist, get_placement_rules,
+        get_regenerable_suffixes, get_regenerable_paths,
+    )
 
-# These are generic project boundaries; a project's own docs/ARCHITECTURE.md
-# (if it has one) may describe more. Hardcoded, not yet read from
-# .guardrail.json — config.py's Config class intentionally does not
-# duplicate this; see that file's own docstring for why.
-PLACEMENT_RULES = {
-    "backend/": {
-        "allowed": {".py"},
-        "message": "backend/ root must contain ONLY core source modules (.py)",
-    },
-    "src/": {
-        "allowed": {".py"},
-        "message": "src/ root must contain ONLY package source modules (.py)",
-    },
-    "tests/": {
-        "allowed": {".py"},
-        "message": "tests/ must contain ONLY test files (.py)",
-    },
-    "scripts/": {
-        "allowed": {".py", ".ps1", ".sh", ".bat"},
-        "message": "scripts/ must contain ONLY utility/debug/benchmark scripts",
-    },
-    "docs/": {
-        "allowed": {".md", ".txt", ".docx", ".pdf"},
-        "message": "docs/ must contain ONLY documentation",
-    },
-}
+# PLACEMENT_RULES/REGENERABLE_SUFFIXES/REGENERABLE_PATHS used to be
+# hardcoded here, with a comment claiming "config.py's Config class
+# intentionally does not duplicate this" -- false (guardrail fit
+# investigation, 2026-09-06): Config genuinely has placement_rules/
+# regenerable_suffixes/regenerable_paths fields, they were just never
+# read by this file. Now resolved via scan_config.py's
+# get_placement_rules()/get_regenerable_suffixes()/get_regenerable_paths()
+# (same .guardrail.json-with-fallback pattern as get_oversized_allowlist
+# already used here) -- these module-level names are kept as the
+# real-repo defaults for callers that don't pass an explicit root.
+PLACEMENT_RULES = get_placement_rules(REPO_ROOT)
+REGENERABLE_SUFFIXES = get_regenerable_suffixes(REPO_ROOT)
+REGENERABLE_PATHS = get_regenerable_paths(REPO_ROOT)
 
 # Whole subtrees exempted from PLACEMENT_RULES above (unlike
 # PLACEMENT_ALLOWLIST below, which exempts individual files). Needed because
@@ -66,14 +60,6 @@ PLACEMENT_RULES = {
 PLACEMENT_TREE_ALLOWLIST = {
     "src/guardrail/template/",
 }
-
-# Regenerable artifacts that should never be committed.
-REGENERABLE_SUFFIXES = {
-    ".stl", ".step", ".stp", ".obj", ".ply", ".3mf",
-    ".json", ".jsonl", ".dat", ".log", ".txt",
-    ".png", ".jpg", ".jpeg", ".svg",
-}
-REGENERABLE_PATHS = {"test_output/", "designs/", "chat-logs/", "wiki/"}
 
 
 def staged_files():
@@ -107,13 +93,22 @@ def check_utf16(path: Path) -> bool:
         return False
 
 
-def check_regenerable(path: str) -> str | None:
-    """Return violation message if path is a regenerable artifact."""
+def check_regenerable(path: str, root: Path | None = None) -> str | None:
+    """Return violation message if path is a regenerable artifact.
+
+    `root` resolves regenerable_suffixes/regenerable_paths via
+    scan_config.py against that repo's own `.guardrail.json` (same
+    pattern as check_module_size's `root` param) -- defaults to this
+    process's REPO_ROOT so existing callers that only pass `path` keep
+    working unchanged.
+    """
+    suffixes = REGENERABLE_SUFFIXES if root is None else get_regenerable_suffixes(root)
+    paths = REGENERABLE_PATHS if root is None else get_regenerable_paths(root)
     low = path.lower()
-    for suffix in REGENERABLE_SUFFIXES:
+    for suffix in suffixes:
         if low.endswith(suffix):
             # JSON logs/reports under test_output/ or designs/ are always regenerable.
-            for prefix in REGENERABLE_PATHS:
+            for prefix in paths:
                 if path.startswith(prefix):
                     return f"{path}: regenerable artifact in {prefix} (do not commit)"
             # JSON config files in config/ or specific machine-config files are allowed.
@@ -137,13 +132,20 @@ PLACEMENT_ALLOWLIST = {
 }
 
 
-def check_placement(path: str) -> str | None:
-    """Detect violation if path violates directory placement rules."""
+def check_placement(path: str, root: Path | None = None) -> str | None:
+    """Detect violation if path violates directory placement rules.
+
+    `root` resolves placement_rules via scan_config.py against that
+    repo's own `.guardrail.json` (see check_regenerable's matching
+    docstring) -- defaults to this process's REPO_ROOT so existing
+    callers that only pass `path` keep working unchanged.
+    """
     if path in PLACEMENT_ALLOWLIST:
         return None
     if any(path.startswith(tree) for tree in PLACEMENT_TREE_ALLOWLIST):
         return None
-    for prefix, rule in PLACEMENT_RULES.items():
+    rules = PLACEMENT_RULES if root is None else get_placement_rules(root)
+    for prefix, rule in rules.items():
         if path.startswith(prefix):
             suffix = Path(path).suffix.lower()
             if suffix and suffix not in rule["allowed"]:
@@ -288,7 +290,7 @@ def main():
             continue
 
         # 1. Regenerable artifacts
-        msg = check_regenerable(rel)
+        msg = check_regenerable(rel, repo_root)
         if msg:
             errors.append(msg)
 
@@ -297,7 +299,7 @@ def main():
             errors.append(f"{rel}: UTF-16 encoding detected — save as UTF-8")
 
         # 3. Placement
-        msg = check_placement(rel)
+        msg = check_placement(rel, repo_root)
         if msg:
             errors.append(msg)
 

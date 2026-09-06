@@ -286,6 +286,71 @@ class TestPreCommitChecks:
             "192.168." + "1.1"
         )
 
+
+class TestPlacementAndRegenerableConfig:
+    """Real bug found 2026-09-06 (guardrail fit investigation): placement_rules,
+    regenerable_suffixes, and regenerable_paths were all declared, typed,
+    .guardrail.json-configurable Config fields that validate_pre_commit.py
+    never actually read -- it hardcoded its own separate copies, one of
+    them (placement_rules) genuinely drifted from Config's (missing the
+    "src/" entry Config's copy needed for lawkeeper's own layout, and
+    missing ".docx"/".pdf" for docs/). Now resolved via scan_config.py's
+    get_placement_rules()/get_regenerable_suffixes()/get_regenerable_paths(),
+    with an explicit `root` threaded through check_placement()/
+    check_regenerable() the same way check_module_size() already threads
+    one -- these tests exercise that explicit-root path directly, since
+    the default (root=None) path is already covered by
+    TestPreCommitChecks above."""
+
+    def test_config_defaults_had_the_src_gap_now_closed(self, tmp_path):
+        """The real drift this pass fixed: validate_pre_commit.py's own
+        PLACEMENT_RULES already had "src/" and ".docx"/".pdf" for docs/ --
+        it was guardrail.config.Config.DEFAULTS that was missing both,
+        so a project relying on Config's copy (rather than this script's
+        separate hardcoded one) had no rule for its own src/ layout.
+        Checked against Config.load() (DEFAULTS populated, no
+        .guardrail.json override in tmp_path), not validate_pre_commit.py's
+        copy, since that copy was never the buggy side. Bare Config()
+        deliberately not used here -- placement_rules' dataclass default
+        is an empty dict; only .load() populates it from DEFAULTS."""
+        from guardrail.config import Config
+        cfg = Config.load(tmp_path)
+        assert "src/" in cfg.placement_rules
+        assert {".docx", ".pdf"} <= cfg.placement_rules["docs/"]
+
+    def test_configured_placement_rules_override(self, tmp_path):
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"placement_rules": {"notes/": [".md"]}})
+        )
+        assert validate_pre_commit.check_placement("notes/foo.md", tmp_path) is None
+        msg = validate_pre_commit.check_placement("notes/foo.py", tmp_path)
+        assert msg is not None and "notes/" in msg
+        # The default rule (tests/ -> .py only) must NOT still apply --
+        # a configured placement_rules genuinely replaces the default,
+        # same all-or-nothing philosophy as governance_files/merge_prefix.
+        assert validate_pre_commit.check_placement("tests/foo.exe", tmp_path) is None
+
+    def test_malformed_placement_rules_falls_back_to_default(self, tmp_path):
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"placement_rules": {"notes/": "not-a-list"}})
+        )
+        assert validate_pre_commit.check_placement("tests/foo.exe", tmp_path) is not None
+
+    def test_configured_regenerable_suffix_override(self, tmp_path):
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"regenerable_suffixes": [".bak"], "regenerable_paths": ["scratch/"]})
+        )
+        assert validate_pre_commit.check_regenerable("scratch/x.bak", tmp_path) is not None
+        # .stl is the *default* suffix list's entry -- must NOT fire once
+        # a configured list has genuinely replaced it.
+        assert validate_pre_commit.check_regenerable("test_output/x.stl", tmp_path) is None
+
+    def test_malformed_regenerable_config_falls_back_to_default(self, tmp_path):
+        (tmp_path / ".guardrail.json").write_text(
+            json.dumps({"regenerable_suffixes": "not-a-list"})
+        )
+        assert validate_pre_commit.check_regenerable("test_output/x.stl", tmp_path) is not None
+
     # test_speed_of_sound_literal_flagged_outside_canonical removed 2026-09-04
     # along with check_hardcoded_speed_of_sound() itself -- see
     # scripts/validate_pre_commit.py's removal note at that function's old
