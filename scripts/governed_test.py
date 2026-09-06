@@ -188,6 +188,26 @@ def run_mutation(test_file: str, card: dict, as_json: bool) -> int:
         print(f"MUTATION CHECK: could not find `{attr} = ...` in {target}", file=sys.stderr)
         return 1
 
+    # Real bug found 2026-09-06 (CI, not local -- caught by actually running
+    # this in CI before trusting it, not assumed safe because it passed on
+    # one machine): the baseline and mutated runs are two separate pytest
+    # subprocesses hitting the SAME target.py path in quick succession.
+    # Python's bytecode cache (__pycache__/*.pyc) is invalidated by mtime,
+    # not content hash -- on a fast filesystem, both writes can land within
+    # the same mtime tick, so the mutated run's subprocess can silently
+    # import the STALE, pre-mutation bytecode instead of re-compiling the
+    # real, just-written source. Reproduced exactly on CI (Ubuntu): a
+    # genuinely discriminating test was scored "does not discriminate"
+    # because the mutated value was never actually seen. Cleared before
+    # BOTH runs below, not just the mutated one -- the baseline run itself
+    # could just as easily read a stale cache from a PRIOR invocation of
+    # this same function against the same target.
+    def _clear_pycache(module_path: Path) -> None:
+        cache_dir = module_path.parent / "__pycache__"
+        if cache_dir.is_dir():
+            for f in cache_dir.glob(f"{module_path.stem}.*.pyc"):
+                f.unlink(missing_ok=True)
+
     # Real bug found 2026-09-06 (relayed cross-repo: a Windwright session's
     # mutation-testing pass found the same failure shape independently --
     # a "98.4% kill rate" that turned out to be a broken baseline test
@@ -200,6 +220,7 @@ def run_mutation(test_file: str, card: dict, as_json: bool) -> int:
     # nonfunctional) would report a false T4 pass, indistinguishable from
     # genuine discrimination. Verify the baseline first; refuse to claim
     # T4 either way if it doesn't hold.
+    _clear_pycache(path)
     baseline_cmd = [sys.executable, "-m", "pytest", "-q", "--tb=line", test_file]
     baseline = subprocess.run(baseline_cmd, cwd=ROOT, capture_output=True, text=True,
                               encoding="utf-8", errors="replace")
@@ -218,11 +239,13 @@ def run_mutation(test_file: str, card: dict, as_json: bool) -> int:
 
     try:
         path.write_text(mutated, encoding="utf-8")
+        _clear_pycache(path)
         cmd = [sys.executable, "-m", "pytest", "-q", "--tb=line", test_file]
         proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True,
                               encoding="utf-8", errors="replace")
     finally:
         path.write_text(original, encoding="utf-8")
+        _clear_pycache(path)
 
     if proc.returncode == 0:
         print(f"MUTATION CHECK FAILED: {test_file} still PASSES after mutating "
