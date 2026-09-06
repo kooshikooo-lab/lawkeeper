@@ -81,7 +81,7 @@ class TestHardlineBranchDelete:
     def test_delete_feature_branch_is_not_flagged(self):
         assert gate.inspect_command("git branch -D opencode/mesh-repair/laptop") is None
 
-    def test_soft_delete_flag_without_force_delete_not_flagged(self):
+    def test_soft_delete_flag_is_still_treated_as_delete_shape(self):
         # -d (lowercase) on git branch is the safe, merged-only delete;
         # still routed through the same delete-flag set intentionally
         # (git refuses an unmerged -d anyway) but must not crash.
