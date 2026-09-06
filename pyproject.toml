@@ -53,7 +53,19 @@ where = ["src"]
 # template_extras/ (ADR-009): opt-in tools installed only by
 # `lawkeeper init --with-tools` — same packaging requirement as template/
 # above (must live inside the package dir for setuptools/wheel to ship it).
-guardrail = ["template/**/*", "template_extras/**/*"]
+#
+# template/.claude/**/* is listed separately, not folded into the plain
+# template/**/* glob above: Python's glob module silently skips any
+# path component starting with "." during ** traversal (there is no way
+# to opt a wildcard segment into matching dotfiles), so template/**/*
+# alone never descends into template/.claude/ at all -- confirmed by
+# building a real wheel and finding .claude/settings.json missing from
+# it (`python -m zipfile -l dist/*.whl | grep .claude` found nothing)
+# after adding the PreToolUse hook's scaffolding, which is what
+# test_init_smoke.py's real-install tests actually caught. The literal
+# ".claude" path segment in this second pattern is not itself a
+# wildcard match, so the hidden-file skip rule doesn't apply to it.
+guardrail = ["template/**/*", "template/.claude/**/*", "template_extras/**/*"]
 
 [tool.pytest.ini_options]
 # Was an exact-filename allowlist -- switched 2026-08-20 after it silently

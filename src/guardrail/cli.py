@@ -187,6 +187,8 @@ def cmd_init(args: argparse.Namespace) -> int:
         dst_root / "docs" / "AI_CONSTITUTION.md",
         dst_root / "scripts" / "install_hooks.py",
         dst_root / ".guardrail.json",
+        dst_root / "scripts" / "gate_pretooluse.py",
+        dst_root / ".claude" / "settings.json",
     ]
     missing = [str(p) for p in required if not p.exists()]
     if missing or len(written) < 3:
