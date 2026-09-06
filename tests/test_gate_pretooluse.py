@@ -89,6 +89,40 @@ class TestHardlineBranchDelete:
         assert risk.level == "hardline"
 
 
+# ── --dry-run: git's own no-mutation guarantee, never flagged ───────────
+
+class TestDryRunNeverFlagged:
+    """Found live: a real end-to-end test of this hook
+    (`git push --force --dry-run origin main`, run to safely verify the
+    hook without risking a real push) got hardline-denied before this
+    exemption existed. --dry-run structurally cannot mutate the remote,
+    so blocking it was a pure false positive, not extra safety."""
+
+    def test_dry_run_force_push_to_main_is_never_flagged(self):
+        assert gate.inspect_command("git push --force --dry-run origin main") is None
+
+    def test_short_flag_dry_run_force_push_to_main_is_never_flagged(self):
+        assert gate.inspect_command("git push -f -n origin main") is None
+
+    def test_dry_run_delete_refspec_of_main_is_never_flagged(self):
+        assert gate.inspect_command("git push --dry-run origin :main") is None
+
+    def test_dry_run_does_not_exempt_a_chained_real_push(self):
+        """Not a bypass: a real push chained after a dry-run one is still
+        inspected independently, on its own merits."""
+        risk = gate.inspect_command("git push --dry-run origin main && git push --force origin main")
+        assert risk is not None
+        assert risk.level == "hardline"
+
+    def test_dry_run_does_not_exempt_branch_delete(self):
+        """--dry-run only exists as a git-push concept; git branch -D has
+        no equivalent no-mutation flag, so this must not accidentally
+        exempt branch deletion too."""
+        risk = gate.inspect_command("git branch -D --dry-run main")
+        assert risk is not None
+        assert risk.level == "hardline"
+
+
 # ── ask tier -- genuine uncertainty, never silently allowed ─────────────
 
 class TestAskTierAmbiguousTargets:
