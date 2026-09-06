@@ -129,7 +129,22 @@ def _current_branch() -> str | None:
     return None
 
 
+_DRY_RUN_FLAGS = {"-n", "--dry-run"}
+
+
 def _inspect_git_push(args: list[str]) -> Risk | None:
+    # `--dry-run`/`-n` is git's own documented guarantee that this push
+    # computes and reports what would happen without mutating the remote
+    # at all -- it structurally cannot cause the harm this tier exists to
+    # prevent, so flagging it is a pure false positive, not extra safety.
+    # This is not a bypass: a chained real push without the flag
+    # (`git push --dry-run origin main && git push --force origin main`)
+    # is still inspected on its own, independently, by _split_commands.
+    # Found live: a real dry-run test of this exact hook got blocked by
+    # this exact function before this exemption existed.
+    if any(a in _DRY_RUN_FLAGS for a in args):
+        return None
+
     force = any(a in _FORCE_FLAGS for a in args)
     delete = any(a in _DELETE_FLAGS_PUSH for a in args)
     positionals = [a for a in args if not a.startswith("-")]
