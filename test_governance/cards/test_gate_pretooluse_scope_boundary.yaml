@@ -1,0 +1,58 @@
+test_id: test_gate_pretooluse_scope_boundary
+theory: >
+  gate_pretooluse.py's docstring claims a specific SCOPE BOUNDARY: it
+  reads only the literal command string, never the contents of any
+  file that command refers to. This test file makes that claim
+  falsifiable rather than folklore -- methodology deliberately ported
+  (not just the idea) from DimitriGeelen/agentic-engineering-framework's
+  tier0_scope_boundary.bats (Apache-2.0; found via
+  docs/RESEARCH_agent_harness_landscape.md, ported at the user's
+  explicit request 2026-09-11): every "this is NOT flagged" boundary
+  assertion is paired with a positive control proving the harness can
+  observe a flag at all, so an "allowed" result can't be silently
+  confused with "the test harness itself is broken and flags nothing."
+  Also characterizes AEF's real T-1506 incident (a stateful single-use
+  approval file self-defeating under duplicate hook registration) as
+  NOT applicable here -- gate_pretooluse.py has no persistent
+  file-mutating state at all, asserted structurally rather than just
+  claimed.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    Real script files with unambiguously dangerous contents (a literal
+    `git push --force origin main`) are written to a real tmp_path and
+    invoked BY NAME (bash <script>, <script> directly, python3 <script>,
+    a bare function-name token) -- never by inlining the dangerous
+    command itself, which would test the wrong thing. Each is asserted
+    against what a human reading gate_pretooluse.py's own documented
+    boundary would predict: invisible to the hook, independent of the
+    hook's internal implementation. The doc-sync tests grep the hook's
+    own source and the sibling theory card directly for the boundary
+    claim text, not for their meaning as interpreted by this test file.
+acceptance: "a real, typed-inline dangerous command is still hardline-flagged (control); the identical danger hidden inside a script's contents, invoked via bash/direct-execution/another interpreter/a bare function-name token, is NOT flagged in any case (boundary); the hook's own docstring and the sibling test_gate_pretooluse.yaml theory card both still contain the literal boundary-claim text (doc-sync); the module contains no write-mode file I/O anywhere in its source (structural no-state proof); two back-to-back identical invocations -- simulating duplicate hook registration firing twice per call -- always agree with each other, for both hardline and ask verdicts."
+blind_spot: >
+  These tests characterize the CURRENT boundary; they do not evaluate
+  whether the boundary is the right one to have (that's the docstring's
+  and the theory card's job, and the user's, not this file's). The
+  no-write-mode-file-I/O check is a source-text substring scan, not a
+  real static-analysis pass -- a sufficiently obfuscated file-write
+  (e.g. built from a dynamically-constructed string, or via a
+  reassigned alias for `open`) would not be caught by it. Acceptable
+  for now because the module is small, hand-written, and reviewed line
+  by line (PR #19, two real Copilot review rounds already), not because
+  the check itself is airtight -- if gate_pretooluse.py ever grows
+  meaningfully, this check should be upgraded to a real AST scan for
+  Call nodes with a write-mode argument, not left as a substring match
+  presumed to still be sufficient.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: either the scope boundary genuinely widened or narrowed (a real behavior change that must be reflected in the docstring in the same commit) or the documented claim text drifted from what the code/theory card actually say
+  crash: gate_pretooluse.py's inspect_command() signature changed, or REPO_ROOT path resolution broke
+  pass: the hook's actual reach matches what its own docstring and theory card claim, and no file-mutating state has been silently introduced
+debug:
+  - a failure in TestControlsHarnessCanObserveAFlag means the test harness itself is broken -- every BOUNDARY result below becomes meaningless until this is fixed first, treat as blocking, not just high severity
+  - a failure in TestBoundaryScriptContentsAreOpaque (a boundary test starts FAILING, i.e. the hook now DOES catch a wrapped script) means the scope actually widened -- update gate_pretooluse.py's docstring and this file's docstring in the same commit, don't just delete the now-red assertion
+  - a failure in TestDocumentationStatesTheBoundary means the docstring or theory card text was edited without checking this file -- the two are supposed to move together
+  - a failure in TestNoStatefulSideEffects means gate_pretooluse.py gained file-mutating state (most likely: porting AEF's own single-use command-hash approval flow, deliberately deferred per docs/RESEARCH_agent_harness_landscape.md) -- this is expected to eventually happen and is not itself a bug, but it must not land without new duplicate-hook-firing test coverage replacing the guarantee this class currently documents
