@@ -40,12 +40,20 @@ precedents -- Hermes' HARDLINE_PATTERNS, goose's deny-always-wins merge):
   lookup). Genuine uncertainty, not confirmed danger -- routed to a
   human instead of either silently allowed or wrongly hardline-blocked.
 
-Real, known limitations, stated rather than hidden (same heuristic
-status as orphan_scan.py's basename matching, same honesty standard):
-this is word-level shell tokenization (shlex), not a real shell parser.
-Command substitution, indirection through a script/alias/function, or
-obscure quoting can evade it. This is a defense-in-depth layer, not a
-sandbox -- exactly the caveat given when this build was proposed.
+SCOPE BOUNDARY (falsifiable, not folklore -- pinned by
+tests/test_gate_pretooluse_scope_boundary.py, per the same discipline
+found in DimitriGeelen/agentic-engineering-framework's own tier0 gate,
+Apache-2.0, docs/RESEARCH_agent_harness_landscape.md): this hook reads
+only the literal `tool_input.command` string from the PreToolUse JSON.
+It never opens, reads, or inspects the contents of any file that
+command refers to -- so `bash deploy.sh` or `./deploy.sh` is completely
+opaque to this hook no matter what deploy.sh actually does, even if
+deploy.sh's own contents are an unambiguous `git push --force origin
+main`. Word-level shell tokenization (shlex), not a real shell parser:
+command substitution, indirection through a script/alias/function, or
+obscure quoting can also evade it. This is a defense-in-depth layer,
+not a sandbox -- exactly the caveat given when this build was proposed,
+now backed by a characterization test rather than left as prose alone.
 
 Failure handling, deliberately asymmetric:
 - Can't even parse the stdin JSON (this hook is broken) -> fail OPEN
