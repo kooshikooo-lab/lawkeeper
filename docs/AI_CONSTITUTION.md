@@ -9,6 +9,18 @@ the human-facing rules.
 It is protected. A commit touching it MUST contain `GOVERNANCE-UPDATE`.
 A human must approve the change (see Law 16).
 
+## Standing Philosophy — Maximum Flexibility (governing principle, not a numbered Law)
+
+No revenue, no external stakeholders, no reputation staked on any tool or method. Nothing here is permanent by default; effort already spent is not a reason to keep it.
+
+Bias, not authority: grants no permission beyond what this constitution already allows for a given change. Every existing approval gate and audit requirement (Law 14, etc.) still applies. It only removes the assumption that existing infrastructure deserves protection for having been built.
+
+Trigger-based, not scheduled: evaluate an alternative when there's a concrete reason (new evidence, a better option, something not working) — not on a cadence, not by habit.
+
+Does not license re-litigating independently verified findings without new evidence. Settled stays settled.
+
+Surface through normal channels — a doc, a plan, the team channel — not as a repeated live question to the user.
+
 ### Law 1 — Architecture over features
 The project's structure and interfaces are decided first; features conform to
 them. An agent must not invent architecture — it asks ("Law 10: when uncertain,
