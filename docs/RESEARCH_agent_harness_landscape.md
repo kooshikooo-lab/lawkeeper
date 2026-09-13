@@ -363,6 +363,28 @@ directly against lawkeeper's own repo, which this session did check itself.
   "keep things open, it's premature to decide on an integration strategy"
   stance from earlier this session.
 
+- **AEF re-verified as squarely lawkeeper's domain, not Falcun's** (relayed
+  2026-09-13, Falcun re-checked AEF directly against its own README while
+  researching an unrelated Falcun tool, not assumed from the earlier
+  master report): AEF has zero idea-generation/research component — it's
+  pure governance/audit/memory infrastructure (260+ governance checks, a
+  3-layer memory system, git hooks, an MCP server exposing 22
+  capabilities, a Flask dashboard for approvals) with no standalone use;
+  it only does anything wrapped around a real coding agent. Confirms the
+  PreToolUse-gate porting work already done (PR #19) was pointed at the
+  right target.
+
+  **A real, not-yet-pursued candidate, explicitly not urged, the user's
+  call on timing:** rather than adopting more of AEF's design untested,
+  clone it into its own sibling repo (not lawkeeper's own tree — same
+  reasoning as keeping research clones off this repo entirely, see the
+  operating note at the top of this doc) and actually run it — wrap its
+  hooks/dashboard/audit around a real workload, plausibly lawkeeper's own
+  repo since that's the actual governance surface it would gate — before
+  deciding whether to port anything beyond the PreToolUse gate for real.
+  This would be hands-on verification of a live system, not another
+  reading pass.
+
 ## Re-check when
 
 Before any new lawkeeper governance mechanism (a new Law, a new guard
