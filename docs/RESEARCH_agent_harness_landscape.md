@@ -373,3 +373,26 @@ Before treating anything in the "secondary, not independently verified"
 entry above as settled: trace the specific claim to its actual primary
 source (paper DOI/arXiv ID, or the AEF repo directly) rather than citing
 Falcun's report a second time once removed.
+
+## Known tension, deliberately not resolved yet (2026-09-13)
+
+Lawkeeper has a weekly scheduled cloud research routine
+(`trig_01UgJi3thYGyEYQaHFif3CY1`, via claude.ai's own RemoteTrigger
+infrastructure) — the same mechanism Windwright already uses for its own
+weekly routine. This is itself "an external platform for research
+scheduling," which is in real tension with a stated user principle from
+4 days earlier (`E:\falcun\docs\research\RESEARCH_SCHEDULING_INDEPENDENCE_2026-09-09.md`,
+direct quote: "we should not rely on external platforms for research
+scheduling... coding from scratch is surely not necessary"). That
+document found a real, ready alternative already on this machine: Hermes
+(`NousResearch/hermes-agent`, MIT, 243k★) ships a complete, tested,
+self-contained cron/scheduling subsystem requiring no claude.ai
+dependency at all.
+
+**Explicit decision, asked directly:** keep the claude.ai routine for now,
+revisit later — not urgent enough to unwind immediately. Recorded here so
+this doesn't silently become "the architecture" by default, and so a
+future session (or this one) doesn't need to re-discover the tension from
+scratch. Re-check when a self-hosted/local scheduling migration becomes
+an actual priority, not on a fixed cadence, per the Maximum Flexibility
+standing philosophy in `docs/AI_CONSTITUTION.md`.
