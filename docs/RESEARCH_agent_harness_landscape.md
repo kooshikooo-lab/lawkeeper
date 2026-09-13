@@ -385,6 +385,41 @@ directly against lawkeeper's own repo, which this session did check itself.
   This would be hands-on verification of a live system, not another
   reading pass.
 
+- **The candidate above escalated into a real architectural question,
+  now in progress (2026-09-13):** relayed via Falcun, the user pushed
+  back on every piece of AEF research to this point (including this
+  doc's own framing) quietly assuming lawkeeper's own codebase as the
+  base with external pieces cloned in — never seriously testing the
+  inverse: **AEF as the base**, with lawkeeper's actual intellectual
+  content (the 23 laws, the theory-card system's independent-oracle
+  discipline, the T0–T5 trust levels) re-expressed as a layer on top of
+  it, rather than incrementally patched into lawkeeper's own
+  implementation. Explicitly not resolved by either Falcun or this
+  session — a genuine open question, not a settled one.
+
+  **Setup done, evaluation itself deliberately not started tonight:**
+  AEF cloned as its own sibling repo at `G:\repos\agentic-engineering-framework`,
+  pinned to `35aaaaedc1c32269079b32de14aa31a7bebe2a54` (a real pinned
+  commit, not a floating dependency — same discipline as the
+  Windwright→Falcun pattern). Deliberately NOT a lawkeeper branch and
+  NOT vendored into lawkeeper's own tree, for two independent reasons
+  (Falcun's own stated reasoning, agreed): (1) the artifact this
+  evaluation produces — a re-expression of lawkeeper's theory-cards/laws
+  as an AEF task-gate/policy layer — is AEF-shaped content whose natural
+  home is the AEF clone, not an edit to lawkeeper's actual files; (2)
+  this is a speculative, consequential comparison ("should we rebuild on
+  this instead"), and exploratory eval code has no business holding
+  write access to lawkeeper's real governance files while testing
+  something this serious. Whatever does the re-expression work should
+  READ lawkeeper's real theory cards/laws/`governed_test.py` from
+  lawkeeper's own existing checkout, not copy them into the AEF clone.
+
+  **Next session's actual task, not done here:** attempt the
+  re-expression for real — take lawkeeper's real theory-card system and
+  see what it would concretely look like inside AEF's task-gate/policy
+  model, and give an honest account of what's preserved, lost, or
+  gained. Not a reading pass; a real hands-on build-and-compare.
+
 ## Re-check when
 
 Before any new lawkeeper governance mechanism (a new Law, a new guard
