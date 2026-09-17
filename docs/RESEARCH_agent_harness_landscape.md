@@ -279,9 +279,187 @@ New follow-ups this survey surfaced, not yet read, queued here:
   mitigations worth checking against lawkeeper's Law 11/19 team-channel
   protocol, which the survey found has no adversarial framing at all today.
 
+---
+
+## Entry (secondary, not independently verified): Falcun's neurosymbolic/harness-field research burst, relayed 2026-09-13
+
+**Provenance discipline, stated up front per explicit user instruction
+(2026-09-13):** the documents below are Falcun's own internal research
+reports — a secondary synthesis of external papers, not the papers
+themselves, and not independently re-read by lawkeeper. Several earlier
+Devin-authored research reports in the same research trail were later
+found to contain mistakes, subsequently fact-checked and corrected in
+Falcun's own follow-up reports — internal reports, including this one,
+are not canonical and are not a substitute for tracing to the actual
+paper/repo before anything gets built on a specific claim. Everything
+below is written as "Falcun's research claims X, citing primary source
+Y" — not as "X is true" — except where explicitly marked as verified
+directly against lawkeeper's own repo, which this session did check itself.
+
+- **Source:** `E:\falcun\docs\research\MASTER_REPORT_HARNESS_NEUROSYMBOLIC_RELEVANCE_2026-09-09.md`
+  (661 lines, read in full) plus `SEP_7_9_RESEARCH_BURST_MAP_2026-09-10.md`
+  (an index of 10 related documents, cross-referencing and partially
+  independently verifying the master report). Not read: the other 8
+  mapped documents, judged by the burst-map's own account to be either
+  near-duplicates of the master report or Falcun-specific (evolver
+  wiring, governance.py re-grounding) with no lawkeeper relevance.
+
+- **The one claim this session verified directly, not trusted secondhand:**
+  the master report (dated 2026-09-09) states lawkeeper has "No PreToolUse
+  hooks" and "the enforcement surface stops at the git boundary." Checked
+  directly against lawkeeper's own repo just now (2026-09-13): **still
+  accurate for `main`** — `gate_pretooluse.py` exists only on the still-open,
+  unmerged PR #19, confirmed via `git log` against both `main` and the PR
+  branch. Not stale, but worth re-checking again once #19 actually merges.
+
+- **Falcun's claim, not independently re-verified by lawkeeper:** a survey
+  (Mättas, Järv & Tammet, "A survey of neurosymbolic artificial
+  intelligence," Neuro-Symbolic AI journal) is characterized as converging
+  the field on "the LLM is an untrusted generator, and value is created
+  only where a symbolic, deterministic, checkable component verifies,
+  constrains, or gates what it produces." **Worth stating plainly since it
+  corrects a hypothesis raised in this session**: per Falcun's account of
+  this literature, neurosymbolic approaches do not reduce the need for
+  harness/gating machinery — they're characterized as the opposite,
+  strengthening the case for deterministic gates over LLM self-grading,
+  which is the same direction lawkeeper's git hooks and the PreToolUse
+  work already point. Stated here as what Falcun's synthesis claims the
+  survey says, not as a verified fact about the survey itself — lawkeeper
+  has not read paper 933 directly.
+
+- **Falcun's claim, citing a real DOI, not independently re-verified:**
+  ANSA (ICAART 2026, DOI 10.5220/0014442700004052) is characterized as
+  describing "verifier agents enforce hard constraints as final
+  gatekeepers, independent of upstream inference" — glossed by Falcun's
+  report as matching lawkeeper's Law 16. Recorded here as a citation worth
+  tracing directly (the DOI is real and checkable) before treating Law 16
+  as externally validated by it.
+
+- **An external assessment of lawkeeper's own execution reality** (Falcun's
+  report, §7.2, dated 2026-09-09, described as based on a subagent's
+  file:line evidence pass over lawkeeper's own repo): roughly ~30% of the
+  23 laws mechanically enforced (3 full, ~7 partial/existence-check-only,
+  11 prose-only) — **arithmetic flag, not silently corrected (GitHub
+  Copilot's review of PR #21 caught this): 3+7+11 = 21, two laws short of
+  23. This is a relayed, secondhand count from Falcun's report, not this
+  session's own categorization, so the 2 unaccounted-for laws' actual
+  status is unknown here rather than guessable — recorded as a real gap
+  in the relayed figure, not resolved by inventing a number to make it
+  add up.** the theory-card/`governed_test.py` system's independent-
+  oracle discipline treated as a real, comparatively strong asset, and the
+  git-hook-only enforcement boundary as the clearest gap. The ~30%/3-fully-
+  enforced figure is a real, independent corroboration of this session's
+  own much earlier finding (this doc's own history: only 3 of 24 guard
+  scripts wired to git hooks, found via direct `system_audit.py`/hook-file
+  inspection, not from this report) — two separately-run checks landing on
+  the same number is worth noting, but the corroboration is about the
+  *conclusion*, not proof the report's own methodology was sound throughout.
+
+- **AEF pieces still explicitly open, not decided against:** Falcun's
+  report recommends porting AEF's "Tier-0 PreToolUse gate + single-use
+  command approvals + Watchtower + idempotency sentinel + process-ancestry
+  tracking" as one bundle. This session already ported the PreToolUse gate
+  itself (`gate_pretooluse.py`, PR #19) and the scope-boundary
+  characterization methodology, and investigated the idempotency sentinel
+  specifically and found it not applicable (no stateful approval file to
+  race on — see PR #19's own commits). **Not yet ported, still open:**
+  the single-use command-hash approval flow, the Watchtower approval
+  queue/CLI, and process-ancestry-based origin tracking. None decided
+  against — recorded as queued, consistent with the user's explicit
+  "keep things open, it's premature to decide on an integration strategy"
+  stance from earlier this session.
+
+- **AEF re-verified as squarely lawkeeper's domain, not Falcun's** (relayed
+  2026-09-13, Falcun re-checked AEF directly against its own README while
+  researching an unrelated Falcun tool, not assumed from the earlier
+  master report): AEF has zero idea-generation/research component — it's
+  pure governance/audit/memory infrastructure (260+ governance checks, a
+  3-layer memory system, git hooks, an MCP server exposing 22
+  capabilities, a Flask dashboard for approvals) with no standalone use;
+  it only does anything wrapped around a real coding agent. Confirms the
+  PreToolUse-gate porting work already done (PR #19) was pointed at the
+  right target.
+
+  **A real, not-yet-pursued candidate, explicitly not urged, the user's
+  call on timing:** rather than adopting more of AEF's design untested,
+  clone it into its own sibling repo (not lawkeeper's own tree — same
+  reasoning as keeping research clones off this repo entirely, see the
+  operating note at the top of this doc) and actually run it — wrap its
+  hooks/dashboard/audit around a real workload, plausibly lawkeeper's own
+  repo since that's the actual governance surface it would gate — before
+  deciding whether to port anything beyond the PreToolUse gate for real.
+  This would be hands-on verification of a live system, not another
+  reading pass.
+
+- **The candidate above escalated into a real architectural question,
+  now in progress (2026-09-13):** relayed via Falcun, the user pushed
+  back on every piece of AEF research to this point (including this
+  doc's own framing) quietly assuming lawkeeper's own codebase as the
+  base with external pieces cloned in — never seriously testing the
+  inverse: **AEF as the base**, with lawkeeper's actual intellectual
+  content (the 23 laws, the theory-card system's independent-oracle
+  discipline, the T0–T5 trust levels) re-expressed as a layer on top of
+  it, rather than incrementally patched into lawkeeper's own
+  implementation. Explicitly not resolved by either Falcun or this
+  session — a genuine open question, not a settled one.
+
+  **Setup done, evaluation itself deliberately not started tonight:**
+  AEF (source: https://github.com/DimitriGeelen/agentic-engineering-framework,
+  Apache-2.0 — recorded here per GitHub Copilot's review of PR #21: a
+  machine-local path and a commit SHA alone are not a clone source on a
+  different checkout/machine) cloned as its own sibling repo at
+  `G:\repos\agentic-engineering-framework`, pinned to
+  `35aaaaedc1c32269079b32de14aa31a7bebe2a54` (a real pinned commit, not a
+  floating dependency — same discipline as the Windwright→Falcun
+  pattern). Deliberately NOT a lawkeeper branch and
+  NOT vendored into lawkeeper's own tree, for two independent reasons
+  (Falcun's own stated reasoning, agreed): (1) the artifact this
+  evaluation produces — a re-expression of lawkeeper's theory-cards/laws
+  as an AEF task-gate/policy layer — is AEF-shaped content whose natural
+  home is the AEF clone, not an edit to lawkeeper's actual files; (2)
+  this is a speculative, consequential comparison ("should we rebuild on
+  this instead"), and exploratory eval code has no business holding
+  write access to lawkeeper's real governance files while testing
+  something this serious. Whatever does the re-expression work should
+  READ lawkeeper's real theory cards/laws/`governed_test.py` from
+  lawkeeper's own existing checkout, not copy them into the AEF clone.
+
+  **Next session's actual task, not done here:** attempt the
+  re-expression for real — take lawkeeper's real theory-card system and
+  see what it would concretely look like inside AEF's task-gate/policy
+  model, and give an honest account of what's preserved, lost, or
+  gained. Not a reading pass; a real hands-on build-and-compare.
+
 ## Re-check when
 
 Before any new lawkeeper governance mechanism (a new Law, a new guard
 script, anything in `GOVERNANCE_PROPOSALS.md` moving to implementation) is
 designed from scratch — check this doc first, and add an entry here before
 adding a proposal there if the design was informed by outside research.
+Before treating anything in the "secondary, not independently verified"
+entry above as settled: trace the specific claim to its actual primary
+source (paper DOI/arXiv ID, or the AEF repo directly) rather than citing
+Falcun's report a second time once removed.
+
+## Known tension, deliberately not resolved yet (2026-09-13)
+
+Lawkeeper has a weekly scheduled cloud research routine
+(`trig_01UgJi3thYGyEYQaHFif3CY1`, via claude.ai's own RemoteTrigger
+infrastructure) — the same mechanism Windwright already uses for its own
+weekly routine. This is itself "an external platform for research
+scheduling," which is in real tension with a stated user principle from
+4 days earlier (`E:\falcun\docs\research\RESEARCH_SCHEDULING_INDEPENDENCE_2026-09-09.md`,
+direct quote: "we should not rely on external platforms for research
+scheduling... coding from scratch is surely not necessary"). That
+document found a real, ready alternative already on this machine: Hermes
+(`NousResearch/hermes-agent`, MIT, 243k★) ships a complete, tested,
+self-contained cron/scheduling subsystem requiring no claude.ai
+dependency at all.
+
+**Explicit decision, asked directly:** keep the claude.ai routine for now,
+revisit later — not urgent enough to unwind immediately. Recorded here so
+this doesn't silently become "the architecture" by default, and so a
+future session (or this one) doesn't need to re-discover the tension from
+scratch. Re-check when a self-hosted/local scheduling migration becomes
+an actual priority, not on a fixed cadence, per the Maximum Flexibility
+standing philosophy in `docs/AI_CONSTITUTION.md`.

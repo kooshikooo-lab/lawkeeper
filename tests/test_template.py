@@ -89,7 +89,32 @@ class TestTemplateSync:
     # one side to change.
 
     def test_constitution_sync(self):
-        self._check("docs/AI_CONSTITUTION.md", "docs/AI_CONSTITUTION.md")
+        """AI_CONSTITUTION.md is a deliberate PARTIAL sync, not a full
+        byte-for-byte one: the numbered laws must match exactly (that's
+        the real governance content `lawkeeper init` ships), but the
+        "Standing Philosophy" section is internal-only -- it describes
+        this project's own situation (no revenue/stakeholders/reputation
+        riding on any tool choice) and must never ship into an arbitrary
+        downstream project's constitution, where that premise may not
+        hold at all. Confirmed directly by the user (2026-09-17): that
+        text is internal, never meant to be product-facing -- caught
+        first by GitHub Copilot's review of PR #21, which flagged the
+        premise as not generally true for `lawkeeper init` consumers.
+        """
+        root_text = _read(ROOT / "docs/AI_CONSTITUTION.md")
+        template_text = _read(TEMPLATE / "docs/AI_CONSTITUTION.md")
+
+        root_laws = root_text[root_text.index("### Law 1"):]
+        template_laws = template_text[template_text.index("### Law 1"):]
+        assert root_laws == template_laws, "drift in the numbered laws between root and template"
+
+        assert "Standing Philosophy" in root_text, (
+            "the internal-only philosophy section went missing from the root copy"
+        )
+        assert "Standing Philosophy" not in template_text, (
+            "the internal-only Standing Philosophy section leaked into the shipped "
+            "template -- it must never reach a downstream project's constitution"
+        )
 
     def test_test_theory_sync(self):
         self._check("docs/TEST_THEORY.md", "docs/TEST_THEORY.md")
