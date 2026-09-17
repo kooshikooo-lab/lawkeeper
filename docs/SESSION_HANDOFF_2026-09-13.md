@@ -24,10 +24,16 @@ instead" question with real setup (a pinned sibling clone) done but the
 actual evaluation not started.
 
 Full detail for anything summarized here lives in
-`docs/RESEARCH_agent_harness_landscape.md`,
-`docs/RESEARCH_harness_governance_survey.md`, and
-`docs/RESEARCH_harness_hook_mechanisms_survey.md` — read those, not just
-this doc, before touching anything below.
+`docs/RESEARCH_agent_harness_landscape.md` and
+`docs/RESEARCH_harness_governance_survey.md` — read those, not just this
+doc, before touching anything below. A third doc,
+`docs/RESEARCH_harness_hook_mechanisms_survey.md`, is real and already
+written but not yet on `main` — it's bundled into PR #19's first commit
+(`d63d746`) rather than landed independently, so it won't exist on this
+branch until Priority 1 item 1 (merging PR #19) actually happens; check
+that PR's branch directly if you need it before then. (Caught by GitHub
+Copilot's review of PR #21 — the reference was broken on `main` at the
+time this doc itself was written.)
 
 ## Priority 1 — ready to finish now, concrete and bounded
 

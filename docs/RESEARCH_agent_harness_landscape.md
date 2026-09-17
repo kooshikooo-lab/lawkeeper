@@ -339,7 +339,13 @@ directly against lawkeeper's own repo, which this session did check itself.
   report, §7.2, dated 2026-09-09, described as based on a subagent's
   file:line evidence pass over lawkeeper's own repo): roughly ~30% of the
   23 laws mechanically enforced (3 full, ~7 partial/existence-check-only,
-  11 prose-only), the theory-card/`governed_test.py` system's independent-
+  11 prose-only) — **arithmetic flag, not silently corrected (GitHub
+  Copilot's review of PR #21 caught this): 3+7+11 = 21, two laws short of
+  23. This is a relayed, secondhand count from Falcun's report, not this
+  session's own categorization, so the 2 unaccounted-for laws' actual
+  status is unknown here rather than guessable — recorded as a real gap
+  in the relayed figure, not resolved by inventing a number to make it
+  add up.** the theory-card/`governed_test.py` system's independent-
   oracle discipline treated as a real, comparatively strong asset, and the
   git-hook-only enforcement boundary as the clearest gap. The ~30%/3-fully-
   enforced figure is a real, independent corroboration of this session's
@@ -398,10 +404,14 @@ directly against lawkeeper's own repo, which this session did check itself.
   session — a genuine open question, not a settled one.
 
   **Setup done, evaluation itself deliberately not started tonight:**
-  AEF cloned as its own sibling repo at `G:\repos\agentic-engineering-framework`,
-  pinned to `35aaaaedc1c32269079b32de14aa31a7bebe2a54` (a real pinned
-  commit, not a floating dependency — same discipline as the
-  Windwright→Falcun pattern). Deliberately NOT a lawkeeper branch and
+  AEF (source: https://github.com/DimitriGeelen/agentic-engineering-framework,
+  Apache-2.0 — recorded here per GitHub Copilot's review of PR #21: a
+  machine-local path and a commit SHA alone are not a clone source on a
+  different checkout/machine) cloned as its own sibling repo at
+  `G:\repos\agentic-engineering-framework`, pinned to
+  `35aaaaedc1c32269079b32de14aa31a7bebe2a54` (a real pinned commit, not a
+  floating dependency — same discipline as the Windwright→Falcun
+  pattern). Deliberately NOT a lawkeeper branch and
   NOT vendored into lawkeeper's own tree, for two independent reasons
   (Falcun's own stated reasoning, agreed): (1) the artifact this
   evaluation produces — a re-expression of lawkeeper's theory-cards/laws
