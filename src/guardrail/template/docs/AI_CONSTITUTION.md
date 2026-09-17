@@ -11,7 +11,7 @@ A human must approve the change (see Law 16).
 
 ## Standing Philosophy — Maximum Flexibility (governing principle, not a numbered Law)
 
-No revenue, no external stakeholders, no reputation staked on any tool or method. Nothing here is permanent by default; effort already spent is not a reason to keep it.
+No tool or method is permanent by default; effort already spent is not a reason to keep it. If a project has revenue, external stakeholders, or reputational commitments, treat those as binding constraints and apply stricter change control accordingly.
 
 Bias, not authority: grants no permission beyond what this constitution already allows for a given change. Every existing approval gate and audit requirement (Law 14, etc.) still applies. It only removes the assumption that existing infrastructure deserves protection for having been built.
 
