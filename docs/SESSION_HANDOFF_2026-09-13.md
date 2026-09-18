@@ -27,26 +27,29 @@ Full detail for anything summarized here lives in
 `docs/RESEARCH_agent_harness_landscape.md` and
 `docs/RESEARCH_harness_governance_survey.md` — read those, not just this
 doc, before touching anything below. A third doc,
-`docs/RESEARCH_harness_hook_mechanisms_survey.md`, is real and already
-written but not yet on `main` — it's bundled into PR #19's first commit
-(`d63d746`) rather than landed independently, so it won't exist on this
-branch until Priority 1 item 1 (merging PR #19) actually happens; check
-that PR's branch directly if you need it before then. (Caught by GitHub
-Copilot's review of PR #21 — the reference was broken on `main` at the
-time this doc itself was written.)
+`docs/RESEARCH_harness_hook_mechanisms_survey.md`, landed on `main` with
+PR #19 (merged 2026-09-18, commit `e2df0de`). (When this doc was first
+written that file was only on PR #19's branch — GitHub Copilot's review
+of PR #21 caught the then-broken reference.)
 
 ## Priority 1 — ready to finish now, concrete and bounded
 
-1. **Merge PR #19** (`scripts/gate_pretooluse.py`, the live `PreToolUse`
-   gate on force-push/delete of canonical branches). Real work, not a
-   stub: 313+ tests, two real Copilot review rounds already addressed
-   (refspec parsing, a remote-only-push regression, `--all`/`--mirror`),
-   plus the AEF scope-boundary characterization methodology ported on
-   top. What's left: `mergeStateStatus` was `BEHIND` as of this session's
-   end (main moved since the last push) — rebase, request one more fresh
-   Copilot review to cover everything since 2026-09-06 (the AEF work was
-   never re-reviewed), confirm clean, merge. This is the single
-   highest-value, lowest-effort thing to close out next session.
+1. ~~**Merge PR #19**~~ — **DONE 2026-09-18** (`e2df0de`). The live
+   `PreToolUse` gate (`scripts/gate_pretooluse.py`, registered in
+   `.claude/settings.json`) is now on `main` and active for sessions in
+   this repo. Merged with 348 tests passing, both required CI checks
+   green, and all 5 Copilot review threads resolved. Note: the AEF
+   scope-boundary commit was NOT given a separate fresh Copilot review
+   round after it was added; CI + the test suite are what cleared it.
+   The merge's last-minute CI failure was a real bug found by the new
+   code: `scripts/toolcheck.py` used a hand-kept list of stdlib modules
+   and flagged `shlex` as a missing dependency (second time this
+   happened, after `pkgutil`); it now uses `sys.stdlib_module_names`, so
+   that whole class of failure is gone. Follow-up worth doing when
+   convenient: a real end-to-end test of the hook inside a live Claude
+   Code session on a fresh machine (the smoke test so far is the script
+   called directly with a canned force-push-to-`main` payload, which
+   correctly returns `deny`).
 
 2. **Check the first automated research-routine run.** Lawkeeper's new
    weekly routine (`trig_01UgJi3thYGyEYQaHFif3CY1`, via `RemoteTrigger`)
