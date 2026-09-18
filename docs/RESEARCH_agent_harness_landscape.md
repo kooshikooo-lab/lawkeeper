@@ -247,7 +247,42 @@ instead of living only in chat:
   write one `PreToolUse` hook re-using guard logic it already has. This is
   the survey's "if lawkeeper does ONE thing next" recommendation.
 
+- ~~**deepseek-harness, hermes-agent, goose — hook/permission mechanisms**~~ —
+  **covered**, 2026-09-06, in
+  `docs/RESEARCH_harness_hook_mechanisms_survey.md`. Finding: all three
+  independently confirm the deny>ask>allow precedence Claude Code and
+  Omnigent already established — dsh's `mergeHookOutputs` states "permission
+  precedence deny > ask > allow" outright in its own docs; Hermes' built-in
+  dangerous-command classifier (`tools/approval.py`) implements
+  hardline-unconditional-deny > bypassable-ask > default-allow; goose's
+  `apply_inspection_results_to_permissions` states the same ordering in a
+  code comment. Five independently-built systems now confirm the algebra —
+  no longer a two-system coincidence. Also found: the external, arbitrary-
+  script hook wire protocol is binary allow/deny-only (no ask) in goose,
+  Hermes' `shell_hooks.py`, and (secondhand, via dsh's own bridge comment)
+  Codex — only Claude Code's and dsh's own native hook protocols carry `ask`
+  in the wire format itself. MIT/MIT/Apache-2.0 respectively; verdict for all
+  three was adopt-the-design, not a dependency (wrong language/stack for
+  lawkeeper's Python tooling in every case). goose's local clone was ~10 weeks
+  stale relative to live `main` (1.39.0 vs. released 1.49.0) — flagged in the
+  survey, not treated as current.
+
 New follow-ups this survey surfaced, not yet read, queued here:
+
+- **The Open Plugins hooks specification** (open-plugins.com/agent-builders/
+  components/hooks) — goose's own plugin-hook system (`crates/goose/src/
+  hooks/mod.rs`) states it is explicitly modelled on this third-party,
+  cross-vendor spec. Not read directly yet — only goose's implementation of
+  it. If it's a genuine cross-harness standard (not just goose's name for its
+  own format), it could be a more durable citation for lawkeeper's own hook
+  wire-format design than any single harness's docs. Surfaced 2026-09-06 in
+  `docs/RESEARCH_harness_hook_mechanisms_survey.md`.
+- **Codex's own native hook protocol, read directly** — every claim this
+  research base has about Codex's hook protocol (no `ask` concept, per
+  dsh's own bridge-implementation comment) is currently secondhand, sourced
+  through a third party that had to reverse-engineer it, not Codex's own
+  docs/source. Worth a dedicated read before citing "Codex's hook protocol is
+  binary" as confirmed fact anywhere load-bearing.
 
 - **MITRE ATLAS's actual technique matrix** — the survey's weakest-sourced
   entry: every fetch attempt against atlas.mitre.org this pass returned an

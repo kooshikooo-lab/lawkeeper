@@ -58,8 +58,8 @@
       "scripts/system_audit.py",
       "module_mutable",
       [
-        "HOOK_WIRING L43",
-        "GUARD_SCRIPTS L50"
+        "HOOK_WIRING L46",
+        "GUARD_SCRIPTS L53"
       ]
     ],
     [
@@ -76,8 +76,7 @@
         "PACKAGE_ALIASES L41",
         "FREECAD_MODULES L64",
         "EXTERNAL_APP_MODULES L70",
-        "LOCAL_ROOTS L73",
-        "STDLIBISH L77"
+        "LOCAL_ROOTS L73"
       ]
     ],
     [
@@ -163,8 +162,8 @@
       "src/guardrail/template/scripts/system_audit.py",
       "module_mutable",
       [
-        "HOOK_WIRING L43",
-        "GUARD_SCRIPTS L50"
+        "HOOK_WIRING L46",
+        "GUARD_SCRIPTS L53"
       ]
     ],
     [
@@ -174,8 +173,7 @@
         "PACKAGE_ALIASES L41",
         "FREECAD_MODULES L64",
         "EXTERNAL_APP_MODULES L70",
-        "LOCAL_ROOTS L73",
-        "STDLIBISH L77"
+        "LOCAL_ROOTS L73"
       ]
     ],
     [

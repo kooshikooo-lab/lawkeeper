@@ -74,33 +74,23 @@ LOCAL_ROOTS = {"backend", "woodwind_designer", "tests", "scripts", "conftest",
                "blender_addon"}
 
 # Third-party roots we knowingly exclude (stdlib / noisy).
-STDLIBISH = {
-    # pkgutil: real gap found 2026-09-04 -- flagged PHANTOM the moment
-    # toolcheck.py started scanning src/guardrail/ (this fix's whole point),
-    # which is where the repo's only real import of it lives
-    # (src/guardrail/core/registry.py, stdlib plugin-discovery). Genuinely
-    # stdlib, just missing from this list until now.
-    "pkgutil",
-    "os", "sys", "io", "json", "math", "time", "re", "ast", "argparse",
-    "pathlib", "dataclasses", "typing", "collections", "functools", "itertools",
-    "subprocess", "tempfile", "shutil", "copy", "enum", "abc", "warnings",
-    "logging", "random", "struct", "socket", "hashlib", "glob", "urllib",
-    "importlib", "uuid", "string", "queue", "threading", "multiprocessing",
-    "textwrap", "statistics", "decimal", "fractions", "contextlib", "profile",
-    "pstats", "cProfile", "gc", "platform", "signal", "datetime", "pickle",
-    "traceback", "unicodedata", "numbers", "operator", "inspect", "csv",
-    "base64", "runpy", "sqlite3", "concurrent", "__future__", "trace",
-    "tomllib", "unittest", "zipfile", "xml", "types", "builtins", "weakref",
-    "configparser", "email", "html", "http", "urllib.request", "tarfile",
-    "bz2", "gzip", "zlib", "lzma", "fnmatch", "glob", "pprint", "tokenize",
-    "keyword", "linecache", "dis", "code", "codecs", "reprlib", "stringprep",
-    "html.parser", "ftplib", "smtplib", "mimetypes", "binascii", "array",
-    "asyncio", "select", "selectors", "ssl", "curses", "ctypes", "datetime",
-    "calendar", "locale", "gettext", "getpass", "pty", "pwd", "grp", "spwd",
-    "resource", "mmap", "msvcrt", "winreg", "winsound", "venv", "ensurepip",
-    "this", "antigravity", "turtle", "tkinter", "webbrowser", "zipimport",
-    "filecmp", "difflib", "fileinput", "secrets", "stat", "marshal", "token",
-}
+#
+# Was a ~90-entry hand-maintained enumeration. Real bug found 2026-09-18
+# (PR #19 CI, `guard` job): `shlex` (used by scripts/gate_pretooluse.py)
+# flagged PHANTOM despite being pure stdlib -- just missing from the list,
+# the SECOND time this exact class of bug hit this file (the `pkgutil`
+# comment this replaced documented the first, 2026-09-04). A hand-kept
+# enumeration of "every stdlib module we've happened to import so far" is
+# structurally guaranteed to keep missing the next new one -- the same
+# "one source of truth" failure Law 7 names for canonical values generally.
+# `sys.stdlib_module_names` (Python 3.10+; this repo requires >=3.11) is
+# the real, authoritative, complete answer to "is this stdlib" -- it's a
+# fixed set baked into the interpreter build covering every platform's
+# modules at once (winreg/msvcrt alongside pwd/grp), not just the ones
+# whoever wrote the old list happened to already be importing, so it
+# eliminates this whole recurring bug class rather than patching one
+# instance at a time.
+STDLIBISH = frozenset(sys.stdlib_module_names)
 
 
 def _src_package_names() -> set[str]:
