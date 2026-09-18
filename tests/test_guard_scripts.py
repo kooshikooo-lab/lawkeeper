@@ -21,6 +21,7 @@ validate_pre_commit = load_script("validate_pre_commit.py")
 guard_governance = load_script("guard_governance.py")
 compliance_watchdog = load_script("compliance_watchdog.py")
 scan_config = load_script("scan_config.py")
+toolcheck = load_script("toolcheck.py")
 
 
 # ── compliance_watchdog: the law loader must read the constitution ─────
@@ -444,3 +445,46 @@ class TestGovernanceFilesConfig:
         subprocess.run(["git", "add", "docs/TEST_THEORY.md"], cwd=tmp_path, check=True)
 
         assert validate_commit_msg.governance_changed(staged=True) is True
+
+
+# -- toolcheck: stdlib detection must not be a hand-kept list ------------
+
+class TestToolcheckStdlibDetection:
+    """toolcheck.py flagged stdlib modules as PHANTOM dependencies twice
+    (pkgutil 2026-09-04, shlex 2026-09-18 -- the latter failed PR #19's CI)
+    because STDLIBISH was a hand-maintained list. It is now the
+    interpreter's own authoritative set, so any stdlib import is exempt."""
+
+    def test_shlex_and_pkgutil_are_not_third_party(self):
+        assert "shlex" in toolcheck.STDLIBISH
+        assert "pkgutil" in toolcheck.STDLIBISH
+
+    def test_stdlib_set_is_the_interpreters_own(self):
+        assert toolcheck.STDLIBISH == frozenset(sys.stdlib_module_names)
+
+    def test_stdlib_only_script_reports_no_third_party_import(self, tmp_path, monkeypatch):
+        """Adversarial: a real file importing stdlib modules nobody put on
+        a list (graphlib, shlex, zoneinfo) must yield zero third-party
+        imports through the real AST scan, not just via the set."""
+        (tmp_path / "scripts").mkdir()
+        (tmp_path / "scripts" / "uses_stdlib.py").write_text(
+            "import shlex, graphlib\nfrom zoneinfo import ZoneInfo\n"
+        )
+        monkeypatch.setattr(toolcheck, "ROOT", tmp_path)
+        monkeypatch.setattr(toolcheck, "get_scan_paths", lambda root: [root / "scripts"])
+        monkeypatch.setattr(toolcheck, "_whitelisted_test_files", lambda: set())
+        monkeypatch.setattr(toolcheck, "_is_local", lambda root: False)
+        assert toolcheck._imported() == set()
+
+    def test_real_third_party_import_is_still_reported(self, tmp_path, monkeypatch):
+        """Guard against over-correction: the fix must not make the scan
+        blind to genuine third-party imports."""
+        (tmp_path / "scripts").mkdir()
+        (tmp_path / "scripts" / "uses_third_party.py").write_text(
+            "import shlex\nimport requests\n"
+        )
+        monkeypatch.setattr(toolcheck, "ROOT", tmp_path)
+        monkeypatch.setattr(toolcheck, "get_scan_paths", lambda root: [root / "scripts"])
+        monkeypatch.setattr(toolcheck, "_whitelisted_test_files", lambda: set())
+        monkeypatch.setattr(toolcheck, "_is_local", lambda root: False)
+        assert toolcheck._imported() == {"requests"}
