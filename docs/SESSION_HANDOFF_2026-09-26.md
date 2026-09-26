@@ -25,7 +25,7 @@ master list; this document does not replace it, it sits on top of it.
   list, with tests, so it can't happen for the next new module either.
 - PRs #21, #22, #23 merged: the pending docs (Standing Philosophy, AEF
   setup, the older handoff), the cosmic-ray note, and the handoff update.
-- `main` is at `ace0979`, has no open PRs, and everything from this
+- `main` is at `f266dfd`, has no open PRs, and everything from this
   session is on GitHub.
 
 **The one thing that is actually broken: the weekly research routine has
@@ -39,29 +39,50 @@ Monday morning the limit is already used up. Windwright, running first,
 got through both times; Falcun and lawkeeper were locked out both times.
 This is a decision for you, see "Decisions waiting on you" below.
 
-## About the C: drive cleanup and closing sessions
+## Where lawkeeper lives now, and the C: drive cleanup
+
+**Working copy: `E:\lawkeeper`** (a fresh clone from GitHub, at `main`
+`f266dfd`, next to `E:\falcun` and `E:\Windwright`). Work from there
+from now on. It has the git hooks installed and the local-only files
+restored; its system audit passes and all 348 tests pass. (An earlier
+version of this section said no repo copy was needed on E:; that was
+not practical once C: is being cleared, and the clone above fixes it.)
 
 - Nothing here deletes anything for you. Deleting lawkeeper's old copy
-  on C: is yours (or the coordinator's) to do.
-- Everything that matters is on GitHub (`kooshikooo-lab/lawkeeper`,
-  `main` at `ace0979`). The backup `E:\lawkeeper-C-backup-2026-09-14\`
-  holds only the small local-only files (`consensus/`, `scripts/`), not
-  the repo, because the repo itself is safely on GitHub.
-- If lawkeeper is worked on from anywhere else after C: is cleared:
-  clone fresh from GitHub, then follow `AGENTS.md` Step 0
-  (`python scripts/install_hooks.py`, then `python scripts/system_audit.py`,
-  which must PASS).
-- Small leftovers on this machine, all harmless:
-  - `.claude/worktrees/handoff-update` — an empty leftover folder Windows
-    refused to remove ("permission denied"). Git no longer tracks it.
-  - Local branches `agent/pretooluse-gate/desktop` (content is identical
-    to what is on `main`, git just can't tell because the PR was
-    squashed), `agent/guardrail-fit-investigation-update/desktop`,
-    `opencode/framework-mvp/desktop` — check before deleting the last
-    two; I did not verify them this round.
-- Claude's own memory notes live under
-  `C:\Users\Admin\.claude\projects\C--Users-Admin-Desktop-lawkeeper\memory\`,
-  i.e. on C:. If C: is wiped, that folder is what would be lost.
+  on C: (`C:\Users\Admin\Desktop\lawkeeper`) is yours (or the
+  coordinator's) to do. Verified on 2026-09-26 before that: local `main`
+  equals `origin/main`, no stashes, no open PRs, and every commit that
+  matters is on GitHub.
+- Backup folder `E:\lawkeeper-C-backup-2026-09-14\`:
+  - `consensus/` and three files from `scripts/` (`.blockers.json`,
+    `.team_state.json`, `compliance_log.jsonl`) — the local-only files Git
+    doesn't track. Checked identical to the C: originals, and already
+    restored into `E:\lawkeeper`.
+  - `claude-memory/` (added 2026-09-26) — a copy of Claude's five memory
+    notes, checked identical to the originals.
+- **Claude's memory notes are the one thing not migrated.** Claude
+  Code stores them per working folder, under
+  `C:\Users\Admin\.claude\projects\<folder-name>\memory\`, so a session
+  opened from `E:\lawkeeper` starts with an empty memory. The copy in
+  `claude-memory/` above is the safety net. To make them active for the
+  E: copy they must be placed in the matching folder for
+  `E:\lawkeeper`, which only exists after the first session is opened
+  there. Not done yet for that reason.
+- Small leftovers on the old C: copy, all harmless:
+  - Empty folders `.claude/worktrees/handoff-update` and
+    `.claude/worktrees/handoff-0926` that Windows refused to remove
+    ("permission denied"). Git no longer tracks them.
+  - Local branches `agent/pretooluse-gate/desktop` (identical in content
+    to `main`; git can't tell because the PR was squashed),
+    `agent/guardrail-fit-investigation-update/desktop` and
+    `opencode/framework-mvp/desktop` (on GitHub already). Ten commits
+    exist only on local branches, all verified as present on `main` in
+    content. None of this matters once C: is cleared; the E: clone has
+    none of it.
+- Old zips `lawkeeper-main.zip`, `lawkeeper-main (1).zip`,
+  `lawkeeper-fixed.zip` in `E:\downloads`, and a stray `E:\Admin\Lawkeeper`
+  (only `.claude` and `delivery`, not a Git repo) are older and not the
+  source of truth. Ignore or delete them; not checked in detail.
 
 ## What is still open (unchanged from the 2026-09-13 handoff)
 
