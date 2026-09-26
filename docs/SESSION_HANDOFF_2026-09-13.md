@@ -127,6 +127,8 @@ candidates — check its output before manually chasing these by hand.
     `sources.json`/`canon.json` as a cross-repo store other repos read
     from) — raised weeks ago, explicitly still undecided, needs the
     user's own call before any repo builds toward it.
+    **Update 2026-09-26: decided YES** (see `SESSION_HANDOFF_2026-09-26.md`,
+    Decisions item 3); the design is being coordinated on the noticeboard.
 13. **Lawkeeper's own domain-boundary scope-check** (an equivalent to
     Falcun's `agent/scope.py`) — deliberately not built yet because
     lawkeeper has no structured catalog for it to protect (Law 21: no
