@@ -37,7 +37,8 @@ is that all three research routines (Windwright 07:00, Falcun 08:00,
 lawkeeper 09:00 UTC, Mondays) share your one account limit, and by
 Monday morning the limit is already used up. Windwright, running first,
 got through both times; Falcun and lawkeeper were locked out both times.
-This is a decision for you, see "Decisions waiting on you" below.
+The user decided on 2026-09-26 that the sessions of all three repos
+solve this together; see "Decisions", item 1, below.
 
 ## Where lawkeeper lives now, and the C: drive cleanup
 
@@ -101,18 +102,24 @@ Go to `docs/SESSION_HANDOFF_2026-09-13.md` for the full text. Summary:
   scheduler (wanted eventually); AEF's smaller pieces; the shared
   cross-repo research registry; a lawkeeper domain-boundary check.
 
-## Decisions waiting on you (nothing here is urgent)
+## Decisions (updated 2026-09-26: 1 and 3 decided, 2 still open)
 
-1. **The research routine.** Options: (a) do nothing and hope the limit
-   isn't used up by Monday; (b) move all three routines to a slot right
-   after the Thursday 07:00 UTC reset, when the cap is fresh (my
-   recommendation: cheapest, no code); (c) do less per run; (d) speed up
-   the move to your own scheduler. Changing the schedule touches all
-   three repos' routines, so it is your call, not something I did on my
-   own.
-2. **When to start the AEF evaluation** (Priority 2 above).
-3. **Whether the shared research registry is wanted at all** (still
-   undecided since it was proposed).
+1. **The research routine.** DECIDED 2026-09-26: to be solved jointly
+   by the sessions of all three repos, not repo by repo. Posted on the
+   machine noticeboard as `NB-20260926T102811Z-2ddb` (facts checked
+   against the routines' run logs, and a proposal: move the three
+   routines to just after the Thursday 07:00 UTC reset, staggered).
+   Replies are due before Thu 2026-10-01. Nobody changes a routine's
+   schedule until the user approves the agreed plan. The next runs are
+   Mon 2026-09-28, which will probably fail the same way.
+2. **When to start the AEF evaluation** (Priority 2 above). Still open.
+3. **The shared research registry.** DECIDED 2026-09-26: yes, the user
+   wants it and it is to be formalized. Posted as
+   `NB-20260926T102811Z-a416`, asking the repos for a home repo, an
+   owner and an entry schema. Nothing is built until a design is agreed
+   and approved by the user. This settles item 12 of the 2026-09-13
+   handoff, and item 13 there (lawkeeper's own domain-boundary check) is
+   no longer blocked on that decision.
 
 ## Things to remember about how to work in this repo
 
