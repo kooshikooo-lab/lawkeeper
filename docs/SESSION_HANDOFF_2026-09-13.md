@@ -123,12 +123,12 @@ candidates — check its output before manually chasing these by hand.
 
 ## Priority 5 — blocked on a bigger decision, not actionable alone
 
-12. **The shared canonical research registry proposal** (Falcun's
+12. **The shared canonical research registry** (proposal: Falcun's
     `sources.json`/`canon.json` as a cross-repo store other repos read
-    from) — raised weeks ago, explicitly still undecided, needs the
-    user's own call before any repo builds toward it.
-    **Update 2026-09-26: decided YES** (see `SESSION_HANDOFF_2026-09-26.md`,
-    Decisions item 3); the design is being coordinated on the noticeboard.
+    from). **Decided YES by the user on 2026-09-26** (see
+    `SESSION_HANDOFF_2026-09-26.md`, Decisions item 3). The design (home
+    repo, owner, entry schema) is being coordinated on the noticeboard;
+    nothing is built until it is agreed and the user approves it.
 13. **Lawkeeper's own domain-boundary scope-check** (an equivalent to
     Falcun's `agent/scope.py`) — deliberately not built yet because
     lawkeeper has no structured catalog for it to protect (Law 21: no

@@ -37,7 +37,8 @@ is that all three research routines (Windwright 07:00, Falcun 08:00,
 lawkeeper 09:00 UTC, Mondays) share your one account limit, and by
 Monday morning the limit is already used up. Windwright, running first,
 got through both times; Falcun and lawkeeper were locked out both times.
-This is a decision for you, see "Decisions waiting on you" below.
+The user decided on 2026-09-26 that the sessions of all three repos
+solve this together; see "Decisions", item 1, below.
 
 ## Where lawkeeper lives now, and the C: drive cleanup
 
