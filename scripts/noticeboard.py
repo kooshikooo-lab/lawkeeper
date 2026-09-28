@@ -149,11 +149,13 @@ def append_entry(board_dir: Path, entry_text: str, now: datetime | None = None) 
     now = now or datetime.now(timezone.utc)
     board_dir.mkdir(parents=True, exist_ok=True)
     f = board_dir / f"NOTICEBOARD_{now.strftime('%Y-%m')}.md"
-    if not f.exists():
-        f.write_text(f"# Noticeboard {now.strftime('%Y-%m')}\n\nAppend-only. Format and rules: "
-                     "`scripts/noticeboard.py` docstring and docs/inter-agent/README.md.\n\n",
-                     encoding="utf-8")
+    # Append-only, never truncate: two sessions creating the month file at once must
+    # not erase each other's entry (a write_text() here could). Worst case under a
+    # race is a duplicated header line, never a lost note.
     with f.open("a", encoding="utf-8") as fh:
+        if fh.tell() == 0:
+            fh.write(f"# Noticeboard {now.strftime('%Y-%m')}\n\nAppend-only. Format and rules: "
+                     "`scripts/noticeboard.py` docstring and docs/inter-agent/README.md.\n\n")
         fh.write(entry_text)
     return f
 

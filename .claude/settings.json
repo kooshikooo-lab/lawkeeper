@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/noticeboard.py\"; [ -f \"$f\" ] && python \"$f\" check --stdin-json --format claude-hook --event SessionStart || true",
+            "command": "python ${CLAUDE_PROJECT_DIR}/scripts/noticeboard.py check --stdin-json --format claude-hook --event SessionStart",
             "timeout": 10,
             "statusMessage": "Checking the agent noticeboard..."
           }
@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/noticeboard.py\"; [ -f \"$f\" ] && python \"$f\" check --stdin-json --format claude-hook --event UserPromptSubmit || true",
+            "command": "python ${CLAUDE_PROJECT_DIR}/scripts/noticeboard.py check --stdin-json --format claude-hook --event UserPromptSubmit",
             "timeout": 10
           }
         ]
@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/noticeboard.py\"; [ -f \"$f\" ] && python \"$f\" check --stdin-json --format claude-hook --event PostToolUse || true",
+            "command": "python ${CLAUDE_PROJECT_DIR}/scripts/noticeboard.py check --stdin-json --format claude-hook --event PostToolUse",
             "timeout": 10
           }
         ]

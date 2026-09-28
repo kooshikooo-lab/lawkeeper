@@ -15,18 +15,20 @@ oracle:
   expression: "hand-written board text with known ids/fields (not produced by the code under test); the hook JSON shape from Claude Code's settings schema; a hand-made git repo whose folder name (myrepo-wt-feature) differs from its remote name (MyRepo.git)"
 acceptance: "exact equality of ids, fields, counts and derived repo names"
 blind_spot: >
-  Concurrent appends from two processes at the same instant are not exercised.
+  Concurrent appends from two processes at the same instant are not exercised;
+  the create-then-truncate race (PR #27 review) is fixed by construction (the
+  board is only ever opened in append mode), not by a test that reproduces it.
   The real Claude Code hook invocation is not run by the tests (checked by hand
   once from a worktree on 2026-09-28: entries shown). A remote URL with an
   unusual shape (no path separator) falls back to the folder name. Only the
   repo-name test was mutation-checked; the five tests copied from Windwright
   were not re-mutated here.
-trust_level: T4
+trust_level: T2
 adversarial_review: none
 failure_meaning:
   failed: the noticeboard parses, filters or reports entries wrongly -- sessions may miss notes or see them twice
   crash: noticeboard.py fails to import or its CLI signature changed
-  pass: entries round-trip, reach the right repos once each, and the repo name survives worktree folders
+  pass: entries round-trip (T2 overall; the repo-name test alone is mutation-verified), reach the right repos once each, and the repo name survives worktree folders
 debug:
   - "mutation check 2026-09-28: restoring the old folder-name behaviour in repo_name_for makes test_repo_name_from_remote_not_worktree_folder fail (1 failed); restored code passes"
   - if machine-board entries never appear in a session, print noticeboard.REPO_NAME from that checkout and compare with the entry's repos field

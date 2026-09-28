@@ -1,6 +1,6 @@
 """Tests for scripts/noticeboard.py (shared agent noticeboard, 2026-09-26).
 
-Theory card (Law 19)
+Theory card (Law 18; card: test_governance/cards/test_noticeboard.yaml)
   claim: a posted entry is parsed back with its fields; `check` shows each entry
     to a session exactly once; machine-board entries reach only the repos they
     name (or "all"); a session seen for the first time sees at most the last
@@ -140,3 +140,41 @@ def test_repo_name_from_remote_not_worktree_folder(tmp_path, monkeypatch):
     plain = tmp_path / "Plain"
     plain.mkdir()
     assert nb.repo_name_for(plain) == "plain"            # no remote: folder name
+
+
+def test_post_cli_writes_repo_and_machine_boards(tmp_path, monkeypatch, capsys):
+    """`post` writes the repo board always, the machine board only when the entry
+    names another repo, and marks the new entry seen for --session."""
+    repo, machine, cur = tmp_path / "repo", tmp_path / "machine", tmp_path / "cursors"
+    monkeypatch.setattr(nb, "REPO_BOARD_DIR", repo)
+    monkeypatch.setattr(nb, "CURSOR_DIR", cur)
+    monkeypatch.setattr(nb, "REPO_NAME", "lawkeeper")
+    monkeypatch.setenv("AGENT_NOTICEBOARD_HOME", str(machine))
+
+    assert nb.main(["post", "--from", "s1", "--text", "local only"]) == 0
+    assert "local only" in next(repo.glob("NOTICEBOARD_*.md")).read_text(encoding="utf-8")
+    assert not machine.exists()                            # names only this repo
+    capsys.readouterr()
+
+    assert nb.main(["post", "--from", "s1", "--repos", "lawkeeper,falcun",
+                    "--session", "poster", "--text", "cross repo"]) == 0
+    eid = capsys.readouterr().out.split()[1]               # "POSTED <id> -> ..."
+    for board in (repo, machine):
+        text = next(board.glob("NOTICEBOARD_*.md")).read_text(encoding="utf-8")
+        assert eid in text and "cross repo" in text
+        assert text.count("# Noticeboard") == 1            # header written once
+    assert eid in nb.read_seen("poster", cur)              # poster won't be re-shown it
+
+
+def test_append_never_truncates_existing_board(tmp_path):
+    """Appends keep every earlier entry and write the month header exactly once.
+    Does not reproduce the two-process create race itself (see the card's blind
+    spot); that fix is by construction: the file is only ever opened in "a" mode."""
+    board = tmp_path / "b"
+    board.mkdir()
+    _, first = nb.new_entry_text("a", "all", "x", "none", "", "first")
+    f = nb.append_entry(board, first)
+    _, second = nb.new_entry_text("b", "all", "x", "none", "", "second")
+    nb.append_entry(board, second)
+    text = f.read_text(encoding="utf-8")
+    assert "first" in text and "second" in text and text.count("# Noticeboard") == 1
