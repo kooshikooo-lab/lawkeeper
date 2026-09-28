@@ -37,3 +37,6 @@ consensus/
 .venv/
 .selfcheck/
 build/
+
+# Noticeboard read cursors (per session, local only)
+docs/inter-agent/noticeboard/.cursors/

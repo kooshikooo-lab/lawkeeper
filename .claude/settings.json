@@ -18,6 +18,40 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/noticeboard.py\"; [ -f \"$f\" ] && python \"$f\" check --stdin-json --format claude-hook --event SessionStart || true",
+            "timeout": 10,
+            "statusMessage": "Checking the agent noticeboard..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/noticeboard.py\"; [ -f \"$f\" ] && python \"$f\" check --stdin-json --format claude-hook --event UserPromptSubmit || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/noticeboard.py\"; [ -f \"$f\" ] && python \"$f\" check --stdin-json --format claude-hook --event PostToolUse || true",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
