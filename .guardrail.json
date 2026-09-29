@@ -1,6 +1,6 @@
 {
   "project_name": "lawkeeper",
-  "machines": ["desktop", "laptop"],
+  "machines": ["desktop", "laptop", "cloud"],
   "canonical_branches": ["main"],
   "scan_dirs": ["src", "scripts"],
   "team_discussion": 2,

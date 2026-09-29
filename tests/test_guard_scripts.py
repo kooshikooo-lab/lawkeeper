@@ -59,6 +59,12 @@ class TestBranchClassify:
         # comment for the full reasoning.
         ("agent/mesh-repair/laptop", "feature"),
         ("agent/branch-governance/desktop", "feature"),
+        # 2026-09-28: "cloud" added to .guardrail.json machines. The weekly
+        # cloud research routine names its branch agent/<topic>/cloud (as the
+        # Windwright/Falcun routines do); the pre-push guard rejected it, so
+        # the 2026-09-28 run's finished report could not be pushed.
+        ("agent/external-research-scan-2026-09-28/cloud", "feature"),
+        ("agent/external-research-scan-2026-09-28/phone", None),   # unknown machine still orphaned
         ("merge/governance", "merge_staging"),
         ("experiment/unconventional-shapes", None),
         ("perf/tmm-refactor-copilot", None),
