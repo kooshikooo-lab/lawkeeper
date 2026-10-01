@@ -13,10 +13,16 @@ in `docs/RESEARCH_agent_harness_landscape.md` and
 `docs/RESEARCH_harness_hook_mechanisms_survey.md` before looking for anything
 new: pre-commit's own extension model, the Open Plugins hooks specification,
 Codex's native hook protocol read directly, MITRE ATLAS's actual technique
-matrix, and AWS Cedar's own policy reference. Four of five are closed this
-pass with a direct primary-source read; one (Open Plugins) is still blocked
-and stays queued, with a real disambiguation finding recorded so it doesn't
-get conflated with a same-sounding but different spec. One new candidate
+matrix, and AWS Cedar's own policy reference. **Three of five are fully
+closed** this pass with a direct primary-source read (pre-commit, MITRE
+ATLAS, AWS Cedar); **one (Codex) is substantially upgraded but stays
+queued** — the evidence improved from a single third party's comment to the
+vendor's own issue tracker, but still falls short of this doc's own
+primary-source bar (§5 says so explicitly, and that status, not "closed,"
+is what the per-entry verdict below actually states); **one (Open Plugins)
+is still fully blocked** and stays queued, with a real disambiguation
+finding recorded so it doesn't get conflated with a same-sounding but
+different spec. One new candidate
 (mutmut, for Law 18's mutation-testing requirement) is added afterward, since
 oracle-independence/mutation-testing methodology is named in-scope and had
 no prior entry in any of the three base documents at all — checked by
@@ -60,9 +66,12 @@ here.
   repo both base surveys' queue entry pointed at) is itself deprecated in
   favor of this one — a real, checkable correction to the queue entry's own
   pointer, not just a content update.
-- **License:** N/A — a knowledge base/taxonomy, not software. (The
-  `atlas-data` repo's own tooling, under `atlas/` and `tools/`, is a
-  separate question not checked this pass.)
+- **License:** Apache-2.0 — confirmed directly by reading the repo's own
+  `LICENSE` file (`mitre-atlas/atlas-data`, copyright MITRE 2021-2026). Worth
+  recording even though the verdict below isn't a dependency call: the data
+  itself is a taxonomy, not executable software, but the same reuse
+  diligence this doc applies everywhere else still applies to it, not just
+  to things being evaluated as a dependency.
 - **The actual finding — confirmed, not secondhand:** the matrix has
   genuinely current (this release, 2026.09) agentic-AI-specific tactics and
   techniques, not just classical ML attack content:
@@ -235,11 +244,17 @@ here.
   stated concretely rather than as a vague "versioning is good" gesture:**
   (1) the hook's source code never lands in the consuming repo's own git
   history at all — only a `repo`+`rev` pointer does, so an upstream fix is a
-  one-line `rev` bump, not a file-tree merge; (2) `WarnMutableRev`'s
-  schema-level pin-enforcement is a direct, reusable precedent for something
-  lawkeeper's own cross-repo pinning discipline (the AEF clone pinned to a
-  specific commit SHA, logged in the landscape doc) currently does only by
-  convention and session memory, not by any mechanical check; (3) per-hook
+  one-line `rev` bump, not a file-tree merge; (2) `WarnMutableRev` is a
+  precedent worth being precise about rather than overselling — it is
+  **advisory, not enforcement**: its own implementation (confirmed by
+  reading it directly) is a bare `logger.warning`, not a raised error, and
+  its heuristic ("mutable" means no `.` in the rev AND it doesn't match
+  `^[a-fA-F0-9]+$`) has a real false-negative gap — a dotted mutable tag
+  like `v2.0` or `release.1` skips the check entirely. Still a reusable
+  precedent for lawkeeper's own cross-repo pinning discipline (the AEF
+  clone pinned to a specific commit SHA, logged in the landscape doc), which
+  today does zero mechanical checking at all — but "an advisory check with
+  known gaps" is the honest bar to copy, not "pin enforcement"; (3) per-hook
   `id` selection means a consumer can take an upstream update to one guard
   without being forced to accept every other file `init --force` would also
   overwrite.
@@ -372,17 +387,28 @@ here.
   Codex adapter can't use `ask` — "the field exists and is silently a
   no-op, don't rely on it" is a sharper, more dangerous-if-missed warning
   than "the field doesn't exist."
-- **A second, independent finding beyond the ask question:** `deny` itself
-  is not reliably enforced across all of Codex's tool-call types even where
-  the field is fully implemented — confirmed by two separate, reproduced
-  bug reports (`apply_patch` and `spawn_agent`) against two different tool
-  calls. This is a genuine, current reliability gap in a shipped product's
-  governance surface, not a design choice — worth recording as a concrete
-  reason a future non-Claude-Code adapter in `EXECUTOR_CONTRACT.md` would
-  need its own characterization tests per tool-call type (exactly the
-  discipline `tests/test_gate_pretooluse_scope_boundary.py` already applies
-  to lawkeeper's own Claude Code hook) rather than trusting a harness's
-  documented contract to match its actual behavior.
+- **A second, independent finding beyond the ask question — stated as what
+  was actually read, not as a settled current-state claim:** two open,
+  filed bug reports (`apply_patch` in `#27833`, `spawn_agent` in `#49736`)
+  describe `deny` not being enforced for those specific tool calls, each
+  with the reporter's own reproduction steps and version numbers (`0.133.0`
+  and `0.138.0-alpha.7` for `#27833`). This pass re-fetched `#27833`
+  directly a second time specifically to check for a later comment
+  reporting a fix in a subsequent version — none was found in what was
+  fetched (no comments at all were visible on that re-fetch, which is
+  itself a tool limitation worth flagging rather than treated as proof
+  nothing was ever posted there). **So, stated carefully: these are two
+  open reports as of the versions they name, not a verified claim about
+  Codex's current `main` or latest release** — do not read "deny isn't
+  enforced" as a settled, still-true-today fact, and don't read the absence
+  of a found fix as confirmation the bug is still live either. Worth
+  recording as a concrete reason a future non-Claude-Code adapter in
+  `EXECUTOR_CONTRACT.md` would need its own characterization tests per
+  tool-call type and per version (exactly the discipline
+  `tests/test_gate_pretooluse_scope_boundary.py` already applies to
+  lawkeeper's own Claude Code hook), precisely because this doc's own
+  attempt to pin down current behavior from the issue tracker alone hit a
+  real limit here.
 - **Honesty about what's still not done:** this is still not a read of
   Codex's own first-party documentation page or its hook-dispatch source
   code directly — it's three directly-read GitHub issues, one of which
@@ -457,16 +483,22 @@ against lawkeeper's own Law 18 mechanism.
   whole file, but a single aggregate score doesn't carry the
   per-mutation "this is the specific blind spot we checked" narrative Law
   18's card format is built around.
-- **One concrete thing lawkeeper could adopt, scoped:** not a replacement
-  for the theory-card mutation field (that's doing real, different work —
-  documenting *which* blind spot was deliberately checked, for a human
-  reviewer) but a **supplementary, non-blocking mutmut pass** over files a
-  theory card already covers, reported as "mutation score: N% — M survived
-  mutants not covered by any declared card" alongside the existing T4
-  check, surfacing gaps a card author didn't think to declare without
-  replacing the legible, declared-blind-spot mechanism Law 18 already has.
-  Not urged for immediate implementation — recorded as a scoped, concrete
-  option per this doc's own convention of verdicts over vague enthusiasm.
+- **One concrete thing lawkeeper could adopt, scoped — and scoped honestly
+  about what mutmut itself does vs. what would need building:** not a
+  replacement for the theory-card mutation field (that's doing real,
+  different work — documenting *which* blind spot was deliberately checked,
+  for a human reviewer) but a **supplementary, non-blocking mutmut pass**
+  over files a theory card already covers. mutmut on its own has no concept
+  of a theory card and would only report its own ordinary survived/killed
+  mutant counts — it cannot produce a "survived mutants not covered by any
+  declared card" figure by itself. Getting that specific, more useful
+  number would mean a separate, lawkeeper-authored mapping step: for each
+  survived mutant mutmut reports, check whether its target `file`/`attr`
+  matches any theory card's declared `mutation` block, and report only the
+  unmatched survivors as the actual gap signal. Recorded as two distinct,
+  separately-sized pieces of future work — plain mutmut adoption (small),
+  and the card-correlation step on top of it (its own real scope, not
+  included for free) — not urged for immediate implementation either way.
 - **Not read this pass, flagged rather than silently assumed equivalent:**
   `cosmic-ray` (the other commonly-cited Python mutation-testing tool) —
   named here only because it came up adjacent to mutmut in search results,
