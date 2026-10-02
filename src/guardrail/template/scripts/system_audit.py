@@ -66,9 +66,9 @@ GUARD_SCRIPTS = [
 CLAUDE_SETTINGS_FILE = REPO_ROOT / ".claude" / "settings.json"
 
 
-def run(cmd, cwd=None):
+def run(cmd, cwd=None, env=None):
     try:
-        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+        result = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True,
                                 encoding="utf-8", errors="replace")
         return result.returncode, result.stdout, result.stderr
     except OSError as e:
@@ -212,8 +212,24 @@ def check_import_boundaries() -> list[str]:
     # install putting `guardrail` on sys.path some other way) could make
     # import-linter fail to find guardrail at all, or silently check the
     # wrong thing.
-    code, out, err = run(["lint-imports", "--config", str(config)], cwd=str(REPO_ROOT))
+    # 2026-09-29: also put the repo's OWN src/ (and root) first on PYTHONPATH.
+    # Without it, `guardrail` (a src-layout package) was found only through
+    # whatever editable install happened to be on the machine: in the cloud
+    # research routine (no install) lint-imports could not find it at all,
+    # and on the desktop the install pointed at an older checkout, so the
+    # contracts were checked against the wrong copy of the code.
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [str(REPO_ROOT / "src"), str(REPO_ROOT)]
+        + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else []))
+    code, out, err = run(["lint-imports", "--config", str(config)], cwd=str(REPO_ROOT), env=env)
     if code != 0:
+        if "Could not find package" in out + err:
+            # Not a layering violation: the checker never saw the code. Say
+            # so, instead of reporting it as a broken contract.
+            return ["import-linter could not find the package(s) named in "
+                    ".importlinter root_packages (looked in src/ and the repo "
+                    f"root) -- contracts NOT checked:\n{out}{err}"]
         return [f"import-linter found broken contract(s):\n{out}{err}"]
     return []
 

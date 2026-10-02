@@ -97,3 +97,51 @@ class TestCheckImportBoundariesCatchesRealViolation:
         assert "broken contract" in problems[0]
         assert "fakepkg.inner" in problems[0]
         assert "fakepkg.outer" in problems[0]
+
+
+class TestCheckImportBoundariesFindsSrcLayoutWithoutInstall:
+    """2026-09-29 regression: lint-imports found `guardrail` only through an
+    editable install. In the cloud routine there was none (reported as
+    'broken contracts'); on the desktop the install pointed at an older
+    checkout. The check must find a src-layout package from the repo itself."""
+
+    def _config(self, root, pkg):
+        (root / ".importlinter").write_text(textwrap.dedent(f"""\
+            [importlinter]
+            root_packages =
+                {pkg}
+
+            [importlinter:contract:a-never-imports-b]
+            name = a never imports b
+            type = forbidden
+            source_modules =
+                {pkg}.a
+            forbidden_modules =
+                {pkg}.b
+            """), encoding="utf-8")
+
+    def test_src_layout_package_found_without_install(self, tmp_path, monkeypatch):
+        pkg = tmp_path / "src" / "srcpkg"
+        pkg.mkdir(parents=True)
+        for name in ("__init__.py", "a.py", "b.py"):
+            (pkg / name).write_text("", encoding="utf-8")
+        self._config(tmp_path, "srcpkg")
+        monkeypatch.setattr(system_audit, "REPO_ROOT", tmp_path)
+        assert system_audit.check_import_boundaries() == []
+
+    def test_missing_package_is_not_reported_as_a_broken_contract(self, tmp_path, monkeypatch):
+        self._config(tmp_path, "nosuchpkg_20260929")
+        monkeypatch.setattr(system_audit, "REPO_ROOT", tmp_path)
+        problems = system_audit.check_import_boundaries()
+        assert len(problems) == 1
+        assert "could not find" in problems[0]
+        assert "broken contract" not in problems[0]
+
+
+def test_tests_import_this_checkouts_own_guardrail():
+    """pyproject's pytest `pythonpath = ["src"]` must win over any installed
+    copy: on 2026-09-29 `import guardrail` run from E:/lawkeeper resolved to
+    the old C: checkout's src/ through a stale editable install."""
+    import guardrail
+    repo_src = (Path(__file__).resolve().parents[1] / "src").resolve()
+    assert Path(guardrail.__file__).resolve().is_relative_to(repo_src)
