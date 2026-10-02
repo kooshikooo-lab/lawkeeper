@@ -353,14 +353,23 @@ here.
     `apply_patch` fires and reports `Failed`, but the write proceeds anyway
     — reproduced through *both* documented deny channels (exit code 2 with
     a stderr message, and `hookSpecificOutput.permissionDecision: "deny"` on
-    stdout). A live, confirmed enforcement gap in Codex's own shipped hook
-    system for one of its two tool-call types.
-  - **`openai/codex#49736`**: a `PreToolUse` hook matching `spawn_agent`
-    (Codex's sub-agent-spawn tool call) is **never invoked at all** when a
-    sub-agent is spawned in an interactive session — the reporter verified
-    their own hook script works correctly by piping the identical payload
-    into it by hand, isolating the bug to Codex's own dispatch not calling
-    the hook for this tool call, not a bug in the guard script itself.
+    stdout), reported on `0.133.0`/`0.138.0-alpha.7`. **Behaviour varies by
+    version and platform** (issue and all comments re-read directly via the
+    GitHub API on 2026-10-02 from a session with full access; still open):
+    a 2026-08-09 comment reports `deny` for `apply_patch` **enforced** on
+    `0.147.0` (macOS, bash); comments from 2026-07-06 (Codex Desktop,
+    `shell_command`) and 2026-09-15 (**Windows, Codex CLI `0.154.0`**,
+    Bash/PowerShell calls) report the same non-enforcement. So: an open,
+    version- and platform-dependent enforcement gap with reproductions as
+    recent as `0.154.0` on Windows, not a confirmed product-wide fact and
+    not shown fixed.
+  - **`openai/codex#49736`** (single open report, filed 2026-09-30, no
+    replies as of 2026-10-02): a `PreToolUse` hook matching `spawn_agent`
+    (Codex's sub-agent-spawn tool call) was **not invoked** when a
+    sub-agent was spawned in the reporter's interactive session — the
+    reporter verified their own hook script works by piping the identical
+    payload into it by hand, which points at Codex's dispatch rather than
+    the guard script. Unconfirmed by anyone else yet.
   - **`i9wa4/dotfiles#378`**: not a bug report against Codex, but a careful,
     citation-backed analysis of Codex's own documented contract — states
     plainly, citing the official docs directly, that `permissionDecision:
@@ -392,16 +401,19 @@ here.
   filed bug reports (`apply_patch` in `#27833`, `spawn_agent` in `#49736`)
   describe `deny` not being enforced for those specific tool calls, each
   with the reporter's own reproduction steps and version numbers (`0.133.0`
-  and `0.138.0-alpha.7` for `#27833`). This pass re-fetched `#27833`
-  directly a second time specifically to check for a later comment
-  reporting a fix in a subsequent version — none was found in what was
-  fetched (no comments at all were visible on that re-fetch, which is
-  itself a tool limitation worth flagging rather than treated as proof
-  nothing was ever posted there). **So, stated carefully: these are two
-  open reports as of the versions they name, not a verified claim about
-  Codex's current `main` or latest release** — do not read "deny isn't
-  enforced" as a settled, still-true-today fact, and don't read the absence
-  of a found fix as confirmation the bug is still live either. Worth
+  and `0.138.0-alpha.7` for `#27833`). The cloud pass that wrote this could
+  not see `#27833`'s comments (fetch-tool limitation); a follow-up read of
+  the issue and all its comments through the GitHub API on 2026-10-02 found
+  them: one report of `deny` **enforced** on `0.147.0` (macOS) and two later
+  reports of **non-enforcement** (Codex Desktop `shell_command`, 2026-07-06;
+  Windows CLI `0.154.0` Bash/PowerShell, 2026-09-15). Codex's current
+  source was **not** read in either pass, so the reviewer's note that it
+  maps a valid `deny` to `Blocked`/`should_block` and wires `apply_patch`
+  and `spawn_agent` hooks is SECONDHAND here. **So, stated carefully: open,
+  version- and platform-dependent reports, with non-enforcement reproduced
+  as recently as `0.154.0` on Windows; not a settled product-wide claim
+  either way** — don't read "deny isn't enforced" as true everywhere today,
+  and don't read the `0.147.0` macOS result as a fix. Worth
   recording as a concrete reason a future non-Claude-Code adapter in
   `EXECUTOR_CONTRACT.md` would need its own characterization tests per
   tool-call type and per version (exactly the discipline
