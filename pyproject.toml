@@ -80,6 +80,12 @@ guardrail = ["template/**/*", "template/.claude/**/*", "template_extras/**/*"]
 # test file naming convention exactly (every file already starts with
 # test_).
 python_files = ["test_*.py"]
+# 2026-09-29: import THIS checkout's src/ first. Without it, `guardrail` came
+# from whatever editable install was on the machine -- on the desktop that was
+# an older checkout (C:/Users/Admin/Desktop/lawkeeper), so tests silently ran
+# against the wrong copy of the code. Guarded by
+# tests/test_system_audit.py::test_tests_import_this_checkouts_own_guardrail.
+pythonpath = ["src"]
 markers = [
     "slow: end-to-end tests that build a wheel and create a venv (test_init_smoke.py)",
 ]
