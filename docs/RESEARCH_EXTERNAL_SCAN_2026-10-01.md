@@ -359,10 +359,12 @@ here.
     a 2026-08-09 comment reports `deny` for `apply_patch` **enforced** on
     `0.147.0` (macOS, bash); comments from 2026-07-06 (Codex Desktop,
     `shell_command`) and 2026-09-15 (**Windows, Codex CLI `0.154.0`**,
-    Bash/PowerShell calls) report the same non-enforcement. So: an open,
-    version- and platform-dependent enforcement gap with reproductions as
-    recent as `0.154.0` on Windows, not a confirmed product-wide fact and
-    not shown fixed.
+    Bash/PowerShell calls) report the same non-enforcement -- but the
+    2026-09-15 reporter also found the identical hooks **enforced** on the
+    same `0.154.0` build with a fresh, empty `CODEX_HOME`, so configuration
+    state matters, not only version or platform. So: an open enforcement gap
+    that depends on version, platform, tool-call type and configuration
+    state; not a confirmed product-wide fact and not shown fixed.
   - **`openai/codex#49736`** (single open report, filed 2026-09-30, no
     replies as of 2026-10-02): a `PreToolUse` hook matching `spawn_agent`
     (Codex's sub-agent-spawn tool call) was **not invoked** when a
@@ -410,13 +412,14 @@ here.
   source was **not** read in either pass, so the reviewer's note that it
   maps a valid `deny` to `Blocked`/`should_block` and wires `apply_patch`
   and `spawn_agent` hooks is SECONDHAND here. **So, stated carefully: open,
-  version- and platform-dependent reports, with non-enforcement reproduced
-  as recently as `0.154.0` on Windows; not a settled product-wide claim
-  either way** — don't read "deny isn't enforced" as true everywhere today,
+  reports whose outcome depends on version, platform, tool-call type and
+  configuration state (non-enforcement on Windows `0.154.0` with a long-used
+  `CODEX_HOME`, enforcement on the same build with a fresh one); not a
+  settled product-wide claim either way** — don't read "deny isn't enforced" as true everywhere today,
   and don't read the `0.147.0` macOS result as a fix. Worth
   recording as a concrete reason a future non-Claude-Code adapter in
   `EXECUTOR_CONTRACT.md` would need its own characterization tests per
-  tool-call type and per version (exactly the discipline
+  tool-call type, version and configuration state (exactly the discipline
   `tests/test_gate_pretooluse_scope_boundary.py` already applies to
   lawkeeper's own Claude Code hook), precisely because this doc's own
   attempt to pin down current behavior from the issue tracker alone hit a
