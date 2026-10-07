@@ -58,6 +58,19 @@ folder. To get a branch back, clone or fetch from that bundle.
   on the task, so it's a one-time fix. Lawkeeper's task now scans
   `E:\lawkeeper` (it was still pointed at the C: copy; repointed 2026-10-07).
 
+**For lawkeeper sessions — first, a safety-gate gap found 2026-10-07 (not fixed):**
+- `scripts/gate_pretooluse.py` decides "which branch is current" for a push
+  with no named destination by running git in the *session's* folder
+  (`_current_branch()`), ignoring a `cd <dir> &&` or `git -C <dir>` in the same
+  command. Reproduced: from a checkout on a feature branch, the gate **allows**
+  `cd /e/lawkeeper && git push --force` and `git -C /e/lawkeeper push --force`
+  while `E:\lawkeeper` is on `main`; the plain `git push --force` run from the
+  `main` checkout is correctly denied. GitHub branch protection on `main` still
+  refuses force-pushes, so `main` is backstopped, but the gate's own guarantee
+  fails silently; the opposite case gives false blocks (seen 2026-09-28).
+  Fix: resolve the target checkout from `cd`/`-C` (or fall back to "ask" when
+  the command changes directory), with tests for both directions.
+
 **For lawkeeper sessions:**
 - **Registry and item 13.** Lawkeeper's own "does this finding belong here"
   check (2026-09-13 handoff item 13) will be covered by the registry's
@@ -67,7 +80,7 @@ folder. To get a branch back, clone or fetch from that bundle.
   every registry change automatically, and (c) lawkeeper's weekly routine
   files findings into the registry. (c) and adding falcun to the routine's
   repo access are routine changes for the user to OK once the design is
-  agreed. Close item 13 when (a)+(b) land.
+  agreed. Close item 13 only when all three, (a), (b) and (c), are approved and in place.
 - **From the 2026-10-01 research report** (`docs/RESEARCH_EXTERNAL_SCAN_2026-10-01.md`):
   queued items now resolved: MITRE ATLAS, AWS Cedar, pre-commit. Codex's
   hook protocol: much better evidenced but no first-party doc read yet.
@@ -78,10 +91,14 @@ folder. To get a branch back, clone or fetch from that bundle.
     scripts and records pinned external commits. Not the pre-commit tool itself.
   - `mutmut` (BSD-3) as a complement to Law 18's hand-rolled single-mutation
     T4 check.
-  - Codex finding, stated carefully: `deny` enforcement in Codex hooks varies
-    by version and platform (openai/codex#27833: enforced on 0.147.0 macOS,
-    not on Windows CLI 0.154.0). Matters if `EXECUTOR_CONTRACT.md` ever adds a
-    Codex adapter: it would need its own per-version characterization tests.
+  - Codex finding, stated carefully: whether Codex enforces a hook's `deny`
+    is not settled and depends on more than version or platform
+    (openai/codex#27833, still open): enforced on 0.147.0 macOS; not enforced
+    on Windows CLI 0.154.0 with a long-used `CODEX_HOME`, but enforced on that
+    same build with a fresh, empty `CODEX_HOME` (same reporter, 2026-09-15).
+    Matters if `EXECUTOR_CONTRACT.md` ever adds a Codex adapter: it would need
+    characterization tests per version, platform, tool-call type and
+    configuration state.
 - **Still from 2026-09-13, unchanged:** the AEF-as-base evaluation
   (Priority 2, set up, not started, needs uninterrupted time); moving routines
   to a self-hosted scheduler (Priority 4).
@@ -92,9 +109,12 @@ falcun #15 and #8; Windwright #96/#93 (backlog session) and #99 (L7).
 ## Things to know when working here
 
 - **Branch names.** `agent/<topic>/desktop` for this machine; `cloud` is valid
-  for the cloud routines. A force-push needs an explicit refspec
-  (`git push --force-with-lease origin <branch>:<branch>`); the PreToolUse gate
-  blocks it otherwise, by design.
+  for the cloud routines. When force-pushing a feature branch, name it
+  explicitly (`git push --force-with-lease origin <branch>:<branch>`); that's a
+  recommendation, not a rule the gate enforces. The gate blocks a push whose
+  named destination is canonical, and a push with no named destination only
+  when the current branch is canonical (`scripts/gate_pretooluse.py`, the
+  `explicit_targets` logic).
 - **Notice-board hook form.** lawkeeper/falcun hooks call
   `python ${CLAUDE_PROJECT_DIR}/scripts/noticeboard.py ...`. Verified only
   with hooks running through Git Bash on this machine, not under
