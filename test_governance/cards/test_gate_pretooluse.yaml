@@ -43,9 +43,11 @@ blind_spot: >
   indirection through a wrapper script, shell alias, or shell function
   that itself runs `git push --force` is invisible to this hook entirely
   (the Bash tool call the hook sees is the wrapper's name, not what it
-  does); and `git push` invoked via `git -c ... push` or with the git
-  subcommand spelled via an alias (`git p`) is not recognized as `push`
-  at all. This is a defense-in-depth layer, not a sandbox -- the same
+  does); and `git push` with the git subcommand spelled via an alias (`git p`)
+  is not recognized as `push` at all. (`git -c ... push`, `git -C <dir> push`
+  and `cd <dir> && git push` ARE recognized since PR #34, which resolves
+  the target checkout; subshell forms such as `(cd x && git push)` are
+  still not parsed.) This is a defense-in-depth layer, not a sandbox -- the same
   caveat given when this build was proposed, not discovered after the
   fact.
 
