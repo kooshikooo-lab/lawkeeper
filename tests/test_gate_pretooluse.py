@@ -346,3 +346,62 @@ class TestMainStdinStdoutContract:
         )
         assert proc.returncode == 0
         assert proc.stdout.strip() == ""
+
+
+# ── directory tracking: `cd <dir> &&` / `git -C <dir>` (handoff 2026-10-07) ──
+
+import subprocess  # noqa: E402
+
+
+def _mk_repo(path, branch):
+    subprocess.run(["git", "init", "-q", "-b", branch, str(path)], check=True)
+    subprocess.run(["git", "-C", str(path), "-c", "user.name=t", "-c", "user.email=t@t",
+                    "commit", "-q", "--allow-empty", "-m", "x"], check=True)
+    return str(path).replace("\\", "/")
+
+
+@pytest.fixture
+def two_checkouts(tmp_path, monkeypatch):
+    """Session folder on a feature branch; a second checkout on main."""
+    feat = _mk_repo(tmp_path / "feat", "agent/topic/desktop")
+    main = _mk_repo(tmp_path / "main", "main")
+    monkeypatch.chdir(feat)
+    return feat, main
+
+
+class TestTargetCheckoutResolution:
+    def test_cd_into_main_checkout_force_push_is_hardline(self, two_checkouts):
+        _, main = two_checkouts
+        risk = gate.inspect_command(f"cd {main} && git push --force")
+        assert risk is not None and risk.level == "hardline" and risk.branch == "main"
+
+    def test_git_dash_C_main_checkout_force_push_is_hardline(self, two_checkouts):
+        _, main = two_checkouts
+        risk = gate.inspect_command(f"git -C {main} push --force")
+        assert risk is not None and risk.level == "hardline"
+
+    def test_git_dash_C_with_explicit_main_target_is_hardline(self, two_checkouts):
+        _, main = two_checkouts
+        risk = gate.inspect_command(f"git -C {main} push --force origin main")
+        assert risk is not None and risk.level == "hardline"
+
+    def test_cd_into_feature_checkout_from_main_is_allowed(self, two_checkouts, monkeypatch):
+        feat, main = two_checkouts
+        monkeypatch.chdir(main)  # session folder is on main: plain push would be denied
+        assert gate.inspect_command("git push --force").level == "hardline"
+        assert gate.inspect_command(f"cd {feat} && git push --force") is None
+        assert gate.inspect_command(f"git -C {feat} push --force") is None
+
+    def test_unresolvable_cd_makes_unnamed_force_push_ask(self, two_checkouts):
+        risk = gate.inspect_command('cd "$TARGET" && git push --force')
+        assert risk is not None and risk.level == "ask"
+
+    def test_cd_dash_and_pushd_make_unnamed_force_push_ask(self, two_checkouts):
+        for cmd in ("cd - && git push --force", "pushd /tmp && git push --force"):
+            risk = gate.inspect_command(cmd)
+            assert risk is not None and risk.level == "ask", cmd
+
+    def test_plain_push_without_force_unaffected(self, two_checkouts):
+        _, main = two_checkouts
+        assert gate.inspect_command(f"cd {main} && git push") is None
+        assert gate.inspect_command(f"git -C {main} push origin main") is None
