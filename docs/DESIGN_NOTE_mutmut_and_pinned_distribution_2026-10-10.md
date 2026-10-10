@@ -5,33 +5,40 @@ and 6), queued in `docs/SESSION_HANDOFF_2026-10-07.md`. User picked both on
 2026-10-10. This note changes no governance text and no code; each proposal
 below needs a separate approval before anything is built.
 
-## 1. mutmut trial — blocked on this machine, with two findings
+## 1. mutmut trial -- result (Linux CI, 2026-10-10)
 
-Tried `mutmut 3.8.0` (pip, in a throwaway venv on E:, outside the repo) against
-a copy of `scripts/gate_pretooluse.py` + `scripts/guard_branch.py` with
-`tests/test_gate_pretooluse.py`.
+**Not runnable on this machine:** `mutmut 3.8.0` refuses native Windows ("please
+use the WSL", boxed/mutmut#397) and there is no WSL here. So it was run once on
+`ubuntu-latest` from a throwaway branch (workflow and branch since deleted;
+nothing merged), against `scripts/gate_pretooluse.py` as of PR #34, with
+`tests/test_gate_pretooluse.py` only.
 
-- **It does not run on native Windows.** `mutmut run` exits with: "To run
-  mutmut on Windows, please use the WSL" (upstream tracking issue:
-  boxed/mutmut#397). This machine has no WSL distribution, so no mutation score
-  was produced. Nothing about the gate's test strength is learned from this
-  trial.
-- **Layout mismatch.** mutmut mutates importable packages/modules. Lawkeeper's
-  guard scripts are loaded by path (`tests/conftest.py::load_script`) and are
-  not a package, so even on Linux they would need a package-shaped copy or a
-  small adapter first.
+**Result: 479 mutants -- 284 killed, 145 survived, 50 have no covering test.**
+That is 59% killed overall, 66% of the mutants the tests can reach.
+- The 50 "no tests" are all in `main()`, which the tests exercise through a
+  subprocess; mutmut only tracks in-process coverage, so this is a measurement
+  gap, not an untested function.
+- The 145 survivors are real: the gate's tests do not pin down many
+  mutations. The run's output was truncated to its last 80 lines, so only 30
+  survivors were seen by function (`inspect_command` 17, `_parse_git_invocation`
+  6, `decide` 4, `_overridden` 3). Those two parser functions hold the
+  `cd`/`-C` tracking added in PR #34, so that code is the least well pinned.
+  The full per-mutant list was not kept.
 
-**Options, cheapest first** (decision for the user, not taken here):
-1. Run mutmut on `ubuntu-latest` in a throwaway CI job (the existing `guard`
-   job already runs there) against a package-shaped copy of the gate. Report
-   the score; do not make it a required check.
-2. Install WSL on the desktop (a system change; not done).
-3. Drop mutmut and extend Law 18's own `run_mutation` to accept several
-   mutations per card. Smaller, but hand-declared, which is the gap mutmut
-   would have closed.
+**What it took (relevant if this is repeated):** mutmut can only attribute
+tests to mutants when the module is imported by name; the repo's tests load
+scripts by path (`conftest.load_script`), which gave "could not find any test
+case for any mutant". The run only worked after copying the gate tests into a
+separate directory and rewriting their import to `import scripts.gate_pretooluse
+as gate`. Making this permanent means changing how `test_gate_pretooluse.py`
+imports the gate.
 
-Recommendation: option 1, as a one-off measurement first. Decide on 3 only if
-the score shows real survivors.
+**Law 18 comparison:** Law 18's single hand-declared mutation per theory card
+cannot see a 145-survivor gap like this; mutmut did, in about 25 seconds of
+mutation time. Recommendation (not acted on): keep the T4 check, add a
+non-blocking mutmut CI job for the gate, and use its survivor list to add
+targeted tests. Needs the user's OK because it adds a CI workflow and a test
+import change.
 
 ## 2. Pinned-reference distribution — proposed shape
 
