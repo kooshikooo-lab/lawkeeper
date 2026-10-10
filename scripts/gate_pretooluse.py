@@ -75,6 +75,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -174,8 +175,38 @@ def _parse_push_refspec(token: str) -> tuple[str | None, bool]:
     return (target or None), (forced or is_delete)
 
 
-def _current_branch() -> str | None:
-    out, code = guard_branch.run_git(["rev-parse", "--abbrev-ref", "HEAD"])
+# Sentinel for "the command changed directory somewhere we cannot resolve
+# statically" (`cd "$X"`, `cd -`, `pushd`, `cd` with no argument). A push
+# with no named branch then cannot be attributed to a checkout -> ask.
+_UNKNOWN_DIR = object()
+
+
+def _msys_to_native(path: str) -> str:
+    """Git Bash spells drive paths `/e/foo`; native git.exe spawned from
+    Python does not translate them. No-op off Windows / for other shapes."""
+    if os.name == "nt":
+        m = re.match(r"^/([A-Za-z])(/.*)?$", path)
+        if m:
+            return f"{m.group(1).upper()}:{m.group(2) or '/'}"
+    return path
+
+
+def _join_dir(base, target: str):
+    """Directory after `cd <target>` from `base` (None = session cwd)."""
+    if base is _UNKNOWN_DIR or not target or target == "-" or target.startswith("~")             or _looks_unresolvable(target):
+        return _UNKNOWN_DIR
+    target = _msys_to_native(target)
+    if base is None or os.path.isabs(target) or re.match(r"^[A-Za-z]:", target):
+        return target
+    return os.path.join(base, target)
+
+
+def _current_branch(cwd=None) -> str | None:
+    """Branch checked out in `cwd` (None = the session's own folder)."""
+    if cwd is _UNKNOWN_DIR:
+        return None
+    prefix = ["-C", cwd] if cwd else []
+    out, code = guard_branch.run_git(prefix + ["rev-parse", "--abbrev-ref", "HEAD"])
     if code == 0 and out and out != "HEAD":
         return out
     return None
@@ -184,7 +215,7 @@ def _current_branch() -> str | None:
 _DRY_RUN_FLAGS = {"-n", "--dry-run"}
 
 
-def _inspect_git_push(args: list[str]) -> Risk | None:
+def _inspect_git_push(args: list[str], cwd=None) -> Risk | None:
     # `--dry-run`/`-n` is git's own documented guarantee that this push
     # computes and reports what would happen without mutating the remote
     # at all -- it structurally cannot cause the harm this tier exists to
@@ -258,11 +289,11 @@ def _inspect_git_push(args: list[str]) -> Risk | None:
             return Risk("ask", None,
                         "a force/delete push with no explicit branch and an unresolvable "
                         "(shell variable/substitution) component")
-        branch = _current_branch()
+        branch = _current_branch(cwd)
         if branch is None:
             return Risk("ask", None,
                          "a force/delete push with no explicit branch, and the current branch "
-                         "could not be resolved")
+                         "could not be resolved (unresolvable directory change, or not a git checkout)")
         if guard_branch.is_canonical(branch):
             return Risk("hardline", branch,
                          f"a force/delete push with no explicit refspec, on canonical branch '{branch}'")
@@ -303,18 +334,62 @@ def _inspect_git_branch(args: list[str]) -> Risk | None:
     return None
 
 
+_GIT_OPTS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
+
+
+def _parse_git_invocation(tokens: list[str], cwd):
+    """Split `git [global opts] <sub> <args>` -> (sub, args, effective cwd).
+    `-C <dir>` (repeatable) re-roots the checkout the subcommand acts on;
+    `--git-dir`/`--work-tree` repoint it in ways not resolved here, so they
+    make the directory unknown. Returns None when no subcommand is found."""
+    i = 1
+    while i < len(tokens):
+        t = tokens[i]
+        if t == "-C" and i + 1 < len(tokens):
+            cwd = _join_dir(cwd, tokens[i + 1])
+            i += 2
+        elif t in ("--git-dir", "--work-tree") or t.startswith(("--git-dir=", "--work-tree=")):
+            cwd = _UNKNOWN_DIR
+            i += 1 if "=" in t else 2
+        elif t in _GIT_OPTS_WITH_VALUE:
+            i += 2
+        elif t.startswith("-"):
+            i += 1
+        else:
+            return t, tokens[i + 1:], cwd
+    return None
+
+
 def inspect_command(command: str) -> Risk | None:
     """Return the highest-severity Risk found across every chained
     sub-command (split on &&/||/;/|), or None if nothing matched a
     known dangerous shape. A hardline finding returns immediately --
-    nothing outranks it (deny > ask > allow, per the survey)."""
+    nothing outranks it (deny > ask > allow, per the survey).
+
+    Directory changes are tracked across the chain: `cd <dir> && git push`
+    and `git -C <dir> push` resolve "current branch" in <dir>, not in the
+    session's folder (handoff 2026-10-07 gap). A directory we cannot
+    resolve statically makes a no-named-branch push an ask."""
     best: Risk | None = None
+    cwd = None
     for tokens in _split_commands(command):
-        if not tokens or _basename(tokens[0]) != "git" or len(tokens) < 2:
+        if not tokens:
             continue
-        sub, args = tokens[1], tokens[2:]
+        head = _basename(tokens[0])
+        if head in ("cd", "chdir"):
+            cwd = _join_dir(cwd, tokens[1] if len(tokens) == 2 else "")
+            continue
+        if head in ("pushd", "popd"):
+            cwd = _UNKNOWN_DIR
+            continue
+        if head != "git" or len(tokens) < 2:
+            continue
+        parsed = _parse_git_invocation(tokens, cwd)
+        if parsed is None:
+            continue
+        sub, args, eff_cwd = parsed
         if sub == "push":
-            risk = _inspect_git_push(args)
+            risk = _inspect_git_push(args, eff_cwd)
         elif sub == "branch":
             risk = _inspect_git_branch(args)
         else:
