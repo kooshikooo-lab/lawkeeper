@@ -220,3 +220,33 @@ class TestOverrideEnv:
         monkeypatch.delenv("GUARD_BRANCH_ALLOW_DELETE")
         monkeypatch.setenv("GUARD_BRANCH_ALLOW_FORCE", "main")
         assert gate._overridden("main") is True
+
+
+class TestWindowsBackslashPaths:
+    """shlex posix mode drops backslashes; unquoted drive paths are rewritten
+    first so a Windows path to git is still recognised as git."""
+
+    def test_unquoted_drive_path_to_git_is_inspected(self):
+        for cmd in (r"C:\tools\git push -f origin main",
+                    r"C:\Git\bin\git.exe push -f origin main",
+                    r"c:\git\GIT.EXE push -f origin main",
+                    r"GIT.EXE push -f origin main"):
+            r = gate.inspect_command(cmd)
+            assert r is not None and (r.level, r.branch) == ("hardline", "main"), cmd
+
+    def test_quoted_drive_path_still_inspected(self):
+        r = gate.inspect_command(r'"C:\Program Files\Git\bin\git.exe" push -f origin main')
+        assert (r.level, r.branch) == ("hardline", "main")
+
+    def test_drive_path_cd_target_keeps_its_separators(self):
+        assert gate._split_commands(r"cd C:\repo\sub && git push") == [["cd", "C:/repo/sub"], ["git", "push"]]
+
+    def test_other_backslashes_are_untouched(self):
+        assert gate._split_commands(r"echo a\ b") == [["echo", "a b"]]
+        # a quoted drive path is rewritten too -- harmless: only git/cd
+        # recognition matters, not the exact text of other arguments
+        assert gate._split_commands(r'echo "C:\x"') == [["echo", "C:/x"]]
+        assert gate._split_commands(r"echo xC:\y") == [["echo", "xC:y"]]
+
+    def test_non_git_executable_with_git_in_its_name_is_ignored(self):
+        assert gate.inspect_command(r"C:\tools\gitk push -f origin main") is None
