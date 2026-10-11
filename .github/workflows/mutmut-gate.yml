@@ -1,0 +1,59 @@
+name: mutmut-gate
+
+# Advisory mutation testing of scripts/gate_pretooluse.py (user-approved
+# 2026-10-10; background in docs/DESIGN_NOTE_mutmut_and_pinned_distribution_
+# 2026-10-10.md). NEVER a required check: mutmut 3 does not run on native
+# Windows, so this runs on ubuntu only, and it reports a score + survivor list
+# for a human to act on. It must not be added to branch protection.
+on:
+  pull_request:
+    paths:
+      - scripts/gate_pretooluse.py
+      - scripts/guard_branch.py
+      - tests/test_gate_pretooluse.py
+      - .github/workflows/mutmut-gate.yml
+  workflow_dispatch:
+
+jobs:
+  mutmut:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]" mutmut==3.8.0
+      - name: Stage the gate tests (mutmut copies only what it is told to)
+        run: |
+          mkdir gt
+          cp tests/conftest.py tests/test_gate_pretooluse.py gt/
+          cat >> pyproject.toml <<'TOML'
+
+          [tool.mutmut]
+          paths_to_mutate = ["scripts/gate_pretooluse.py"]
+          tests_dir = ["gt/"]
+          also_copy = ["gt/", "scripts/", "src/", ".guardrail.json", "pyproject.toml"]
+          TOML
+      - name: mutmut run
+        continue-on-error: true
+        run: mutmut run --max-children 4 > run.log 2>&1; tail -5 run.log
+      - name: Report
+        run: |
+          mutmut results --all true > results.txt 2>&1 || mutmut results > results.txt 2>&1
+          killed=$(grep -c "killed" results.txt || true)
+          survived=$(grep -c ": survived" results.txt || true)
+          notests=$(grep -c ": no tests" results.txt || true)
+          {
+            echo "## mutmut on scripts/gate_pretooluse.py (advisory)"
+            echo "killed: $killed, survived: $survived, no covering test: $notests"
+            echo
+            echo "Survivors by function:"
+            grep ": survived" results.txt | sed 's/.*gate_pretooluse\.x_//; s/__mutmut_[0-9]*.*//' | sort | uniq -c | sort -rn
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mutmut-results
+          path: |
+            results.txt
+            run.log

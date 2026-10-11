@@ -9,12 +9,17 @@ tests exercise real classification behavior, not a stand-in for it.
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
-from conftest import REPO_ROOT, load_script
+from conftest import REPO_ROOT
 
-gate = load_script("gate_pretooluse.py")
+# Imported by name (not conftest.load_script's path loader) so mutmut can
+# attribute tests to mutants of scripts/gate_pretooluse.py; the path comes
+# from this file's own location so a mutmut copy imports its own mutated copy.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts import gate_pretooluse as gate  # noqa: E402
 
 
 # ── inspect_command: hardline tier -- no ask path exists for these ─────
