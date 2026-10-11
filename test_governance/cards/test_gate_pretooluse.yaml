@@ -47,7 +47,14 @@ blind_spot: >
   is not recognized as `push` at all. (`git -c ... push`, `git -C <dir> push`
   and `cd <dir> && git push` ARE recognized since PR #34, which resolves
   the target checkout; subshell forms such as `(cd x && git push)` are
-  still not parsed.) This is a defense-in-depth layer, not a sandbox -- the same
+  still not parsed.)
+
+  Found by the 2026-10-11 mutmut run: shlex posix mode strips backslashes,
+  so an unquoted Windows path to git (C:\...\git.exe) is not recognised as
+  git at all -- an evasion/blind spot, recorded not fixed. The advisory
+  mutmut CI job (.github/workflows/mutmut-gate.yml) now reports surviving
+  mutants of the gate; tests/test_gate_pretooluse.py's last classes were
+  written to kill them. This is a defense-in-depth layer, not a sandbox -- the same
   caveat given when this build was proposed, not discovered after the
   fact.
 
