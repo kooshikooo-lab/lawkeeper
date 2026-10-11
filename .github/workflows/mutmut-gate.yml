@@ -51,9 +51,16 @@ jobs:
             echo "Survivors by function:"
             grep ": survived" results.txt | sed 's/.*gate_pretooluse\.x_//; s/__mutmut_[0-9]*.*//' | sort | uniq -c | sort -rn
           } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Survivor diffs
+        run: |
+          grep ": survived" results.txt | sed 's/^ *//; s/: survived.*//' | while read -r m; do
+            echo "=== $m"; mutmut show "$m" 2>&1 | head -40
+          done > survivors.diff
+          wc -l survivors.diff
       - uses: actions/upload-artifact@v4
         with:
           name: mutmut-results
           path: |
             results.txt
             run.log
+            survivors.diff
