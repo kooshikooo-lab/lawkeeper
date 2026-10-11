@@ -355,25 +355,6 @@ class TestMainStdinStdoutContract:
 
 # ── directory tracking: `cd <dir> &&` / `git -C <dir>` (handoff 2026-10-07) ──
 
-import subprocess  # noqa: E402
-
-
-def _mk_repo(path, branch):
-    subprocess.run(["git", "init", "-q", "-b", branch, str(path)], check=True)
-    subprocess.run(["git", "-C", str(path), "-c", "user.name=t", "-c", "user.email=t@t",
-                    "commit", "-q", "--allow-empty", "-m", "x"], check=True)
-    return str(path).replace("\\", "/")
-
-
-@pytest.fixture
-def two_checkouts(tmp_path, monkeypatch):
-    """Session folder on a feature branch; a second checkout on main."""
-    feat = _mk_repo(tmp_path / "feat", "agent/topic/desktop")
-    main = _mk_repo(tmp_path / "main", "main")
-    monkeypatch.chdir(feat)
-    return feat, main
-
-
 class TestTargetCheckoutResolution:
     def test_cd_into_main_checkout_force_push_is_hardline(self, two_checkouts):
         _, main = two_checkouts
@@ -410,3 +391,4 @@ class TestTargetCheckoutResolution:
         _, main = two_checkouts
         assert gate.inspect_command(f"cd {main} && git push") is None
         assert gate.inspect_command(f"git -C {main} push origin main") is None
+

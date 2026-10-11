@@ -33,6 +33,15 @@ separate directory and rewriting their import to `import scripts.gate_pretooluse
 as gate`. Making this permanent means changing how `test_gate_pretooluse.py`
 imports the gate.
 
+**Follow-up (2026-10-11):** the survivors were dumped per mutant by the now
+permanent advisory CI job (`.github/workflows/mutmut-gate.yml`) and targeted
+with new tests (`tests/test_gate_pretooluse_mutants.py`). Second run: **411
+killed, 16 survived, 50 uncovered (`main()`, subprocess-tested)**; the 16 left
+are mostly equivalent mutants (e.g. explicit `posix=True`, an initial `cwd` of
+`""` vs `None`). It also surfaced a real blind spot, recorded not fixed: shlex
+posix mode strips backslashes, so an unquoted Windows path to git
+(`C:\...\git.exe`) is not recognised as git by the gate.
+
 **Law 18 comparison:** Law 18's single hand-declared mutation per theory card
 cannot see a 145-survivor gap like this; mutmut did, in about 25 seconds of
 mutation time. Recommendation (not acted on): keep the T4 check, add a
