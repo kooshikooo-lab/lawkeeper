@@ -89,6 +89,12 @@ _DELETE_FLAGS_PUSH = {"-d", "--delete"}
 _DELETE_FLAGS_BRANCH = {"-D", "--delete", "-d"}
 _SHELL_OPERATORS = {"&&", "||", ";", "|"}
 _MULTI_REF_PUSH_FLAGS = {"--all", "--mirror"}
+# An unquoted Windows drive path (C:\tools\git.exe, cd C:\repo). shlex in
+# posix mode treats a backslash as an escape and drops it, turning this into
+# "C:toolsgit.exe" -- so the path is rewritten to forward slashes first. Quoted
+# paths are rewritten too, which is harmless: only git/cd recognition matters.
+_WIN_DRIVE_PATH = re.compile(r"""(?<![\w\\/])[A-Za-z]:(?:\\[^\s\\"'`$;&|()<>]*)+""")
+_GIT_NAMES = {"git", "git.exe"}
 
 
 class Risk:
@@ -111,6 +117,7 @@ def _split_commands(command: str) -> list[list[str]]:
     command yields no sub-commands (treated as "nothing to inspect"
     here, not as a signal on its own -- most unbalanced-quote commands
     have nothing to do with git and shouldn't ask on every one)."""
+    command = _WIN_DRIVE_PATH.sub(lambda m: m.group(0).replace("\\", "/"), command)
     try:
         tokens = shlex.split(command, posix=True)
     except ValueError:
@@ -375,14 +382,14 @@ def inspect_command(command: str) -> Risk | None:
     for tokens in _split_commands(command):
         if not tokens:
             continue
-        head = _basename(tokens[0])
+        head = _basename(tokens[0]).lower()
         if head in ("cd", "chdir"):
             cwd = _join_dir(cwd, tokens[1] if len(tokens) == 2 else "")
             continue
         if head in ("pushd", "popd"):
             cwd = _UNKNOWN_DIR
             continue
-        if head != "git" or len(tokens) < 2:
+        if head not in _GIT_NAMES or len(tokens) < 2:
             continue
         parsed = _parse_git_invocation(tokens, cwd)
         if parsed is None:
