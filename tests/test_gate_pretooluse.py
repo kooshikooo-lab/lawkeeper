@@ -9,12 +9,17 @@ tests exercise real classification behavior, not a stand-in for it.
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
-from conftest import REPO_ROOT, load_script
+from conftest import REPO_ROOT
 
-gate = load_script("gate_pretooluse.py")
+# Imported by name (not conftest.load_script's path loader) so mutmut can
+# attribute tests to mutants of scripts/gate_pretooluse.py; the path comes
+# from this file's own location so a mutmut copy imports its own mutated copy.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts import gate_pretooluse as gate  # noqa: E402
 
 
 # ── inspect_command: hardline tier -- no ask path exists for these ─────
@@ -346,3 +351,44 @@ class TestMainStdinStdoutContract:
         )
         assert proc.returncode == 0
         assert proc.stdout.strip() == ""
+
+
+# ── directory tracking: `cd <dir> &&` / `git -C <dir>` (handoff 2026-10-07) ──
+
+class TestTargetCheckoutResolution:
+    def test_cd_into_main_checkout_force_push_is_hardline(self, two_checkouts):
+        _, main = two_checkouts
+        risk = gate.inspect_command(f"cd {main} && git push --force")
+        assert risk is not None and risk.level == "hardline" and risk.branch == "main"
+
+    def test_git_dash_C_main_checkout_force_push_is_hardline(self, two_checkouts):
+        _, main = two_checkouts
+        risk = gate.inspect_command(f"git -C {main} push --force")
+        assert risk is not None and risk.level == "hardline"
+
+    def test_git_dash_C_with_explicit_main_target_is_hardline(self, two_checkouts):
+        _, main = two_checkouts
+        risk = gate.inspect_command(f"git -C {main} push --force origin main")
+        assert risk is not None and risk.level == "hardline"
+
+    def test_cd_into_feature_checkout_from_main_is_allowed(self, two_checkouts, monkeypatch):
+        feat, main = two_checkouts
+        monkeypatch.chdir(main)  # session folder is on main: plain push would be denied
+        assert gate.inspect_command("git push --force").level == "hardline"
+        assert gate.inspect_command(f"cd {feat} && git push --force") is None
+        assert gate.inspect_command(f"git -C {feat} push --force") is None
+
+    def test_unresolvable_cd_makes_unnamed_force_push_ask(self, two_checkouts):
+        risk = gate.inspect_command('cd "$TARGET" && git push --force')
+        assert risk is not None and risk.level == "ask"
+
+    def test_cd_dash_and_pushd_make_unnamed_force_push_ask(self, two_checkouts):
+        for cmd in ("cd - && git push --force", "pushd /tmp && git push --force"):
+            risk = gate.inspect_command(cmd)
+            assert risk is not None and risk.level == "ask", cmd
+
+    def test_plain_push_without_force_unaffected(self, two_checkouts):
+        _, main = two_checkouts
+        assert gate.inspect_command(f"cd {main} && git push") is None
+        assert gate.inspect_command(f"git -C {main} push origin main") is None
+
