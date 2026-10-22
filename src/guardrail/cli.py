@@ -16,7 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from guardrail import __version__
+from guardrail import __version__, template_sync
 
 # Resolved via importlib.resources rather than a path relative to this file's
 # disk location. A path like Path(__file__).parent.parent.parent only works
@@ -85,11 +85,7 @@ def _repo_root(start: Path | None = None) -> Path | None:
 
 
 def _render(src: Path, dst: Path, project_name: str) -> None:
-    text = src.read_text(encoding="utf-8", errors="replace")
-    rendered = (text
-                .replace("__PROJECT_NAME__", project_name)
-                .replace("__PROJECT_NAME_TITLE__", project_name.replace("-", " ").title()))
-    dst.write_text(rendered, encoding="utf-8", newline="\n")
+    dst.write_text(template_sync.render_text(src, project_name), encoding="utf-8", newline="\n")
 
 
 def _copy_template_tree(template_root: Path, dst_root: Path, project_name: str) -> list[Path]:
@@ -192,6 +188,13 @@ def cmd_init(args: argparse.Namespace) -> int:
         "project_name": project_name,
         "machines": args.machines.split(",") if args.machines else ["desktop", "laptop"],
         "canonical_branches": ["main"],
+        # Provenance, so `lawkeeper update` can tell an untouched scaffold file
+        # from one the project has customised (no hashes = nothing to compare).
+        "template_version": __version__,
+        "template_files": {
+            p.relative_to(dst_root).as_posix(): template_sync.sha256(p.read_bytes())
+            for p in sorted(written)
+        },
     }
     (dst_root / ".guardrail.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
     written.append(dst_root / ".guardrail.json")
@@ -233,6 +236,16 @@ def cmd_init(args: argparse.Namespace) -> int:
     print("  4. python scripts/system_audit.py    # must PASS before any real commit")
     print("  5. git push && open a PR (branch protection requires it)")
     return 0
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    """`lawkeeper update` -- see template_sync.run_update for the rules."""
+    root = _repo_root()
+    if root is None:
+        print("lawkeeper: not inside a git repository.", file=sys.stderr)
+        return 1
+    return template_sync.run_update(root, _template_root(), _extras_template_root(),
+                                    args.apply, __version__)
 
 
 def cmd_status(_: argparse.Namespace) -> int:
@@ -312,6 +325,12 @@ def main(argv=None) -> int:
 
     sub.add_parser("status", help="show enforcement-layer status (read-only)")
 
+    p_update = sub.add_parser(
+        "update",
+        help="compare scaffolded files with the installed template (dry run; --apply to write)")
+    p_update.add_argument("--apply", action="store_true",
+                          help="write files that are unchanged locally; never overwrites conflicts")
+
     args = parser.parse_args(argv)
     if args.version or args.cmd is None:
         print(f"lawkeeper {__version__}")
@@ -320,6 +339,8 @@ def main(argv=None) -> int:
         return cmd_init(args)
     if args.cmd == "status":
         return cmd_status(args)
+    if args.cmd == "update":
+        return cmd_update(args)
     if args.cmd == "run":
         return cmd_run(args)
     if args.cmd == "reasoning":

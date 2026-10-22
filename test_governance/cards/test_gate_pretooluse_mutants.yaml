@@ -1,0 +1,40 @@
+test_id: test_gate_pretooluse_mutants
+theory: >
+  The first mutmut run against scripts/gate_pretooluse.py (2026-10-10, CI)
+  killed 284 of 479 mutants and left 146 surviving: the existing tests
+  checked that a verdict was hardline/ask/None but not its exact branch and
+  reason, and left the argument parsers (git global options, cd tracking,
+  refspec splitting) and the Windows path translation under-pinned. These
+  tests pin that behavior so a change to it fails a test instead of passing
+  silently. See test_gate_pretooluse.yaml for why the gate exists.
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    Expected values are written out by hand from the documented rules --
+    the exact reason strings the human sees in the permission prompt, the
+    git command-line grammar for global options and refspecs, and the
+    Windows drive-path convention (/e/x -> E:/x) -- not computed by calling
+    the code under test. The survivor list that motivated each test comes
+    from mutmut, an independent mutation generator.
+acceptance: "every Risk verdict carries the exact level, branch and reason text for its situation (multi-ref, unresolvable component, unresolvable current branch, canonical current branch, explicit canonical target, unresolvable target, branch delete); git branch without a delete flag and non-push git commands are never flagged; --delete alone makes a push risky; a hardline later in a chain outranks an earlier ask and the first ask is kept over a later one; a flag-only git invocation does not hide a later push; quoted arguments are unquoted; refspecs split on the first colon; _current_branch returns a name only on a successful non-HEAD result and prefixes -C when given a directory; _join_dir returns the unknown marker for empty, '-', '~', variable and substitution targets and joins relative targets onto the base; _msys_to_native translates /x/... drive paths only when os.name is nt; _parse_git_invocation handles -C chains, --git-dir/--work-tree in both spellings, -c and valueless options, and returns None without a subcommand; chdir, chained relative cd, popd, bare cd and cd with two arguments resolve or fall to ask as specified; the override env vars match the branch name exactly."
+blind_spot: >
+  Written against one mutmut survivor list, so it pins what that run found,
+  not every behavior. Some survivors are equivalent mutants that no test can
+  kill (for example passing posix=True explicitly to shlex.split, or an
+  initial cwd of '' vs None). Reason strings are asserted exactly, so
+  rewording a message means updating these tests -- intended, since the
+  text is the user-facing contract. Does not cover the backslash-path gap
+  (shlex posix mode strips backslashes, so an unquoted C:\...\git is not
+  recognised); that is recorded in test_gate_pretooluse.yaml as a known
+  blind spot, not fixed.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: a verdict's level, branch or reason changed, or one of the gate's parsers changed behavior on an edge case it used to handle
+  crash: the gate module's import path or helper names changed (these tests import it by name and call private helpers directly)
+  pass: the gate's exact outputs and parser edge cases match the documented rules
+debug:
+  - a failure in TestVerdictsExact means a verdict or its message changed -- if the change is intended, update the expected text here and in the permission-prompt docs
+  - a failure in TestMsysToNative or TestJoinDir means the cd/-C target-checkout resolution changed -- a wrong answer here silently judges a push against the wrong checkout
+  - a failure in TestParseGitInvocation means git global-option handling changed -- re-check -C, --git-dir and --work-tree against git's documented grammar

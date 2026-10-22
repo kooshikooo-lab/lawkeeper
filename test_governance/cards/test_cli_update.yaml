@@ -1,0 +1,41 @@
+test_id: test_cli_update
+theory: >
+  `lawkeeper init` copies a template tree into a consuming repo and the only
+  way to take later fixes was `init --force`, a blind overwrite that destroys
+  local customisation. Provenance (template_version plus a sha256 per written
+  file in .guardrail.json) lets `lawkeeper update` tell an untouched scaffold
+  file from a customised one, so upstream fixes can be taken file by file
+  without ever clobbering local work (docs/DESIGN_NOTE_mutmut_and_pinned_
+  distribution_2026-10-10.md, steps 1-2).
+oracle:
+  type: reference
+  independence: independent
+  expression: >
+    Each test builds a small fake template tree and a real git repo, runs the
+    real CLI entry point (cli.main) for init and update, and asserts on the
+    resulting files on disk, the printed report and the exit code. The
+    expected outcome for each situation (unchanged / upstream-only change /
+    local-only change / both changed / missing / new file / CRLF checkout /
+    no provenance) is stated in the design note's rules, not derived from
+    the implementation's own hashing code; the hash check recomputes sha256
+    independently from the bytes on disk.
+acceptance: "init records template_version and a sha256 for every file it wrote; update with nothing changed reports up to date; an upstream-only change is reported on a dry run without touching the repo and written only with --apply (and re-recorded, so the next run is up to date); a local customisation with unchanged upstream is kept; a file changed both locally and upstream is reported as CONFLICT with a unified diff and is never overwritten, even with --apply, and the exit code is 1; a file missing locally is reported and not recreated; a new upstream file is added only with --apply; a checkout whose line endings git converted to CRLF is not mistaken for a customised file; a repo with no recorded hashes is reported as having no provenance and nothing is changed."
+blind_spot: >
+  The template is a fake tree, so these tests do not prove the shipped
+  template renders and hashes identically between init and update on every
+  platform; test_init_smoke.py covers a real install of init only. Hashes
+  are of the rendered text with line endings normalised, so a file that
+  differs only in line endings is treated as unchanged (intended). Extras
+  (--with-tools) are tracked only when recorded at init; a repo that adds
+  them later by hand is not covered. Three-way merge is out of scope:
+  conflicts are shown as a two-way diff for a human to resolve.
+trust_level: T2
+adversarial_review: none
+failure_meaning:
+  failed: update would overwrite, skip or mis-report a scaffolded file, or init stopped recording provenance
+  crash: cli.main's argument surface or the _template_root/_extras_template_root seams changed
+  pass: provenance is recorded and update classifies every situation correctly without ever overwriting local work
+debug:
+  - a failure in test_conflict_is_shown_and_never_overwritten_even_with_apply is high severity -- update destroyed (or would destroy) local customisation; check the conflicts branch in template_sync.run_update
+  - a failure in test_crlf_checkout_is_not_mistaken_for_customisation means sha256() stopped normalising line endings, so every autocrlf Windows checkout would report spurious conflicts
+  - a failure in test_repo_without_provenance_is_reported_and_untouched means update guessed instead of refusing when no hashes are recorded
