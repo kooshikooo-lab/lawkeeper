@@ -1,5 +1,15 @@
 # Agent-harness landscape — research knowledge base
 
+> **Correction, 2026-10-28:** Claude Code's own `PreToolUse` precedence is no
+> longer three-tier. Its hooks reference now reads "precedence is `deny` >
+> `defer` > `ask` > `allow`" (re-read directly from `code.claude.com/docs/en/hooks`
+> on 2026-10-28; first found by `docs/RESEARCH_EXTERNAL_SCAN_2026-10-08.md` section 1).
+> `defer` is a headless pause/resume primitive (`-p --resume`), not a gating
+> verdict, so the `deny > ask > allow` core below still holds for the other
+> systems and for lawkeeper's own gate, which only emits allow/deny/ask. Wherever
+> this document calls Claude Code's algebra "three-tier", read it as that core
+> plus `defer`. The text below is left as originally written.
+
 Started 2026-09-05, prompted by the user's own course-correction: prior
 lawkeeper design work (the enforcement stack, the policy ideas in
 `GOVERNANCE_PROPOSALS.md`, the harness-adapter thinking in
