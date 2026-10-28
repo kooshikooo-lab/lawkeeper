@@ -1,6 +1,6 @@
-# Draft: lawkeeper weekly research routine files findings into the shared registry (2026-10-28)
+# Lawkeeper weekly research routine files findings into the shared registry (2026-10-28)
 
-Status: **DRAFT for the user's decision. Nothing here is applied.** This is the
+Status: **APPLIED 2026-10-28 with the user's approval (all three edits).** The text below is the draft as proposed. The registry paragraph in the applied prompt follows falcun's `docs/research/REGISTRY_FILING_GUIDE.md` wording plus the guardrails listed in edit 2. Applied via the routines API (trigger `trig_01UgJi3thYGyEYQaHFif3CY1`); read back and confirmed. First run with it: Thursday 2026-10-29 09:32 UTC (the "2026-11-05" below is wrong). Original status line: DRAFT, nothing applied. This is the
 "separate yes/no" that falcun's registry proposal (falcun PR #8, merged
 2026-10-21) leaves to the user, and condition (c) for closing lawkeeper handoff
 item 13. Conditions (a) and (b) are in falcun `main` (commit 8944704: lawkeeper's
