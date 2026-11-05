@@ -38,17 +38,38 @@ items.
 
 ---
 
-## 1. Codex's native hook protocol — resolved from primary source, after three prior passes stuck at secondhand
+## 1. Codex's native hook protocol — re-confirmed from source, correcting both this pass's own first draft and a stale "still blocked" claim in 2026-10-15
 
-This item has been queued since the hook-mechanisms survey (2026-09-06) and
-was re-attempted and still blocked on 2026-10-01, 2026-10-08 (partially — see
-that scan), and 2026-10-15. `developers.openai.com` is still blocked this
-pass too (confirmed again, `connect_rejected`) — but this pass found the
-actual answer sitting in OpenAI's own **source code**, not its docs site,
-reachable the whole time via `raw.githubusercontent.com`/`api.github.com`
-search, which none of the three prior passes tried for this specific item
-(they checked `github.com/openai/codex/docs/config.md` for a hooks *doc*,
-not the hook *implementation* itself).
+**Correction, written after this PR's own automated review caught it —
+recorded here rather than silently fixed, same discipline the top of
+`docs/RESEARCH_agent_harness_landscape.md` already uses for its own
+corrections:** this section originally claimed to be the *first*
+primary-source resolution of this long-queued item. That claim was wrong,
+and the error compounded one already present in
+`docs/RESEARCH_EXTERNAL_SCAN_2026-10-15.md` (its §3 states "Codex's native
+hook protocol — still blocked, no primary-source progress this pass,"
+citing only a "Prior status (2026-10-01)"). In fact
+`docs/RESEARCH_EXTERNAL_SCAN_2026-10-08.md`'s §2 **already fully resolved
+this from primary source**, at a pinned clone commit
+(`d2a6dac20b3b76d4b95d8a699ef7bc6ee3a852d6`), reading
+`output_parser.rs`, `pre_tool_use.rs`, and `permission_request.rs` in full
+and reaching the same `ask`-fails-open finding this section re-derives
+below. 2026-10-15 should have carried that resolution forward and instead
+regressed it to "still blocked" — a real error in that doc, not a
+re-opening grounded in new evidence. This pass repeated 2026-10-08's
+primary-source read **without first reading 2026-10-08 itself**, trusting
+2026-10-15's "Prior status" framing instead of the actual chain of prior
+docs — exactly the "trust a document's account over the primary source"
+failure mode this repo's own standards exist to catch. Both errors are
+logged here, not quietly smoothed over.
+
+**What this section actually adds, now that the "first resolution" framing
+is retracted:** a re-confirmation against current `main` (2026-11-05)
+rather than 2026-10-08's pinned commit, plus one new angle 2026-10-08 did
+not check — whether `ask` is schema-valid JSON (not just absent from the
+Rust match arms) — and one correction to this pass's *own* first-draft
+claim about `PermissionRequest`'s failure mode, flagged in its own
+paragraph below rather than silently fixed.
 
 - **What was actually read, all via `raw.githubusercontent.com` against
   `openai/codex`'s `main` branch, 2026-11-05:**
@@ -96,20 +117,26 @@ not the hook *implementation* itself).
   "permissionDecision":"ask","permissionDecisionReason":"please confirm"}}`
   into `parse_completed` asserts `should_block: false` (the call is **not**
   blocked) and `status: HookRunStatus::Failed` with the error text above.
-  **This is the precise, no-longer-secondhand answer**: Codex's native
-  `PreToolUse` protocol does not merely "ignore" `ask` (the prior,
-  dsh-sourced secondhand characterization) — it recognizes the field
-  syntactically, explicitly flags it as an unsupported/invalid hook output,
-  logs the hook run as `Failed`, and **fails open**: the tool call proceeds
-  anyway. The same fail-open-on-unsupported-decision behavior is confirmed
-  for two other shapes in the same test module: a bare `allow` with no
+  This matches, from a fresh read of current `main`, the same finding
+  `docs/RESEARCH_EXTERNAL_SCAN_2026-10-08.md`'s §2 already reached from
+  the pinned 2026-10-08 commit: Codex's native `PreToolUse` protocol does
+  not merely "ignore" `ask` — it recognizes the field syntactically,
+  explicitly flags it as an unsupported/invalid hook output, logs the hook
+  run as `Failed`, and **fails open**: the tool call proceeds anyway. The
+  same fail-open-on-unsupported-decision behavior is confirmed for two
+  other shapes in the same test module: a bare `allow` with no
   `updatedInput` (`permission_decision_allow_without_updated_input_fails_open`)
   and the deprecated top-level `{"decision":"approve"}` legacy shape
   (`deprecated_approve_decision_fails_open`) — "received a decision this
   version doesn't act on" fails open consistently across all three cases,
-  not just the `ask` one.
-- **A second, genuinely separate hook event most of this research base
-  didn't know existed — `PermissionRequest`, confirmed from
+  not just the `ask` one. **One genuinely new angle this pass adds, not in
+  2026-10-08's entry:** the generated JSON Schema (not read in 2026-10-08)
+  confirms `ask` is schema-valid, not merely absent from the Rust match
+  arms — a hook author sending it gets no JSON-validation error at all;
+  the rejection is Codex's own deliberate application-level choice, not a
+  side effect of the wire format never having room for the value.
+- **A second, separate hook event, already documented in
+  2026-10-08's entry — `PermissionRequest`, confirmed again from
   `dispatcher.rs`'s own `HookEventName` match arms and its own generated
   schema:** distinct from `PreToolUse`, with its own binary-only decision
   type, confirmed directly from the schema:
@@ -118,21 +145,42 @@ not the hook *implementation* itself).
   ```
   No `ask` value exists in this enum at all — not even as an
   unimplemented, schema-valid-but-rejected option the way `PreToolUse` has
-  it. **And its failure-mode default is the opposite of `PreToolUse`'s**:
-  three reserved-for-future fields on the same schema (`interrupt`,
-  `updatedInput`, `updatedPermissions`) each carry the same explicit
-  doc comment pattern, quoted verbatim:
-  > "Reserved for future short-circuiting semantics.\n\nPermissionRequest
-  > hooks currently fail closed if this field is `true`."
-  (and the equivalent wording for the other two reserved fields). So
-  within one harness, one event (`PreToolUse`) fails open on an
-  unsupported/future decision shape, while a second, separate event
-  (`PermissionRequest`) fails closed on the same kind of situation — a
-  real, sourced instance of "failure-mode policy is per-mechanism, not
-  uniform across a harness," refining (not just repeating) GitHub
-  Copilot's already-logged "timeout vs. crash get different rules" finding
-  from 2026-10-15: here the axis isn't failure type, it's which hook event
-  you're in.
+  it.
+  **Correction to this section's own first draft, caught by this PR's
+  automated review and verified directly against
+  `codex-rs/hooks/src/events/permission_request.rs` before writing this
+  paragraph:** the first draft claimed the three reserved-for-future
+  fields on this schema (`interrupt`, `updatedInput`, `updatedPermissions`)
+  make `PermissionRequest` "fail closed," the opposite default from
+  `PreToolUse`. That is wrong. Reading `permission_request.rs`'s own
+  `parse_completed` directly: a reserved field being set produces
+  `invalid_reason`, which sets the hook run's status to `Failed` and logs
+  an error — but it leaves `decision: None` for that handler (the `Deny`
+  branch is a sibling of, not reached by, the `invalid_reason` branch).
+  `run()` then folds decisions with
+  `results.iter().filter_map(|result| result.data.decision.as_ref())` —
+  a `None` decision is filtered **out** of that fold entirely, so a
+  handler that set a reserved field contributes nothing, for or against,
+  to the outcome. `resolve_permission_request_decision`'s own doc comment
+  states the actual fallback: "any deny wins immediately; otherwise keep
+  the highest-precedence allow" — with no deny and no allow in the fold,
+  the result is `None`, and the module's own top-of-file doc comment says
+  what `None` means: a handler can "return a concrete allow/deny decision,
+  or **decline to decide and let the normal approval flow continue**."
+  That is not a deny — it is this hook's vote being discarded while a
+  separate, un-read-this-pass approval path (`core/src/tools/approvals.rs`)
+  decides what happens next, which could still resolve to an allow if that
+  path or another hook supplies one. **The "opposite failure-mode
+  defaults" framing is retracted along with it**: both events actually
+  handle an invalid/unsupported hook output the same structural way —
+  mark the run `Failed`, exclude it from the decision fold — they differ
+  only in what the fold defaults to when nothing is left in it
+  (`PreToolUse`'s fold is a boolean OR with a `false` identity, so
+  "nothing left" means the call proceeds; `PermissionRequest`'s fold
+  defers to a separate approval mechanism not read this pass, so "nothing
+  left" does not mean deny, and whether it practically behaves more like
+  open or closed depends on that mechanism's own default, which remains
+  unverified here).
 - **Composition across multiple hooks on the same `PreToolUse` call,
   confirmed from `pre_tool_use.rs`'s own `run()`:**
   `results.iter().any(|result| result.data.should_block)` — any one
@@ -153,13 +201,15 @@ not the hook *implementation* itself).
   is the decision to accept `ask` syntactically but reject it at runtime
   and fail open — that's a deliberate product choice on top of a borrowed
   shape, not evidence of a seventh independent team converging on
-  deny>ask>allow from scratch. Recorded honestly: this closes the
-  queued item with a real, sourced answer, but it should not be added to
+  deny>ask>allow from scratch. This reinforces 2026-10-08's own answer
+  rather than adding a new one, but it should not be added to
   the hook-mechanisms survey's "N independent systems" convergence tally
   as a fully independent data point for the *wire-format* question, only
   for the narrower "does this harness's native protocol actually let a
   hook ask" question (answer: no, confirmed).
-- **Verdict: queued item resolved, adopt-the-finding (not a dependency).**
+- **Verdict: queued item re-confirmed against current `main` (it was
+  already resolved in 2026-10-08, see the correction above), adopt-the-finding,
+  not a dependency.**
   The concrete, reusable takeaway for lawkeeper's own `gate_pretooluse.py`
   and any future `EXECUTOR_CONTRACT.md` harness-adapter work: if lawkeeper
   ever adapts its gate to run under Codex specifically, assume `ask` is a
@@ -243,10 +293,19 @@ substantive changes — not just a version bump.
   old entry). Adopt-the-design candidates worth a future look: the
   `cause: policy_denial | hook_failure` split is a cleaner, more precise
   version of the decision/infrastructure-failure distinction lawkeeper's
-  own `gate_pretooluse.py` already draws informally (see §4); the
-  `Stop`-hook block-cap is a concrete answer to "what stops an ASK-capable
-  hook from holding a turn hostage forever" that neither lawkeeper's design
-  nor any prior entry in this research base had addressed.
+  own `gate_pretooluse.py` already draws informally (see §4).
+  **Correction, caught by this PR's automated review:** the `Stop`-hook
+  block-cap was first described here as answering "what stops an
+  ASK-capable hook from holding a turn hostage forever." That conflates
+  two different things. goose's wire protocol is confirmed binary (§2
+  above, "There is no third value") — there is no ASK-capable hook here
+  to hold anything hostage, and the cap specifically bounds *repeated
+  `Stop`-event blocks* (a hook forcing an already-finished turn to keep
+  going, over and over), not a pending `PreToolUse` approval. It says
+  nothing about what bounds a human-facing approval prompt that never
+  gets answered — that liveness question, which is the one lawkeeper's
+  own design docs actually care about for its planned ASK tier, remains
+  open and unaddressed by any entry in this research base to date.
 
 ---
 
@@ -297,9 +356,11 @@ substantive changes — not just a version bump.
 2026-10-15 flagged this as "a concrete, checkable comparison point this
 pass identified but did not itself check" — comparing lawkeeper's own
 fail-open/fail-closed behavior against GitHub Copilot's per-failure-mode
-split. Checked directly this pass, now that §1-2 above give two more
-comparison points (Codex's per-*event* fail-open/fail-closed split;
-goose's `cause: policy_denial | hook_failure` distinction).
+split. Checked directly this pass, now that §2 above gives one more
+comparison point (goose's `cause: policy_denial | hook_failure`
+distinction) — §1's own "Codex applies opposite defaults per event" claim
+was retracted after review, so it is not counted as a comparison point
+here either.
 
 - **What was actually read:** `scripts/gate_pretooluse.py` in full (this
   repo, current `main`).
@@ -321,21 +382,20 @@ goose's `cause: policy_denial | hook_failure` distinction).
   what happens on one, is a property of the harness invoking this script,
   not of the script), a boundary this entry makes explicit rather than
   leaving implicit.
-- **How this compares to the two new findings above, stated plainly:**
-  lawkeeper's own two-tier split ("can't see the input" vs. "saw the input,
-  broke while judging it, fail to the cautious tier instead of either
-  extreme") is a *third* shape, distinct from both Codex's
-  per-event policy (same event, same failure, one fixed fail-direction per
-  event) and GitHub Copilot's per-failure-mode policy (same event, one
-  fixed fail-direction per *kind* of failure, e.g. timeout vs. crash).
-  Lawkeeper's script picks its fail-direction based on **how much was
-  learned before the failure happened** (nothing learned → open; something
-  learned, judgment failed → ask) — a reasonable design already in place,
-  not something this pass is recommending changing. **Verdict: this
-  follow-up is closed — the script's existing design holds up against two
-  more shipped comparison points and needs no change**, and the script
-  itself now has three external, sourced precedents to cite (GitHub
-  Copilot, Codex, goose) if its own docstring is ever expanded.
+- **How this compares to the two findings actually still standing, stated
+  plainly:** lawkeeper's own two-tier split ("can't see the input" vs.
+  "saw the input, broke while judging it, fail to the cautious tier
+  instead of either extreme") is a *second* shape, distinct from GitHub
+  Copilot's per-failure-mode policy (same event, one fixed fail-direction
+  per *kind* of failure, e.g. timeout vs. crash). Lawkeeper's script picks
+  its fail-direction based on **how much was learned before the failure
+  happened** (nothing learned → open; something learned, judgment failed
+  → ask) — a reasonable design already in place, not something this pass
+  is recommending changing. **Verdict: this follow-up is closed — the
+  script's existing design holds up against the one shipped comparison
+  point that survives this PR's own review (GitHub Copilot's) and needs
+  no change.** Codex is not counted as a second comparison point here,
+  since §1's claim about it was retracted.
 
 ---
 
@@ -410,8 +470,9 @@ Per the task brief's own instruction: stated plainly rather than padded.
   is still blocked (confirmed again this pass, same as every prior
   attempt); nothing new to add.
 - **Policy-decision algebra:** no new independently-built system surfaced
-  this pass beyond Codex (§1, which resolves a long-queued item rather
-  than adding a new one to the tally) and the goose correction (§2). A
+  this pass beyond Codex (§1, which re-confirms an item 2026-10-08 already
+  resolved, per the correction there, rather than adding a new one to the
+  tally) and the goose correction (§2). A
   search for "new 2026 policy engine" turned up only vendor-SDK approval
   callbacks (Snowflake's Cortex Code Agent SDK's `canUseTool`, mentioned in
   search results but `docs.snowflake.com` is blocked this pass, so not
@@ -448,3 +509,19 @@ Per the task brief's own instruction: stated plainly rather than padded.
   keyed to the ~10-week-stale 1.39.0 backup and should be re-read from a
   fresh clone before anything cites exact source locations for goose
   again.
+- Codex's `core/src/tools/approvals.rs` — §1's correction left open what
+  actually happens when a `PermissionRequest` fold resolves to `None`
+  (no hook decided): the module docstring says "the normal approval flow
+  continue[s]," but this pass did not read that file, so whether "normal"
+  defaults to prompting a human, a configured auto-approve, or something
+  else is unverified. Read it directly before citing `PermissionRequest`'s
+  practical fail-direction as settled either way.
+- `docs/RESEARCH_EXTERNAL_SCAN_2026-10-15.md`'s §3 — contains a real
+  error (claims Codex's hook protocol was "still blocked, no
+  primary-source progress" when 2026-10-08's §2 had already resolved it
+  from source one week earlier). Per this project's "settled stays
+  settled" philosophy this isn't being edited retroactively, but a future
+  session citing 2026-10-15's account of this item should read
+  2026-10-08 directly instead of trusting 2026-10-15's "Prior status"
+  framing — the exact mistake this pass made before its own review caught
+  it.
