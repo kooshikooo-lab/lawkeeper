@@ -269,12 +269,23 @@ substantive changes — not just a version bump.
      explicit anti-infinite-loop cap
      (`GOOSE_STOP_HOOK_BLOCK_CAP`, overridable) once which goose overrides
      the hook and ends the turn anyway. Not in the 2026-09-06 entry at all.
-  4. **The binary (no-`ask`) nature of the wire protocol is now stated in
-     goose's own docs text, not just inferred from its Rust enum**, closing
-     the 2026-09-06 entry's own gap (that finding came from reading
-     `HookDecision::{Allow, Deny}` in source, not from docs saying so
-     outright): "`decision` | `allow` or `deny`, on `PreToolUseResult`.
-     There is no third value."
+  4. **The binary (no-`ask`) nature of `PreToolUseResult`'s own `decision`
+     field is now stated in goose's own docs text, not just inferred from
+     its Rust enum**, closing the 2026-09-06 entry's own gap (that finding
+     came from reading `HookDecision::{Allow, Deny}` in source, not from
+     docs saying so outright): "`decision` | `allow` or `deny`, on
+     `PreToolUseResult`. There is no third value." **Scoped precisely, not
+     generalized to the hook's own response, per the same discipline a
+     parallel finding in the shared Falcun registry needed correcting
+     for (`kooshikooo-lab/falcun#44`, review round 2):** a `PreToolUse`
+     hook's own stdout signal uses a different vocabulary — exit code 2,
+     or `{"decision":"block","reason":"..."}` — "block," not "deny." A
+     hook that literally sent `{"decision":"deny",...}` would not be
+     recognized at all and would fall through to `on_failure`'s `allow`
+     default (point 1 above), the opposite of what the sender presumably
+     intended. "`allow`/`deny`, no third value" is accurate for
+     `PreToolUseResult`'s own reporting field specifically, not a
+     description of what a hook itself should return to block a call.
   5. **Still cites the Open Plugins spec as its model**, unchanged:
      "goose follows the [Open Plugins hooks specification]
      (https://open-plugins.com/agent-builders/components/hooks)." The spec
@@ -283,9 +294,11 @@ substantive changes — not just a version bump.
      between them, which is itself a small data point against treating any
      single harness's implementation as a stable proxy for the spec text.
 - **Verdict: corrects, doesn't overturn, the 2026-09-06 entry's bottom
-  line** (goose is still binary/no-ask at the external hook layer; deny
-  still wins when it fires) — but the specific mechanism details that
-  entry gave (unconditional fail-open, no `Stop`-hook concept, no
+  line** (goose's `PreToolUse` layer is still binary/no-ask either way you
+  look at it — a hook's own response is allow-by-default/explicit-`block`,
+  and `PreToolUseResult`'s separate report is allow/`deny` — neither has a
+  third state, they just don't share a vocabulary) — but the specific
+  mechanism details that entry gave (unconditional fail-open, no `Stop`-hook concept, no
   `PreToolUseResult` observability) are now known to be stale as written.
   Not urgent to fix retroactively in the older doc (per this project's own
   "settled stays settled unless there's new evidence" philosophy — this
